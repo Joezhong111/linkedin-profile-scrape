@@ -1,5 +1,0 @@
-{
-  "name": "LinkedIn Insights Pro",
-  "description": "Professional LinkedIn profile scraper and analyzer using Apify and Gemini AI, backed by Supabase storage.",
-  "requestFramePermissions": []
-}

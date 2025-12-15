@@ -1,10 +1,13 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { LinkedInProfile } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({
+  apiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
+});
 
-export const analyzeProfile = async (profile: LinkedInProfile): Promise<string> => {
+export const analyzeProfile = async (
+  profile: LinkedInProfile
+): Promise<string> => {
   const prompt = `
     Analyze this LinkedIn profile data and provide a professional executive summary.
     Highlight their top skills, key career achievements, and suggest potential conversation starters for networking.
@@ -23,11 +26,11 @@ export const analyzeProfile = async (profile: LinkedInProfile): Promise<string> 
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         temperature: 0.7,
-      }
+      },
     });
 
     return response.text || "Could not generate analysis.";

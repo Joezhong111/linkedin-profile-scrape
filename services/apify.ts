@@ -1,48 +1,42 @@
+import { LinkedInProfile } from "../types";
 
-import * as ApifyModule from 'apify-client';
-import { LinkedInProfile } from '../types';
-
-// Robustly extract ApifyClient from the module, handling various ESM transformation styles
-const ApifyClient = (ApifyModule as any).ApifyClient || (ApifyModule as any).default?.ApifyClient || (ApifyModule as any).default;
-
-const APIFY_TOKEN = process.env.APIFY_TOKEN || '';
-
-export const scrapeLinkedInProfiles = async (urls: string[]): Promise<LinkedInProfile[]> => {
-  if (!APIFY_TOKEN) {
-    throw new Error('APIFY_TOKEN is missing in environment variables.');
-  }
-
-  if (!ApifyClient) {
-    throw new Error('Failed to load ApifyClient from module. Check your connection or package version.');
-  }
-
-  const client = new ApifyClient({
-    token: APIFY_TOKEN,
+// Frontend: call serverless function instead of bundling apify-client in the browser
+export const scrapeLinkedInProfiles = async (
+  urls: string[]
+): Promise<any[]> => {
+  const res = await fetch("/api/scrape", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ urls }),
   });
 
-  const input = {
-    "profileUrls": urls
-  };
-
-  try {
-    // Run the Actor and wait for it to finish
-    // Actor ID: 2SyF0bVxmgGr8IVCZ (LinkedIn Profile Scraper)
-    const run = await client.actor("2SyF0bVxmgGr8IVCZ").call(input);
-
-    // Fetch Actor results from the run's dataset
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-
-    return items.map((item: any) => ({
-      profile_url: item.url || item.profileUrl || urls[0],
-      full_name: item.fullName || `${item.firstName} ${item.lastName}` || 'Unknown',
-      headline: item.headline || item.title || '',
-      location: item.location || '',
-      about: item.about || item.summary || '',
-      photo_url: item.profilePicUrl || item.profilePhotoUrl || '',
-      raw_data: item,
-    }));
-  } catch (error: any) {
-    console.error('Apify scraping failed:', error);
-    throw new Error(error.message || 'Scraping failed');
+  if (!res.ok) {
+    let msg = "Scraping failed";
+    try {
+      const data = await res.json();
+      msg = (data && (data.error || data.message)) || msg;
+    } catch (_) {}
+    throw new Error(msg);
   }
+
+  const data = await res.json();
+  return (data as any[]) || [];
 };
+
+export function mapApifyToLinkedInProfile(item: any): LinkedInProfile {
+  const fullName =
+    item.fullName || [item.firstName, item.lastName].filter(Boolean).join(" ");
+  return {
+    profile_url: item.linkedinUrl || item.linkedinPublicUrl || item.url || "",
+    full_name: fullName || "Unknown",
+    headline: item.headline || item.title || "",
+    location:
+      item.addressWithCountry ||
+      item.addressWithoutCountry ||
+      item.location ||
+      "",
+    about: item.about || item.summary || "",
+    photo_url: item.profilePicHighQuality || item.profilePic || "",
+    raw_data: item,
+  } as LinkedInProfile;
+}
