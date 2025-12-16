@@ -15,6 +15,7 @@ import {
   CircleStackIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
+import ProfileCard from "../components/ProfileCard";
 
 export default function Home() {
   const [urls, setUrls] = useState<string>("");
@@ -28,6 +29,12 @@ export default function Home() {
     new Set()
   );
   const [savedCount, setSavedCount] = useState<number>(0);
+
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {}
+  };
 
   const apifyToken = import.meta.env.VITE_APIFY_TOKEN;
   const isApifyReady = Boolean(apifyToken); // used only to show hint in dev; UI not gated by it
@@ -49,7 +56,7 @@ export default function Home() {
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isApifyReady) {
-      setState((prev) => ({
+      setState((prev: ScraperState) => ({
         ...prev,
         error: "Apify token missing. Please set VITE_APIFY_TOKEN.",
       }));
@@ -57,29 +64,37 @@ export default function Home() {
     }
     const urlList = urls
       .split("\n")
-      .map((u) => u.trim())
-      .filter((u) => u.startsWith("http"));
+      .map((u: string) => u.trim())
+      .filter((u: string) => u.startsWith("http"));
     if (urlList.length === 0) {
-      setState((prev) => ({
+      setState((prev: ScraperState) => ({
         ...prev,
         error: "Please enter at least one valid LinkedIn URL",
       }));
       return;
     }
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    setState((prev: ScraperState) => ({
+      ...prev,
+      isLoading: true,
+      error: null,
+    }));
     try {
       const items = await scrapeLinkedInProfiles(urlList);
       setPreviewItems(items || []);
       setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
       setUrls("");
-      setState((prev) => ({ ...prev, isLoading: false }));
+      setState((prev: ScraperState) => ({ ...prev, isLoading: false }));
     } catch (err: any) {
-      setState((prev) => ({ ...prev, isLoading: false, error: err.message }));
+      setState((prev: ScraperState) => ({
+        ...prev,
+        isLoading: false,
+        error: err.message,
+      }));
     }
   };
 
   const toggleSelect = (idx: number) => {
-    setSelectedIndexes((prev) => {
+    setSelectedIndexes((prev: Set<number>) => {
       const next = new Set(prev);
       next.has(idx) ? next.delete(idx) : next.add(idx);
       return next;
@@ -97,15 +112,15 @@ export default function Home() {
       return;
     }
     const toImport = previewItems
-      .map((item, idx) => ({ item, idx }))
+      .map((item: any, idx: number) => ({ item, idx }))
       .filter(({ idx }) => selectedIndexes.has(idx))
-      .map(({ item }) => mapApifyToLinkedInProfile(item));
+      .map(({ item }: { item: any }) => mapApifyToLinkedInProfile(item));
     if (toImport.length === 0) {
       alert("No rows selected.");
       return;
     }
     try {
-      await Promise.all(toImport.map((p) => saveProfile(p)));
+      await Promise.all(toImport.map((p: LinkedInProfile) => saveProfile(p)));
       await loadCount();
       clearPreview();
     } catch (e: any) {
@@ -149,7 +164,9 @@ export default function Home() {
                   className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono disabled:bg-gray-50 disabled:cursor-not-allowed"
                   placeholder="https://www.linkedin.com/in/..."
                   value={urls}
-                  onChange={(e) => setUrls(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setUrls(e.target.value)
+                  }
                 />
               </div>
               <button
@@ -260,30 +277,17 @@ export default function Home() {
                     <tr>
                       <th className="p-3 w-10"></th>
                       <th className="p-3 text-left">Name</th>
-                      <th className="p-3 text-left">Headline</th>
-                      <th className="p-3 text-left">Location</th>
+                      <th className="p-3 text-left">Title</th>
                       <th className="p-3 text-left">Company</th>
+                      <th className="p-3 text-left">Region</th>
                       <th className="p-3 text-left">Email</th>
-                      <th className="p-3 text-left">Followers</th>
+                      <th className="p-3 text-left">Phone</th>
                       <th className="p-3 text-left">LinkedIn</th>
                     </tr>
                   </thead>
                   <tbody>
                     {previewItems.map((item: any, idx: number) => {
-                      const name =
-                        item.fullName ||
-                        [item.firstName, item.lastName]
-                          .filter(Boolean)
-                          .join(" ");
-                      const loc =
-                        item.addressWithCountry ||
-                        item.addressWithoutCountry ||
-                        item.location ||
-                        "";
-                      const company =
-                        item.companyName ||
-                        item.experiences?.[0]?.companyName ||
-                        "";
+                      const profile = mapApifyToLinkedInProfile(item);
                       return (
                         <tr
                           key={idx}
@@ -296,34 +300,10 @@ export default function Home() {
                               onChange={() => toggleSelect(idx)}
                             />
                           </td>
-                          <td className="p-3 font-medium text-gray-900">
-                            {name || "Unknown"}
-                          </td>
-                          <td className="p-3 text-gray-700">
-                            {item.headline || item.title || ""}
-                          </td>
-                          <td className="p-3 text-gray-700">{loc}</td>
-                          <td className="p-3 text-gray-700">{company}</td>
-                          <td className="p-3 text-gray-700">
-                            {item.email || ""}
-                          </td>
-                          <td className="p-3 text-gray-700">
-                            {item.followers ?? item.follower_count ?? ""}
-                          </td>
-                          <td className="p-3">
-                            <a
-                              href={
-                                item.linkedinUrl ||
-                                item.linkedinPublicUrl ||
-                                item.url
-                              }
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-blue-600 hover:underline"
-                            >
-                              View
-                            </a>
-                          </td>
+                          <ProfileCard
+                            profile={profile}
+                            handleCopy={handleCopy}
+                          />
                         </tr>
                       );
                     })}

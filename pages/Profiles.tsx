@@ -2,14 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { LinkedInProfile } from "../types";
 
 import { fetchAllProfiles } from "../services/supabase";
-import {
-  MagnifyingGlassIcon,
-  ArrowTopRightOnSquareIcon,
-  SparklesIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ClipboardDocumentIcon,
-} from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import ProfileRow from "../components/ProfileRow";
 
 function toCsv(rows: LinkedInProfile[]) {
   const headers = [
@@ -64,7 +58,7 @@ export default function Profiles() {
   const [hasEdu, setHasEdu] = useState(false);
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const [sortBy, setSortBy] = useState<"newest" | "followers" | "default">(
     "default"
   );
@@ -430,95 +424,13 @@ export default function Profiles() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((p: LinkedInProfile) => {
-                const idKey = p.id || p.profile_url;
-                const isOpen = expandedId === idKey;
-                return (
-                  <React.Fragment key={idKey}>
-                    <tr className="border-t border-gray-200 hover:bg-gray-50">
-                      <td className="p-3 text-center">
-                        <button
-                          onClick={() => setExpandedId(isOpen ? null : idKey)}
-                          className="text-gray-400 hover:text-gray-700"
-                        >
-                          {isOpen ? (
-                            <ChevronUpIcon className="h-5 w-5" />
-                          ) : (
-                            <ChevronDownIcon className="h-5 w-5" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="p-3 font-medium text-gray-900 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={p.profile_pic_high_quality || p.photo_url}
-                            alt={p.full_name}
-                            className="h-12 w-12 rounded-full object-cover bg-gray-200"
-                          />
-                          <div>
-                            <div className="font-bold">{p.full_name}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-3 text-gray-700">
-                        {p.job_title || "-"}
-                      </td>
-                      <td className="p-3 text-gray-700">
-                        {p.company_name || "-"}
-                      </td>
-                      <td className="p-3 text-gray-700">
-                        {p.job_location || p.location || "-"}
-                      </td>
-                      <td className="p-3 text-gray-700 truncate max-w-[16rem]">
-                        {p.email || "-"}
-                        {p.email && (
-                          <button
-                            onClick={() => handleCopy(p.email)}
-                            className="ml-2 text-gray-400 hover:text-gray-700"
-                          >
-                            <ClipboardDocumentIcon className="h-4 w-4" />
-                          </button>
-                        )}
-                      </td>
-                      <td className="p-3 text-gray-700 truncate max-w-[12rem]">
-                        {p.mobile_number || "-"}
-                        {p.mobile_number && (
-                          <button
-                            onClick={() => handleCopy(p.mobile_number)}
-                            className="ml-2 text-gray-400 hover:text-gray-700"
-                          >
-                            <ClipboardDocumentIcon className="h-4 w-4" />
-                          </button>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <a
-                          href={p.linkedin_public_url || p.profile_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-blue-600 hover:underline inline-flex items-center gap-1"
-                        >
-                          Open <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-                        </a>
-                      </td>
-                    </tr>
-                    {isOpen && (
-                      <tr className="bg-gray-50 border-t border-gray-200">
-                        <td colSpan={8} className="p-4">
-                          <div>
-                            <h4 className="font-semibold text-gray-800 mb-2">
-                              Raw Data
-                            </h4>
-                            <pre className="text-xs text-gray-700 bg-white border border-gray-200 rounded p-3 overflow-auto max-h-96">
-                              {JSON.stringify(p.raw_data, null, 2)}
-                            </pre>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+              {sorted.map((p: LinkedInProfile) => (
+                <ProfileRow
+                  key={p.id || p.profile_url}
+                  profile={p}
+                  handleCopy={handleCopy}
+                />
+              ))}
             </tbody>
           </table>
         </div>

@@ -8,7 +8,8 @@ A modern web application for scraping LinkedIn profiles and generating AI-powere
 - 💾 Database Storage - Save profiles to Supabase for persistent storage
 - ✨ AI Insights - Generate executive summaries using Google Gemini
 - 🗂️ Profile Management - View, manage, and analyze saved profiles
-- 🎨 Modern UI - Built with React and Tailwind CSS
+- 📊 Talent Analytics Dashboard - Visualize profile data with interactive charts (Career Timeline, Network Influence)
+- 🎨 Modern UI - Built with React, Tailwind CSS, and Recharts
 
 ## Prerequisites
 
@@ -148,6 +149,14 @@ The repo includes `netlify.toml` with SPA redirects and cache headers.
 ```
 ├── App.tsx              # Main application component
 ├── index.tsx            # Entry point
+├── components/
+│   ├── dashboard/        # Talent Analytics Dashboard components
+│   │   ├── CareerTimeline.tsx
+│   │   ├── NetworkTreemap.tsx
+│   │   ├── ProfileHeader.tsx
+│   │   └── ...
+│   ├── ProfileCard.tsx
+│   └── ProfileRow.tsx
 ├── services/
 │   ├── apify.ts        # LinkedIn scraping service
 │   ├── supabase.ts     # Database service
