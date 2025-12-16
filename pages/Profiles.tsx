@@ -1,11 +1,27 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LinkedInProfile } from "../types";
+
 import { fetchAllProfiles } from "../services/supabase";
-import { MagnifyingGlassIcon, ArrowTopRightOnSquareIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import {
+  MagnifyingGlassIcon,
+  ArrowTopRightOnSquareIcon,
+  SparklesIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ClipboardDocumentIcon,
+} from "@heroicons/react/24/outline";
 
 function toCsv(rows: LinkedInProfile[]) {
   const headers = [
-    "id","created_at","profile_url","full_name","headline","location","about","photo_url","ai_summary"
+    "id",
+    "created_at",
+    "profile_url",
+    "full_name",
+    "headline",
+    "location",
+    "about",
+    "photo_url",
+    "ai_summary",
   ];
   const esc = (v: any) => {
     const s = v === undefined || v === null ? "" : String(v);
@@ -13,9 +29,19 @@ function toCsv(rows: LinkedInProfile[]) {
   };
   const lines = [headers.join(",")];
   for (const r of rows) {
-    lines.push([
-      esc(r.id), esc(r.created_at), esc(r.profile_url), esc(r.full_name), esc(r.headline), esc(r.location), esc(r.about), esc(r.photo_url), esc(r.ai_summary)
-    ].join(","));
+    lines.push(
+      [
+        esc(r.id),
+        esc(r.created_at),
+        esc(r.profile_url),
+        esc(r.full_name),
+        esc(r.headline),
+        esc(r.location),
+        esc(r.about),
+        esc(r.photo_url),
+        esc(r.ai_summary),
+      ].join(",")
+    );
   }
   return lines.join("\n");
 }
@@ -26,6 +52,45 @@ export default function Profiles() {
   const [aiOnly, setAiOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [hasEmail, setHasEmail] = useState(false);
+  const [hasPhone, setHasPhone] = useState(false);
+  const [minFollowers, setMinFollowers] = useState<number>(0);
+  const [industryQ, setIndustryQ] = useState("");
+
+  const [locationFilter, setLocationFilter] = useState("");
+  const [hasPhoto, setHasPhoto] = useState(false);
+  const [hasExp, setHasExp] = useState(false);
+  const [hasEdu, setHasEdu] = useState(false);
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"newest" | "followers" | "default">(
+    "default"
+  );
+
+  const locations = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of all) {
+      if (p.location) set.add(p.location);
+    }
+    return Array.from(set).sort();
+  }, [all]);
+
+  const clearFilters = () => {
+    setQ("");
+    setAiOnly(false);
+    setHasEmail(false);
+    setHasPhone(false);
+    setMinFollowers(0);
+    setIndustryQ("");
+    setLocationFilter("");
+    setHasPhoto(false);
+    setHasExp(false);
+    setHasEdu(false);
+    setDateFrom("");
+    setDateTo("");
+  };
 
   useEffect(() => {
     (async () => {
@@ -44,32 +109,136 @@ export default function Profiles() {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return all.filter(p => {
+    return all.filter((p: LinkedInProfile) => {
+      const followers =
+        (p.followers as any) ?? (p as any).raw_data?.followers ?? 0;
+      const emailVal = (p.email as any) ?? (p as any).raw_data?.email;
+      const phoneVal =
+        (p.mobile_number as any) ?? (p as any).raw_data?.mobileNumber;
+      const industryVal =
+        (p.company_industry as any) ??
+        (p as any).raw_data?.companyIndustry ??
+        "";
+      const loc =
+        p.location ||
+        (p as any).address_with_country ||
+        (p as any).raw_data?.addressWithCountry ||
+        "";
+
       if (aiOnly && !p.ai_summary) return false;
+      if (hasEmail && !emailVal) return false;
+      if (hasPhone && !phoneVal) return false;
+      if (minFollowers && followers < minFollowers) return false;
+      if (
+        industryQ &&
+        !String(industryVal).toLowerCase().includes(industryQ.toLowerCase())
+      )
+        return false;
+
+      if (locationFilter && loc !== locationFilter) return false;
+      if (hasPhoto && !p.photo_url) return false;
+      const expList =
+        (p.experiences as any[]) || (p as any).raw_data?.experiences || [];
+      if (hasExp && expList.length === 0) return false;
+      const eduList =
+        (p.education as any[]) || (p as any).raw_data?.educations || [];
+      if (hasEdu && eduList.length === 0) return false;
+
+      if (dateFrom || dateTo) {
+        const created = p.created_at ? new Date(p.created_at).getTime() : NaN;
+        if (!isNaN(created)) {
+          if (dateFrom && created < new Date(dateFrom).getTime()) return false;
+          if (
+            dateTo &&
+            created > new Date(dateTo).getTime() + 24 * 60 * 60 * 1000 - 1
+          )
+            return false;
+        }
+      }
+
       if (!term) return true;
-      const hay = [p.full_name, p.headline, p.location, p.raw_data?.companyName, p.profile_url].map(v => (v||"").toLowerCase()).join(" ");
+      const hay = [
+        p.full_name,
+        p.first_name,
+        p.last_name,
+        p.headline,
+        loc,
+        (p as any).raw_data?.companyName,
+        p.profile_url,
+        p.about,
+        p.ai_summary,
+        String(industryVal),
+      ]
+        .map((v) => (v || "").toLowerCase())
+        .join(" ");
       return hay.includes(term);
     });
-  }, [all, q, aiOnly]);
+  }, [
+    all,
+    q,
+    aiOnly,
+    hasEmail,
+    hasPhone,
+    minFollowers,
+    industryQ,
+    locationFilter,
+    hasPhoto,
+    hasExp,
+    hasEdu,
+    dateFrom,
+    dateTo,
+  ]);
 
   const exportCsv = () => {
-    const csv = toCsv(filtered);
+    const csv = toCsv(sorted);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `profiles_${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `profiles_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const handleCopy = async (text?: string | null) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {}
+  };
+
+  const sorted = useMemo(() => {
+    const base = filtered.slice() as LinkedInProfile[];
+    if (sortBy === "followers") {
+      base.sort(
+        (a: LinkedInProfile, b: LinkedInProfile) =>
+          (b.followers || 0) - (a.followers || 0)
+      );
+    } else if (sortBy === "newest") {
+      base.sort(
+        (a: LinkedInProfile, b: LinkedInProfile) =>
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
+      );
+    }
+    return base;
+  }, [filtered, sortBy]);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Captured Profiles</h1>
         <div className="flex items-center gap-2">
-          <a href="#/" className="text-sm text-blue-600 hover:underline">← Back to Home</a>
-          <button onClick={exportCsv} disabled={filtered.length===0} className="px-3 py-1.5 text-sm font-semibold rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">Export CSV</button>
+          <a href="#/" className="text-sm text-blue-600 hover:underline">
+            ← Back to Home
+          </a>
+          <button
+            onClick={exportCsv}
+            disabled={filtered.length === 0}
+            className="px-3 py-1.5 text-sm font-semibold rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+          >
+            Export CSV
+          </button>
         </div>
       </div>
 
@@ -77,13 +246,163 @@ export default function Profiles() {
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 flex-1">
             <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-            <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Search name / headline / location / company" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input
+              value={q}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setQ(e.target.value)
+              }
+              placeholder="Search name / headline / location / company / about"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
           <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={aiOnly} onChange={(e)=>setAiOnly(e.target.checked)} />
-            <span className="flex items-center gap-1"><SparklesIcon className="h-4 w-4 text-blue-600"/>AI only</span>
+            <input
+              type="checkbox"
+              checked={aiOnly}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setAiOnly(e.target.checked)
+              }
+            />
+            <span className="flex items-center gap-1">
+              <SparklesIcon className="h-4 w-4 text-blue-600" />
+              AI only
+            </span>
           </label>
-          <div className="text-sm text-gray-500">{filtered.length} / {all.length}</div>
+          <div className="flex items-center gap-3">
+            <div className="text-sm">
+              <label className="mr-2 text-gray-600">Sort</label>
+              <select
+                value={sortBy}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                  setSortBy(
+                    e.target.value as "default" | "followers" | "newest"
+                  )
+                }
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              >
+                <option value="default">Default</option>
+                <option value="followers">Followers desc</option>
+                <option value="newest">Newest</option>
+              </select>
+            </div>
+            <div className="text-sm text-gray-500">
+              {filtered.length} / {all.length}
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-6 gap-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Location</label>
+            <select
+              value={locationFilter}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setLocationFilter(e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option value="">All</option>
+              {locations.map((loc: string) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Contact</label>
+            <div className="flex items-center gap-4 text-sm">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={hasEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setHasEmail(e.target.checked)
+                  }
+                />
+                <span>Has Email</span>
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={hasPhone}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setHasPhone(e.target.checked)
+                  }
+                />
+                <span>Has Phone</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              Min Followers
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={1000}
+              value={minFollowers}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setMinFollowers(Number(e.target.value) || 0)
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              placeholder="e.g. 100000"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              Industry contains
+            </label>
+            <input
+              type="text"
+              value={industryQ}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setIndustryQ(e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              placeholder="Software / Non-profit / Energy"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              Created From
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setDateFrom(e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              Created To
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setDateTo(e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="md:col-span-6 flex justify-end">
+            <button
+              onClick={clearFilters}
+              className="px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Clear filters
+            </button>
+          </div>
         </div>
       </div>
 
@@ -92,31 +411,114 @@ export default function Profiles() {
       ) : error ? (
         <div className="mt-6 text-red-600">{error}</div>
       ) : filtered.length === 0 ? (
-        <div className="mt-6 bg-white border border-dashed border-gray-300 rounded-xl p-12 text-center text-gray-500">No profiles match your filters.</div>
+        <div className="mt-6 bg-white border border-dashed border-gray-300 rounded-xl p-12 text-center text-gray-500">
+          No profiles match your filters.
+        </div>
       ) : (
         <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 text-gray-600">
               <tr>
+                <th className="p-3 text-left w-10"></th>
                 <th className="p-3 text-left">Name</th>
-                <th className="p-3 text-left">Headline</th>
-                <th className="p-3 text-left">Location</th>
+                <th className="p-3 text-left">Title</th>
                 <th className="p-3 text-left">Company</th>
-                <th className="p-3 text-left">AI</th>
+                <th className="p-3 text-left">Region</th>
+                <th className="p-3 text-left">Email</th>
+                <th className="p-3 text-left">Phone</th>
                 <th className="p-3 text-left">LinkedIn</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="p-3 font-medium text-gray-900 whitespace-nowrap">{p.full_name}</td>
-                  <td className="p-3 text-gray-700">{p.headline}</td>
-                  <td className="p-3 text-gray-700">{p.location}</td>
-                  <td className="p-3 text-gray-700">{p.raw_data?.companyName || p.experiences?.[0]?.companyName || ""}</td>
-                  <td className="p-3 text-gray-700">{p.ai_summary ? "Yes" : "No"}</td>
-                  <td className="p-3"><a href={p.profile_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1">Open <ArrowTopRightOnSquareIcon className="h-4 w-4"/></a></td>
-                </tr>
-              ))}
+              {sorted.map((p: LinkedInProfile) => {
+                const idKey = p.id || p.profile_url;
+                const isOpen = expandedId === idKey;
+                return (
+                  <React.Fragment key={idKey}>
+                    <tr className="border-t border-gray-200 hover:bg-gray-50">
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() => setExpandedId(isOpen ? null : idKey)}
+                          className="text-gray-400 hover:text-gray-700"
+                        >
+                          {isOpen ? (
+                            <ChevronUpIcon className="h-5 w-5" />
+                          ) : (
+                            <ChevronDownIcon className="h-5 w-5" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="p-3 font-medium text-gray-900 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={p.profile_pic_high_quality || p.photo_url}
+                            alt={p.full_name}
+                            className="h-12 w-12 rounded-full object-cover bg-gray-200"
+                          />
+                          <div>
+                            <div className="font-bold">{p.full_name}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {p.job_title || "-"}
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {p.company_name || "-"}
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {p.job_location || p.location || "-"}
+                      </td>
+                      <td className="p-3 text-gray-700 truncate max-w-[16rem]">
+                        {p.email || "-"}
+                        {p.email && (
+                          <button
+                            onClick={() => handleCopy(p.email)}
+                            className="ml-2 text-gray-400 hover:text-gray-700"
+                          >
+                            <ClipboardDocumentIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                      </td>
+                      <td className="p-3 text-gray-700 truncate max-w-[12rem]">
+                        {p.mobile_number || "-"}
+                        {p.mobile_number && (
+                          <button
+                            onClick={() => handleCopy(p.mobile_number)}
+                            className="ml-2 text-gray-400 hover:text-gray-700"
+                          >
+                            <ClipboardDocumentIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <a
+                          href={p.linkedin_public_url || p.profile_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                        >
+                          Open <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                        </a>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="bg-gray-50 border-t border-gray-200">
+                        <td colSpan={8} className="p-4">
+                          <div>
+                            <h4 className="font-semibold text-gray-800 mb-2">
+                              Raw Data
+                            </h4>
+                            <pre className="text-xs text-gray-700 bg-white border border-gray-200 rounded p-3 overflow-auto max-h-96">
+                              {JSON.stringify(p.raw_data, null, 2)}
+                            </pre>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -124,4 +526,3 @@ export default function Profiles() {
     </main>
   );
 }
-

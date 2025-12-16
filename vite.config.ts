@@ -43,15 +43,35 @@ export default defineConfig(({ mode }) => {
                   ApifyModule.default;
 
                 const client = new ApifyClient({ token });
-                const input = { profileUrls: urls };
-                const run = await client.actor("2SyF0bVxmgGr8IVCZ").call(input);
-                const { items } = await client
-                  .dataset(run.defaultDatasetId)
-                  .listItems();
+                try {
+                  const input: any = {
+                    profileUrls: urls,
+                    proxy: { useApifyProxy: true },
+                  };
 
-                // Return raw Apify items for frontend preview
-                res.setHeader("Content-Type", "application/json");
-                res.end(JSON.stringify(items));
+                  const timeoutMs = 120000;
+                  const run = (await Promise.race([
+                    client.actor("2SyF0bVxmgGr8IVCZ").call(input),
+                    new Promise((_, reject) =>
+                      setTimeout(
+                        () => reject(new Error("Apify run timed out (120s)")),
+                        timeoutMs
+                      )
+                    ),
+                  ])) as any;
+
+                  const { items } = await client
+                    .dataset(run.defaultDatasetId)
+                    .listItems();
+
+                  res.setHeader("Content-Type", "application/json");
+                  res.end(JSON.stringify(items));
+                } catch (err: any) {
+                  const msg = err?.message || "Scrape failed";
+                  res.statusCode = 504;
+                  res.setHeader("Content-Type", "application/json");
+                  res.end(JSON.stringify({ error: msg }));
+                }
               } catch (e: any) {
                 res.statusCode = 500;
                 res.setHeader("Content-Type", "application/json");
