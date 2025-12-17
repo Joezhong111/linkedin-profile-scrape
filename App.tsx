@@ -1,12 +1,35 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Home from "./pages/Home";
 import Profiles from "./pages/Profiles";
-import { ExclamationTriangleIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import {
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
+} from "@heroicons/react/24/outline";
 import { isSupabaseReady } from "./services/supabase";
 
 export default function App() {
   const [hash, setHash] = useState<string>(window.location.hash || "#/");
-  const apifyReady = Boolean(import.meta.env.VITE_APIFY_TOKEN);
+  const [apifyReady, setApifyReady] = useState<boolean>(
+    Boolean(import.meta.env.VITE_APIFY_TOKEN)
+  );
+
+  // Probe server-side readiness (works in Vite dev via middleware and in Netlify via function)
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch("/api/health");
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data?.apify === "boolean") setApifyReady(data.apify);
+        }
+      } catch (_) {
+        // ignore: fall back to VITE_ value
+      }
+    };
+    check();
+  }, []);
 
   useEffect(() => {
     const onHash = () => setHash(window.location.hash || "#/");
@@ -17,6 +40,8 @@ export default function App() {
   const route = useMemo(() => {
     const h = (hash || "#/").toLowerCase();
     if (h.startsWith("#/profiles")) return "profiles";
+    if (h.startsWith("#/login")) return "login";
+    if (h.startsWith("#/dashboard")) return "dashboard";
     return "home";
   }, [hash]);
 
@@ -25,35 +50,80 @@ export default function App() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <a href="#/" className="text-xl font-bold text-gray-900 tracking-tight">LinkedIn Insights Pro</a>
+            <a
+              href="#/"
+              className="text-xl font-bold text-gray-900 tracking-tight"
+            >
+              LinkedIn Insights Pro
+            </a>
             <nav className="hidden sm:flex items-center gap-3 text-sm">
-              <a href="#/" className={`px-2 py-1 rounded-md ${route === "home" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-gray-900"}`}>Home</a>
-              <a href="#/profiles" className={`px-2 py-1 rounded-md ${route === "profiles" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-gray-900"}`}>Profiles</a>
+              <a
+                href="#/"
+                className={`px-2 py-1 rounded-md ${
+                  route === "home"
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Home
+              </a>
+              <a
+                href="#/profiles"
+                className={`px-2 py-1 rounded-md ${
+                  route === "profiles"
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Profiles
+              </a>
             </nav>
           </div>
           <div className="flex items-center gap-4 text-sm font-medium">
+            <a
+              href="#/login"
+              className="px-2 py-1 rounded-md text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50"
+            >
+              Login
+            </a>
+            <a
+              href="#/dashboard"
+              className="px-2 py-1 rounded-md text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50"
+            >
+              Dashboard
+            </a>
             <div className="flex items-center gap-1.5">
               <span className="text-gray-500">Apify:</span>
               {apifyReady ? (
-                <span className="text-green-600 flex items-center gap-1"><CheckCircleIcon className="h-4 w-4"/> Ready</span>
+                <span className="text-green-600 flex items-center gap-1">
+                  <CheckCircleIcon className="h-4 w-4" /> Ready
+                </span>
               ) : (
-                <span className="text-red-500 flex items-center gap-1"><ExclamationTriangleIcon className="h-4 w-4"/> Missing</span>
+                <span className="text-red-500 flex items-center gap-1">
+                  <ExclamationTriangleIcon className="h-4 w-4" /> Missing
+                </span>
               )}
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-gray-500">Supabase:</span>
               {isSupabaseReady ? (
-                <span className="text-green-600 flex items-center gap-1"><CheckCircleIcon className="h-4 w-4"/> Connected</span>
+                <span className="text-green-600 flex items-center gap-1">
+                  <CheckCircleIcon className="h-4 w-4" /> Connected
+                </span>
               ) : (
-                <span className="text-red-500 flex items-center gap-1"><ExclamationTriangleIcon className="h-4 w-4"/> Disconnected</span>
+                <span className="text-red-500 flex items-center gap-1">
+                  <ExclamationTriangleIcon className="h-4 w-4" /> Disconnected
+                </span>
               )}
             </div>
           </div>
         </div>
       </header>
 
-      {route === "home" ? <Home/> : <Profiles/>}
+      {route === "home" && <Home />}
+      {route === "profiles" && <Profiles />}
+      {route === "login" && <Login />}
+      {route === "dashboard" && <Dashboard />}
     </div>
   );
 }
-

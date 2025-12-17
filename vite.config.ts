@@ -1,12 +1,17 @@
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import { config as loadDotenv } from "dotenv";
+import { existsSync } from "node:fs";
+
+// Load non-VITE_ secrets (e.g., APIFY_TOKEN) for pure Vite dev
+loadDotenv({ path: existsSync(".env.local") ? ".env.local" : ".env" });
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "VITE_");
   return {
     server: {
-      port: 3000,
+      port: 5173,
       host: "0.0.0.0",
     },
     plugins: [
@@ -14,6 +19,13 @@ export default defineConfig(({ mode }) => {
       {
         name: "dev-api-scrape",
         configureServer(server) {
+          // Health check for APIFY token presence during Vite dev
+          server.middlewares.use("/api/health", (_req, res) => {
+            const token = process.env.APIFY_TOKEN || env.VITE_APIFY_TOKEN || "";
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ apify: Boolean(token) }));
+          });
+
           server.middlewares.use("/api/scrape", (req, res) => {
             if (req.method !== "POST") {
               res.statusCode = 405;

@@ -11,7 +11,6 @@ import {
 } from "../services/supabase";
 import {
   CloudArrowUpIcon,
-  ExclamationTriangleIcon,
   CircleStackIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
@@ -36,9 +35,6 @@ export default function Home() {
     } catch {}
   };
 
-  const apifyToken = import.meta.env.VITE_APIFY_TOKEN;
-  const isApifyReady = Boolean(apifyToken); // used only to show hint in dev; UI not gated by it
-
   const loadCount = useCallback(async () => {
     if (!isSupabaseReady) return;
     try {
@@ -55,13 +51,7 @@ export default function Home() {
 
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isApifyReady) {
-      setState((prev: ScraperState) => ({
-        ...prev,
-        error: "Apify token missing. Please set VITE_APIFY_TOKEN.",
-      }));
-      return;
-    }
+
     const urlList = urls
       .split("\n")
       .map((u: string) => u.trim())
@@ -130,23 +120,6 @@ export default function Home() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-      {!isApifyReady && import.meta.env.DEV && (
-        <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-4 shadow-sm">
-          <ExclamationTriangleIcon className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="text-sm font-bold text-amber-800">Dev note</h3>
-            <p className="text-sm text-amber-700 mt-1">
-              In development, set{" "}
-              <code className="px-1 py-0.5 bg-amber-100 rounded">
-                VITE_APIFY_TOKEN
-              </code>{" "}
-              to use the local /api proxy. In production, serverless functions
-              will handle the token.
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

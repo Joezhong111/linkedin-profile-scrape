@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:health": "node scripts/db-health.js",
+    "db:smoke": "node scripts/db-smoke-insert.js"
   },
   "dependencies": {
     "@google/genai": "^1.33.0",
@@ -14,6 +19,7 @@
     "@supabase/supabase-js": "^2.87.1",
     "@types/recharts": "^2.0.1",
     "apify-client": "2.21.0",
+    "drizzle-orm": "^0.45.1",
     "lucide-react": "^0.561.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
@@ -21,7 +27,11 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/pg": "^8.16.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "dotenv": "^17.2.3",
+    "drizzle-kit": "^0.31.8",
+    "pg": "^8.16.3",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
