@@ -9,6 +9,7 @@ import {
   boolean,
   numeric,
   primaryKey,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -22,6 +23,9 @@ export const linkedinProfiles = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .default(sql`timezone('utc'::text, now())`)
       .notNull(),
+
+    // Owner (Supabase auth.users.id) - initially nullable to allow safe migration/backfill
+    ownerId: uuid("owner_id"),
 
     profileUrl: text("profile_url").notNull(),
     fullName: text("full_name"),
@@ -88,6 +92,10 @@ export const linkedinProfiles = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.id], name: "linkedin_profiles_pkey" }),
+    uxOwnerUrl: uniqueIndex("ux_linkedin_profiles_owner_url").on(
+      t.ownerId,
+      t.profileUrl
+    ),
   })
 );
 

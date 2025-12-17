@@ -1,17 +1,108 @@
-import React from "react";
+import React, { useState } from "react";
 import GoogleSignInButton from "../components/GoogleSignInButton";
+import { supabaseBrowser } from "../lib/supabase-client";
 
 export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      if (mode === "signin") {
+        const { error } = await supabaseBrowser.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        window.location.hash = "#/dashboard";
+      } else {
+        const { error } = await supabaseBrowser.auth.signUp({
+          email,
+          password,
+        });
+        if (error) throw error;
+        // Depending on your Supabase email confirmation setting, user might need to confirm.
+        window.location.hash = "#/dashboard";
+      }
+    } catch (err: any) {
+      setError(err?.message || "Authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="max-w-lg mx-auto px-4 sm:px-6 lg:px-8 mt-12">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        <h1 className="text-2xl font-bold text-gray-900">Sign in</h1>
-        <p className="text-gray-600 mt-2">Use your Google account to continue.</p>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {mode === "signin" ? "Sign in" : "Sign up"}
+        </h1>
+        <p className="text-gray-600 mt-2">
+          Use email/password or Google to continue.
+        </p>
+
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <div>
+            <label className="block text-sm text-gray-700">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          {error && <div className="text-sm text-red-600">{error}</div>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading
+              ? "Processing..."
+              : mode === "signin"
+              ? "Sign in"
+              : "Sign up"}
+          </button>
+        </form>
+
+        <div className="mt-4 text-sm text-gray-600">
+          {mode === "signin" ? (
+            <button className="underline" onClick={() => setMode("signup")}>
+              Need an account? Sign up
+            </button>
+          ) : (
+            <button className="underline" onClick={() => setMode("signin")}>
+              Already have an account? Sign in
+            </button>
+          )}
+        </div>
+
         <div className="mt-6">
-          <GoogleSignInButton className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800" redirectTo="#/dashboard"/>
+          <GoogleSignInButton
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800"
+            redirectTo="#/dashboard"
+          />
         </div>
       </div>
     </main>
   );
 }
-

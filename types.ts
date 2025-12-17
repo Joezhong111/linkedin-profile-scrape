@@ -1,6 +1,9 @@
 export interface LinkedInProfile {
   id?: string;
   created_at?: string;
+  // Owner for multi-tenant isolation (Supabase auth.users.id)
+  owner_id?: string;
+
   profile_url: string;
   full_name: string;
 

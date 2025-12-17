@@ -1,29 +1,25 @@
-import { createClient } from "@supabase/supabase-js";
 import { LinkedInProfile } from "../types";
+import { supabaseBrowser as supabase } from "../lib/supabase-client";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const isSupabaseReady = Boolean(
+  (import.meta as any).env?.VITE_SUPABASE_URL &&
+    (import.meta as any).env?.VITE_SUPABASE_ANON_KEY
+);
 
-export const isSupabaseReady = Boolean(supabaseUrl && supabaseAnonKey);
-
-// Safely initialize the client or provide a null reference to prevent startup crashes
-export const supabase = isSupabaseReady
-  ? createClient(supabaseUrl!, supabaseAnonKey!)
-  : null;
-
-/**
- * Expected SQL schema for table public.linkedin_profiles:
- * - Matches the schema you provided (all columns).
- * - Optional but recommended: add a unique index on profile_url if you want to deduplicate by URL.
- *   create unique index if not exists ux_linkedin_profiles_profile_url on public.linkedin_profiles(profile_url);
- */
+async function getCurrentUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user?.id) throw new Error("Not authenticated");
+  return data.user.id;
+}
 
 export const saveProfile = async (profile: LinkedInProfile) => {
-  if (!supabase) throw new Error("Supabase is not configured.");
-
+  const userId = await getCurrentUserId();
   const rd: any = profile.raw_data || {};
 
   const row: any = {
+    // Multi-tenant owner
+    owner_id: userId,
+
     // Core fields
     profile_url: profile.profile_url,
     raw_data: profile.raw_data,
@@ -104,11 +100,11 @@ export const saveProfile = async (profile: LinkedInProfile) => {
     volunteer_causes: rd.volunteerCauses,
   };
 
-  // Upsert by profile_url requires a unique index on profile_url. If it's not present,
-  // perform a manual insert-or-update.
+  // Upsert by (owner_id, profile_url)
   const { data: existing, error: findErr } = await supabase
     .from("linkedin_profiles")
     .select("id")
+    .eq("owner_id", userId)
     .eq("profile_url", row.profile_url)
     .maybeSingle();
   if (findErr) throw findErr;
@@ -132,11 +128,13 @@ export const saveProfile = async (profile: LinkedInProfile) => {
 };
 
 export const fetchAllProfiles = async () => {
-  if (!supabase) return [];
+  const userId = await getCurrentUserId().catch(() => "");
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("linkedin_profiles")
     .select("*")
+    .eq("owner_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -144,23 +142,21 @@ export const fetchAllProfiles = async () => {
 };
 
 export const deleteProfile = async (id: string) => {
-  if (!supabase) throw new Error("Supabase is not configured.");
-
+  const userId = await getCurrentUserId();
   const { error } = await supabase
     .from("linkedin_profiles")
     .delete()
-    .match({ id });
+    .match({ id, owner_id: userId });
 
   if (error) throw error;
 };
 
 export const updateProfileAI = async (id: string, summary: string) => {
-  if (!supabase) throw new Error("Supabase is not configured.");
-
+  const userId = await getCurrentUserId();
   const { error } = await supabase
     .from("linkedin_profiles")
     .update({ ai_summary: summary })
-    .match({ id });
+    .match({ id, owner_id: userId });
 
   if (error) throw error;
 };

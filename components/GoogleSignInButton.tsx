@@ -6,20 +6,34 @@ type Props = {
   redirectTo?: string; // e.g. "#/dashboard"
 };
 
-export default function GoogleSignInButton({ className, redirectTo = "#/dashboard" }: Props) {
+export default function GoogleSignInButton({
+  className,
+  redirectTo = "#/dashboard",
+}: Props) {
   const onClick = async () => {
-    const url = new URL(window.location.href);
-    const redirectUrl = `${url.origin}/${redirectTo}`;
+    try {
+      const url = new URL(window.location.href);
+      // redirectTo should be an absolute URL and MUST be allowed in Supabase > Auth > URL Configuration
+      const redirectUrl = `${url.origin}/${redirectTo.replace(/^\//, "")}`;
 
-    await supabaseBrowser.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: redirectUrl,
-        // You can add additional scopes if needed
-        // scopes: "email profile openid",
-      },
-    });
-    // Note: The above will redirect the browser to Google's consent screen.
+      const { data, error } = await supabaseBrowser.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+          // Ensure we navigate ourselves to avoid any popup/redirect blockers
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No redirect URL returned by Supabase");
+      }
+    } catch (err) {
+      console.error("Google OAuth error:", err);
+      alert("Google 登录启动失败，请检查浏览器拦截或 Supabase URL 配置。");
+    }
   };
 
   return (
@@ -56,4 +70,3 @@ export default function GoogleSignInButton({ className, redirectTo = "#/dashboar
     </button>
   );
 }
-
