@@ -28,3 +28,11 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+
+
+# Build/test caches and tool artifacts
+coverage/
+.eslintcache
+*.tsbuildinfo
+.vercel/
+Thumbs.db

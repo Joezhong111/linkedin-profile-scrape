@@ -11,9 +11,31 @@ A modern web application for scraping LinkedIn profiles and generating AI-powere
 - 📊 Talent Analytics Dashboard - Visualize profile data with interactive charts (Career Timeline, Network Influence)
 - 🎨 Modern UI - Built with React, Tailwind CSS, and Recharts
 
+## Netlify deploy checklist
+
+- Build command: `npm run build`
+- Publish directory: `dist`
+- Functions directory: `netlify/functions`
+- Node version: `20` (set in `netlify.toml`)
+- Redirects (configured in `netlify.toml`):
+  - `/api/scrape` → `/.netlify/functions/scrape`
+  - `/api/health` → `/.netlify/functions/health`
+  - SPA fallback: `/*` → `/index.html`
+- Environment variables (Site settings → Build & deploy → Environment):
+  - `APIFY_TOKEN` (serverless functions)
+  - `VITE_SUPABASE_URL` (frontend)
+  - `VITE_SUPABASE_ANON_KEY` (frontend)
+  - `VITE_GEMINI_API_KEY` (optional, frontend)
+- Supabase Auth → URL Configuration:
+  - Site URL: your Netlify domain (e.g. `https://your-site.netlify.app`)
+  - Additional Redirect URLs: include your Netlify domain(s) and any previews
+- Google OAuth (in Google Cloud): Authorized redirect URI must include
+  `https://<your-ref>.supabase.co/auth/v1/callback`
+- Database & RLS: ensure `public.linkedin_profiles` has `owner_id uuid` and per-user RLS policies.
+
 ## Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v20 or higher)
 - npm or yarn
 - Accounts and API keys for:
   - [Apify](https://apify.com) - For LinkedIn scraping
@@ -30,27 +52,19 @@ npm install
 
 ### 2. Configure Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in your credentials:
-
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your API keys:
+Create a `.env.local` in the project root with at least the following:
 
 ```env
-# Apify API Key
-# Get from: https://apify.com/account/integrations
-VITE_APIFY_TOKEN=your_apify_api_key_here
+# Server-side (not exposed to browser)
+DATABASE_URL=postgresql://<user>:<password>@<host>:6543/postgres
+APIFY_TOKEN=your_apify_api_key_here
 
-# Supabase Configuration
-# Get from: https://supabase.com (Project Settings)
+# Front-end (browser) – Supabase Auth
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 
-# Google Gemini API Key (Optional)
-# Get from: https://ai.google.dev/
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
+# Optional – AI features
+# VITE_GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ### 3. Setup Supabase Database
