@@ -12,6 +12,7 @@ export default function App() {
     Boolean(import.meta.env.VITE_APIFY_TOKEN)
   );
   const [authed, setAuthed] = useState<boolean>(false);
+  const [authChecked, setAuthChecked] = useState<boolean>(false);
 
   const signOut = async () => {
     try {
@@ -47,10 +48,12 @@ export default function App() {
     (async () => {
       const { data } = await supabaseBrowser.auth.getSession();
       setAuthed(Boolean(data?.session?.user?.id));
+      setAuthChecked(true);
     })();
     const { data: sub } = supabaseBrowser.auth.onAuthStateChange(
       (_e, session) => {
         setAuthed(Boolean(session?.user?.id));
+        setAuthChecked(true);
       }
     );
     return () => {
@@ -59,12 +62,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!authChecked) return; // wait until we know auth state
     const h = (hash || "#/").toLowerCase();
     const wantsPublic = h.startsWith("#/login");
     if (!authed && !wantsPublic) {
       if (!h.startsWith("#/login")) window.location.hash = "#/login";
     }
-  }, [hash, authed]);
+    if (authed && wantsPublic) {
+      window.location.hash = "#/dashboard";
+    }
+  }, [hash, authed, authChecked]);
 
   const route = useMemo(() => {
     const h = (hash || "#/").toLowerCase();

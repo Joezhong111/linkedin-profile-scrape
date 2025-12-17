@@ -9,6 +9,22 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // If already authed, bounce to dashboard
+  React.useEffect(() => {
+    (async () => {
+      const { data } = await supabaseBrowser.auth.getSession();
+      if (data?.session?.user?.id) {
+        window.location.hash = "#/dashboard";
+      }
+    })();
+    const { data: sub } = supabaseBrowser.auth.onAuthStateChange(
+      (_e, session) => {
+        if (session?.user?.id) window.location.hash = "#/dashboard";
+      }
+    );
+    return () => sub.subscription?.unsubscribe?.();
+  }, []);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

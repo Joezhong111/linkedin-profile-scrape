@@ -12,27 +12,31 @@ export default function GoogleSignInButton({
 }: Props) {
   const onClick = async () => {
     try {
-      const url = new URL(window.location.href);
-      // redirectTo should be an absolute URL and MUST be allowed in Supabase > Auth > URL Configuration
-      const redirectUrl = `${url.origin}/${redirectTo.replace(/^\//, "")}`;
+      const { origin } = window.location;
+      // Redirect directly to dashboard (hash route) after successful sign-in
+      const finalRedirect = `${origin}/#/dashboard`;
 
+      // Let supabase-js handle the redirect directly (more reliable)
       const { data, error } = await supabaseBrowser.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: redirectUrl,
-          // Ensure we navigate ourselves to avoid any popup/redirect blockers
-          skipBrowserRedirect: true,
+          redirectTo: finalRedirect,
+          skipBrowserRedirect: false,
+          // Force account chooser for clarity
+          queryParams: { prompt: "select_account" },
+          // flowType: "pkce", // optional: explicitly use PKCE
         },
       });
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No redirect URL returned by Supabase");
+
+      // In some environments supabase still returns a URL; we fallback to manual navigation
+      if (!error && data?.url) {
+        window.location.assign(data.url);
       }
     } catch (err) {
       console.error("Google OAuth error:", err);
-      alert("Google 登录启动失败，请检查浏览器拦截或 Supabase URL 配置。");
+      alert(
+        "Google 登录启动失败，请检查 Supabase URL 配置（Site URL/Additional Redirect URLs）并重试。"
+      );
     }
   };
 

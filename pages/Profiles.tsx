@@ -52,6 +52,7 @@ export default function Profiles() {
   const [minFollowers, setMinFollowers] = useState<number>(0);
   const [industryQ, setIndustryQ] = useState("");
 
+  const [companyQ, setCompanyQ] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [hasPhoto, setHasPhoto] = useState(false);
   const [hasExp, setHasExp] = useState(false);
@@ -78,6 +79,7 @@ export default function Profiles() {
     setHasPhone(false);
     setMinFollowers(0);
     setIndustryQ("");
+    setCompanyQ("");
     setLocationFilter("");
     setHasPhoto(false);
     setHasExp(false);
@@ -113,6 +115,8 @@ export default function Profiles() {
         (p.company_industry as any) ??
         (p as any).raw_data?.companyIndustry ??
         "";
+      const companyVal =
+        (p.company_name as any) ?? (p as any).raw_data?.companyName ?? "";
       const loc =
         p.location ||
         (p as any).address_with_country ||
@@ -126,6 +130,11 @@ export default function Profiles() {
       if (
         industryQ &&
         !String(industryVal).toLowerCase().includes(industryQ.toLowerCase())
+      )
+        return false;
+      if (
+        companyQ &&
+        !String(companyVal).toLowerCase().includes(companyQ.toLowerCase())
       )
         return false;
 
@@ -175,6 +184,7 @@ export default function Profiles() {
     hasPhone,
     minFollowers,
     industryQ,
+    companyQ,
     locationFilter,
     hasPhoto,
     hasExp,
@@ -358,6 +368,21 @@ export default function Profiles() {
               }
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               placeholder="Software / Non-profit / Energy"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              Company contains
+            </label>
+            <input
+              type="text"
+              value={companyQ}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setCompanyQ(e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              placeholder="e.g. Google / Microsoft / OpenAI"
             />
           </div>
 

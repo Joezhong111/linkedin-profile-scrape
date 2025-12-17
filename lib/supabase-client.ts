@@ -20,5 +20,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   }
 }
 
-export const supabaseBrowser = createClient(supabaseUrl || "", supabaseAnonKey || "");
-
+export const supabaseBrowser = createClient(
+  supabaseUrl || "",
+  supabaseAnonKey || "",
+  {
+    auth: {
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
+      autoRefreshToken: true,
+    },
+  }
+);
