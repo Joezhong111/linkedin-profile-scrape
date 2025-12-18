@@ -1,20 +1,34 @@
 import React from "react";
-import { CheckCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 
 type Props = {
   authed: boolean;
+  isAdmin?: boolean;
   route: string;
   apifyReady: boolean;
   supabaseConnected: boolean;
   onSignOut: () => void;
 };
 
-const Navbar: React.FC<Props> = ({ authed, route, apifyReady, supabaseConnected, onSignOut }) => {
+const Navbar: React.FC<Props> = ({
+  authed,
+  isAdmin,
+  route,
+  apifyReady,
+  supabaseConnected,
+  onSignOut,
+}) => {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <a href="#/" className="text-xl font-bold text-gray-900 tracking-tight">
+          <a
+            href="#/"
+            className="text-xl font-bold text-gray-900 tracking-tight"
+          >
             LinkedIn Insights Pro
           </a>
           {authed && (
@@ -22,7 +36,9 @@ const Navbar: React.FC<Props> = ({ authed, route, apifyReady, supabaseConnected,
               <a
                 href="#/dashboard"
                 className={`px-2 py-1 rounded-md ${
-                  route === "dashboard" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-gray-900"
+                  route === "dashboard"
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 Dashboard
@@ -30,11 +46,26 @@ const Navbar: React.FC<Props> = ({ authed, route, apifyReady, supabaseConnected,
               <a
                 href="#/profiles"
                 className={`px-2 py-1 rounded-md ${
-                  route === "profiles" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-gray-900"
+                  route === "profiles"
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 Profiles
               </a>
+              {/* Admin link only for admins */}
+              {isAdmin && (
+                <a
+                  href="#/admin"
+                  className={`px-2 py-1 rounded-md ${
+                    route === "admin"
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  Admin
+                </a>
+              )}
             </nav>
           )}
         </div>
@@ -88,4 +119,3 @@ const Navbar: React.FC<Props> = ({ authed, route, apifyReady, supabaseConnected,
 };
 
 export default Navbar;
-

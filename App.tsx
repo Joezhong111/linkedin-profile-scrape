@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import Home from "./pages/Home";
 import Profiles from "./pages/Profiles";
 import Login from "./pages/Login";
+import Admin from "./pages/Admin";
 import { isSupabaseReady } from "./services/supabase";
 import { supabaseBrowser } from "./lib/supabase-client";
 import Navbar from "./components/Navbar";
+import { getMe } from "./services/admin";
 
 export default function App() {
   const [hash, setHash] = useState<string>(window.location.hash || "#/");
@@ -13,6 +15,7 @@ export default function App() {
   );
   const [authed, setAuthed] = useState<boolean>(false);
   const [authChecked, setAuthChecked] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   const signOut = async () => {
     try {
@@ -77,23 +80,42 @@ export default function App() {
     const h = (hash || "#/").toLowerCase();
     if (h.startsWith("#/profiles")) return "profiles";
     if (h.startsWith("#/login")) return "login";
+    if (h.startsWith("#/admin")) return "admin";
     // default and explicit dashboard both go to dashboard
     if (h.startsWith("#/dashboard") || h === "#/") return "dashboard";
     return "dashboard";
   }, [hash]);
 
+  // Fetch admin flag when authenticated
+  useEffect(() => {
+    (async () => {
+      if (!authed) {
+        setIsAdmin(false);
+        return;
+      }
+      try {
+        const me = await getMe();
+        setIsAdmin(Boolean(me?.isAdmin));
+      } catch {
+        setIsAdmin(false);
+      }
+    })();
+  }, [authed]);
+
   return (
     <div className="min-h-screen pb-12 bg-gray-50">
       <Navbar
         authed={authed}
+        isAdmin={isAdmin}
         route={route}
         apifyReady={apifyReady}
         supabaseConnected={isSupabaseReady}
         onSignOut={signOut}
       />
 
-      {route === "profiles" && <Profiles />}
       {route === "login" && <Login />}
+      {route === "profiles" && <Profiles />}
+      {route === "admin" && (isAdmin ? <Admin /> : <Home />)}
       {(route === "dashboard" || route === "home") && <Home />}
     </div>
   );

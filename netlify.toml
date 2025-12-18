@@ -20,6 +20,27 @@
   to = "/.netlify/functions/health"
   status = 200
 
+# Admin API endpoints
+[[redirects]]
+  from = "/api/admin/me"
+  to = "/.netlify/functions/admin_me"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/toggles"
+  to = "/.netlify/functions/admin_toggles"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/quotas"
+  to = "/.netlify/functions/admin_quotas"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/create-user"
+  to = "/.netlify/functions/admin_create_user"
+  status = 200
+
 # SPA fallback
 [[redirects]]
   from = "/*"

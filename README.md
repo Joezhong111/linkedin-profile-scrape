@@ -10,6 +10,8 @@ A modern web application for scraping LinkedIn profiles and generating AI-powere
 - 🗂️ Profile Management - View, manage, and analyze saved profiles
 - 📊 Talent Analytics Dashboard - Visualize profile data with interactive charts (Career Timeline, Network Influence)
 - 🎨 Modern UI - Built with React, Tailwind CSS, and Recharts
+- 🔐 Role-Based Access Control (RBAC) - Admin and User roles with a protected admin panel.
+- 📈 Usage Quotas - Per-user daily scraping limits enforced by the backend.
 
 ## Netlify deploy checklist
 
@@ -23,6 +25,7 @@ A modern web application for scraping LinkedIn profiles and generating AI-powere
   - SPA fallback: `/*` → `/index.html`
 - Environment variables (Site settings → Build & deploy → Environment):
   - `APIFY_TOKEN` (serverless functions)
+  - `SUPABASE_SERVICE_ROLE_KEY` (serverless functions, for admin actions)
   - `VITE_SUPABASE_URL` (frontend)
   - `VITE_SUPABASE_ANON_KEY` (frontend)
   - `VITE_GEMINI_API_KEY` (optional, frontend)
@@ -69,21 +72,10 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 
 ### 3. Setup Supabase Database
 
-Run this SQL in your Supabase SQL Editor to create the required table:
+Run the Drizzle migrations to set up your database schema. This will create all necessary tables, including `linkedin_profiles`, `user_roles`, `apify_quotas`, and more, and will also apply the required Row Level Security (RLS) policies.
 
-```sql
-create table linkedin_profiles (
-  id uuid default gen_random_uuid() primary key,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  profile_url text unique not null,
-  full_name text,
-  headline text,
-  location text,
-  about text,
-  photo_url text,
-  raw_data jsonb,
-  ai_summary text
-);
+```bash
+npm run db:migrate
 ```
 
 ### 4. Run the Application
@@ -129,12 +121,14 @@ The repo includes `netlify.toml` with SPA redirects and cache headers.
 
 ## Environment Variables
 
-| Variable                 | Required | Description                           |
-| ------------------------ | -------- | ------------------------------------- |
-| `VITE_APIFY_TOKEN`       | Yes      | Apify API token for LinkedIn scraping |
-| `VITE_SUPABASE_URL`      | Yes      | Supabase project URL                  |
-| `VITE_SUPABASE_ANON_KEY` | Yes      | Supabase anonymous key                |
-| `VITE_GEMINI_API_KEY`    | No       | Google Gemini API key for AI analysis |
+| Variable                    | Required | Description                                       |
+| --------------------------- | -------- | ------------------------------------------------- |
+| `APIFY_TOKEN`               | Yes      | Apify API token (used by Netlify Functions)       |
+| `DATABASE_URL`              | Yes      | Supabase connection string for Drizzle migrations |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes      | Supabase service role key for admin functions     |
+| `VITE_SUPABASE_URL`         | Yes      | Supabase project URL (exposed to frontend)        |
+| `VITE_SUPABASE_ANON_KEY`    | Yes      | Supabase anonymous key (exposed to frontend)      |
+| `VITE_GEMINI_API_KEY`       | No       | Google Gemini API key for AI analysis             |
 
 ## How to Get API Keys
 

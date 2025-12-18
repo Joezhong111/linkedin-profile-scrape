@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import GoogleSignInButton from "../components/GoogleSignInButton";
 import { supabaseBrowser } from "../lib/supabase-client";
+import { getToggles } from "../services/admin";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -8,14 +9,24 @@ export default function Login() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [toggles, setToggles] = useState({
+    registration_open: true,
+    google_oauth_open: true,
+  });
 
-  // If already authed, bounce to dashboard
+  // If already authed, bounce to dashboard; also fetch toggles
   React.useEffect(() => {
     (async () => {
       const { data } = await supabaseBrowser.auth.getSession();
       if (data?.session?.user?.id) {
         window.location.hash = "#/dashboard";
+        return;
       }
+      try {
+        const t = await getToggles();
+        setToggles(t);
+        if (!t.registration_open) setMode("signin");
+      } catch {}
     })();
     const { data: sub } = supabaseBrowser.auth.onAuthStateChange(
       (_e, session) => {
@@ -102,9 +113,11 @@ export default function Login() {
 
         <div className="mt-4 text-sm text-gray-600">
           {mode === "signin" ? (
-            <button className="underline" onClick={() => setMode("signup")}>
-              Need an account? Sign up
-            </button>
+            toggles.registration_open && (
+              <button className="underline" onClick={() => setMode("signup")}>
+                Need an account? Sign up
+              </button>
+            )
           ) : (
             <button className="underline" onClick={() => setMode("signin")}>
               Already have an account? Sign in
@@ -112,12 +125,14 @@ export default function Login() {
           )}
         </div>
 
-        <div className="mt-6">
-          <GoogleSignInButton
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800"
-            redirectTo="#/dashboard"
-          />
-        </div>
+        {toggles.google_oauth_open && (
+          <div className="mt-6">
+            <GoogleSignInButton
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800"
+              redirectTo="#/dashboard"
+            />
+          </div>
+        )}
       </div>
     </main>
   );
