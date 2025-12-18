@@ -1,8 +1,8 @@
 import { ApifyClient } from "apify-client";
-import { createClient } from "@supabase/supabase-js";
-
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY as string;
+import { verifyToken, extractToken } from "../../lib/auth-server";
+import { db } from "../../db/client";
+import { apifyQuotas, apifyUsage } from "../../db/schema";
+import { eq, and } from "drizzle-orm";
 
 function utcDay(): string {
   return new Date().toISOString().slice(0, 10);
@@ -27,19 +27,14 @@ export const handler = async (event: any) => {
     // Auth: require Authorization bearer (user token)
     const authHeader =
       event.headers?.authorization || event.headers?.Authorization;
-    const bearer =
-      typeof authHeader === "string" && authHeader.startsWith("Bearer ")
-        ? authHeader.slice("Bearer ".length)
-        : "";
-    if (!bearer) return { statusCode: 401, body: "Unauthorized" };
+    const token = extractToken(authHeader);
 
-    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON);
-    const { data: authData, error: authErr } = await authClient.auth.getUser(
-      bearer
-    );
-    if (authErr || !authData?.user)
-      return { statusCode: 401, body: "Invalid token" };
-    const userId = authData.user.id as string;
+    if (!token) return { statusCode: 401, body: "Unauthorized" };
+
+    const user = await verifyToken(token);
+    if (!user) return { statusCode: 401, body: "Invalid token" };
+
+    const userId = user.id;
 
     const body =
       typeof event.body === "string"
@@ -51,17 +46,15 @@ export const handler = async (event: any) => {
 
     // Quota: count by requested URLs (conservative, avoids running Apify when over limit)
     const day = utcDay();
-    const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
-      global: { headers: { Authorization: `Bearer ${bearer}` } },
-    });
 
     // Read quota and usage
-    const { data: quotaRow } = await sb
-      .from("apify_quotas")
-      .select("daily_limit")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const limit = Number(quotaRow?.daily_limit ?? 0);
+    const [quotaRow] = await db
+      .select()
+      .from(apifyQuotas)
+      .where(eq(apifyQuotas.userId, userId))
+      .limit(1);
+
+    const limit = Number(quotaRow?.dailyLimit ?? 0);
 
     if (!limit) {
       return {
@@ -70,13 +63,13 @@ export const handler = async (event: any) => {
       };
     }
 
-    const { data: usageRow } = await sb
-      .from("apify_usage")
-      .select("used_count")
-      .eq("user_id", userId)
-      .eq("day", day)
-      .maybeSingle();
-    const used = Number(usageRow?.used_count ?? 0);
+    const [usageRow] = await db
+      .select()
+      .from(apifyUsage)
+      .where(and(eq(apifyUsage.userId, userId), eq(apifyUsage.day, day)))
+      .limit(1);
+
+    const used = Number(usageRow?.usedCount ?? 0);
     const remaining = Math.max(0, limit - used);
 
     if (urls.length === 0) {
@@ -101,19 +94,26 @@ export const handler = async (event: any) => {
 
     // Update usage: consume by requested URLs (consistent with preflight)
     const consumed = urls.length;
-    const upsert = {
-      user_id: userId,
-      day,
-      used_count: used + consumed,
-      updated_at: new Date().toISOString(),
-    } as any;
-    // Upsert usage (RLS allows own write)
-    const { error: writeErr } = await sb
-      .from("apify_usage")
-      .upsert(upsert, { onConflict: "user_id,day" });
-    if (writeErr) {
+
+    try {
+      await db
+        .insert(apifyUsage)
+        .values({
+          userId,
+          day,
+          usedCount: used + consumed,
+          updatedAt: new Date().toISOString(),
+        })
+        .onConflictDoUpdate({
+          target: [apifyUsage.userId, apifyUsage.day],
+          set: {
+            usedCount: used + consumed,
+            updatedAt: new Date().toISOString(),
+          },
+        });
+    } catch (writeErr: any) {
       // Non-fatal: log and continue
-      console.error("usage upsert error", writeErr.message);
+      console.error("usage upsert error", writeErr?.message);
     }
 
     return {

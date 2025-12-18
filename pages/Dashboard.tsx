@@ -1,21 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { supabaseBrowser } from "../lib/supabase-client";
+import { authClient } from "../lib/auth";
 
 export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabaseBrowser.auth.getSession();
-      const u = data?.session?.user;
-      setUserId(u?.id || null);
-      setEmail(u?.email || null);
-    })();
+    const user = authClient.getUser();
+    setUserId(user?.id || null);
+    setEmail(user?.email || null);
   }, []);
 
   const signOut = async () => {
-    await supabaseBrowser.auth.signOut();
+    await authClient.signOut();
     window.location.hash = "#/";
   };
 
@@ -50,4 +47,3 @@ export default function Dashboard() {
     </main>
   );
 }
-

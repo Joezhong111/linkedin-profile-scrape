@@ -1,20 +1,23 @@
-import { supabaseBrowser } from "../lib/supabase-client";
+import { authClient } from "../lib/auth";
 
 async function authHeaders() {
-  const { data } = await supabaseBrowser.auth.getSession();
-  const token = data?.session?.access_token;
-  const h: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) h.Authorization = `Bearer ${token}`;
-  return h;
+  return authClient.getAuthHeaders();
 }
 
-export async function getMe(): Promise<{ user_id?: string; role?: string; isAdmin?: boolean }> {
+export async function getMe(): Promise<{
+  user_id?: string;
+  role?: string;
+  isAdmin?: boolean;
+}> {
   const res = await fetch("/api/admin/me", { headers: await authHeaders() });
   if (!res.ok) return { isAdmin: false };
   return res.json();
 }
 
-export type Toggles = { registration_open: boolean; google_oauth_open: boolean };
+export type Toggles = {
+  registration_open: boolean;
+  google_oauth_open: boolean;
+};
 export async function getToggles(): Promise<Toggles> {
   const res = await fetch("/api/admin/toggles");
   if (!res.ok) return { registration_open: true, google_oauth_open: true };
@@ -31,13 +34,18 @@ export async function setToggles(p: Partial<Toggles>): Promise<void> {
 }
 
 export async function getQuota(user_id?: string): Promise<any> {
-  const url = user_id ? `/api/admin/quotas?user_id=${encodeURIComponent(user_id)}` : "/api/admin/quotas";
+  const url = user_id
+    ? `/api/admin/quotas?user_id=${encodeURIComponent(user_id)}`
+    : "/api/admin/quotas";
   const res = await fetch(url, { headers: await authHeaders() });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-export async function setQuota(user_id: string, daily_limit: number): Promise<void> {
+export async function setQuota(
+  user_id: string,
+  daily_limit: number
+): Promise<void> {
   const res = await fetch("/api/admin/quotas", {
     method: "POST",
     headers: await authHeaders(),
@@ -46,7 +54,12 @@ export async function setQuota(user_id: string, daily_limit: number): Promise<vo
   if (!res.ok) throw new Error(await res.text());
 }
 
-export async function adminCreateUser(params: { email: string; password?: string; invite?: boolean; daily_limit?: number }): Promise<any> {
+export async function adminCreateUser(params: {
+  email: string;
+  password?: string;
+  invite?: boolean;
+  daily_limit?: number;
+}): Promise<any> {
   const res = await fetch("/api/admin/create-user", {
     method: "POST",
     headers: await authHeaders(),
@@ -55,4 +68,3 @@ export async function adminCreateUser(params: { email: string; password?: string
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
-

@@ -1,17 +1,12 @@
 import { LinkedInProfile } from "../types";
+import { authClient } from "../lib/auth";
 
 // Frontend: call serverless function instead of bundling apify-client in the browser
 export const scrapeLinkedInProfiles = async (
   urls: string[]
 ): Promise<any[]> => {
   // Attach Authorization header so Functions can identify current user for quotas
-  let headers: any = { "Content-Type": "application/json" };
-  try {
-    const { supabaseBrowser } = await import("../lib/supabase-client");
-    const { data } = await supabaseBrowser.auth.getSession();
-    const token = data?.session?.access_token;
-    if (token) headers.Authorization = `Bearer ${token}`;
-  } catch {}
+  const headers = authClient.getAuthHeaders();
 
   const res = await fetch("/api/scrape", {
     method: "POST",

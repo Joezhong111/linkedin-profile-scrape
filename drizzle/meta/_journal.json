@@ -1,12 +1,26 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
+  "version": "5",
+  "dialect": "pg",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1765960611699,
+      "version": "5",
+      "when": 1704067200000,
       "tag": "0000_dusty_wildside",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1766076805744,
+      "tag": "0001_flaky_zombie",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1766079714710,
+      "tag": "0002_dashing_champions",
       "breakpoints": true
     }
   ]

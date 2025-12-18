@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import GoogleSignInButton from "../components/GoogleSignInButton";
-import { supabaseBrowser } from "../lib/supabase-client";
+import { authClient } from "../lib/auth";
 import { getToggles } from "../services/admin";
 
 export default function Login() {
@@ -17,9 +16,9 @@ export default function Login() {
   // If already authed, bounce to dashboard; also fetch toggles
   React.useEffect(() => {
     (async () => {
-      const { data } = await supabaseBrowser.auth.getSession();
-      if (data?.session?.user?.id) {
-        window.location.hash = "#/dashboard";
+      const session = authClient.getSession();
+      if (session?.user?.id) {
+        // App.tsx will handle redirect based on auth state
         return;
       }
       try {
@@ -28,12 +27,12 @@ export default function Login() {
         if (!t.registration_open) setMode("signin");
       } catch {}
     })();
-    const { data: sub } = supabaseBrowser.auth.onAuthStateChange(
-      (_e, session) => {
-        if (session?.user?.id) window.location.hash = "#/dashboard";
-      }
-    );
-    return () => sub.subscription?.unsubscribe?.();
+
+    const unsubscribe = authClient.onAuthStateChange((_user) => {
+      // App.tsx handles route redirects based on auth state
+    });
+
+    return unsubscribe;
   }, []);
 
   const submit = async (e: React.FormEvent) => {
@@ -42,20 +41,11 @@ export default function Login() {
     setError(null);
     try {
       if (mode === "signin") {
-        const { error } = await supabaseBrowser.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        window.location.hash = "#/dashboard";
+        await authClient.signIn(email, password);
+        // App.tsx will handle redirect to dashboard based on auth state
       } else {
-        const { error } = await supabaseBrowser.auth.signUp({
-          email,
-          password,
-        });
-        if (error) throw error;
-        // Depending on your Supabase email confirmation setting, user might need to confirm.
-        window.location.hash = "#/dashboard";
+        await authClient.signUp(email, password);
+        // App.tsx will handle redirect to dashboard based on auth state
       }
     } catch (err: any) {
       setError(err?.message || "Authentication failed");
@@ -124,15 +114,6 @@ export default function Login() {
             </button>
           )}
         </div>
-
-        {toggles.google_oauth_open && (
-          <div className="mt-6">
-            <GoogleSignInButton
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800"
-              redirectTo="#/dashboard"
-            />
-          </div>
-        )}
       </div>
     </main>
   );

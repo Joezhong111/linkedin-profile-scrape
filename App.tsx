@@ -4,7 +4,7 @@ import Profiles from "./pages/Profiles";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import { isSupabaseReady } from "./services/supabase";
-import { supabaseBrowser } from "./lib/supabase-client";
+import { authClient } from "./lib/auth";
 import Navbar from "./components/Navbar";
 import { getMe } from "./services/admin";
 
@@ -16,10 +16,11 @@ export default function App() {
   const [authed, setAuthed] = useState<boolean>(false);
   const [authChecked, setAuthChecked] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const redirectingRef = React.useRef(false);
 
   const signOut = async () => {
     try {
-      await supabaseBrowser.auth.signOut();
+      await authClient.signOut();
     } catch {}
     window.location.hash = "#/login";
   };
@@ -48,20 +49,16 @@ export default function App() {
 
   // Auth state gate: only logged-in users can access app routes
   useEffect(() => {
-    (async () => {
-      const { data } = await supabaseBrowser.auth.getSession();
-      setAuthed(Boolean(data?.session?.user?.id));
+    const session = authClient.getSession();
+    setAuthed(Boolean(session?.user?.id));
+    setAuthChecked(true);
+
+    const unsubscribe = authClient.onAuthStateChange((user) => {
+      setAuthed(Boolean(user?.id));
       setAuthChecked(true);
-    })();
-    const { data: sub } = supabaseBrowser.auth.onAuthStateChange(
-      (_e, session) => {
-        setAuthed(Boolean(session?.user?.id));
-        setAuthChecked(true);
-      }
-    );
-    return () => {
-      sub.subscription?.unsubscribe?.();
-    };
+    });
+
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -69,10 +66,22 @@ export default function App() {
     const h = (hash || "#/").toLowerCase();
     const wantsPublic = h.startsWith("#/login");
     if (!authed && !wantsPublic) {
-      if (!h.startsWith("#/login")) window.location.hash = "#/login";
+      if (h !== "#/login" && !redirectingRef.current) {
+        redirectingRef.current = true;
+        setTimeout(() => {
+          window.location.hash = "#/login";
+          redirectingRef.current = false;
+        }, 0);
+      }
     }
     if (authed && wantsPublic) {
-      window.location.hash = "#/dashboard";
+      if (h !== "#/dashboard" && !redirectingRef.current) {
+        redirectingRef.current = true;
+        setTimeout(() => {
+          window.location.hash = "#/dashboard";
+          redirectingRef.current = false;
+        }, 0);
+      }
     }
   }, [hash, authed, authChecked]);
 

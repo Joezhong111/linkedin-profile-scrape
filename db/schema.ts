@@ -13,7 +13,58 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-// Use default Postgres schema (public)
+// ============================================
+// Authentication & User Management
+// ============================================
+
+// Users table - replaces Supabase Auth
+export const users = pgTable("users", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  fullName: text("full_name"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+    .default(sql`timezone('utc'::text, now())`)
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+    .default(sql`timezone('utc'::text, now())`)
+    .notNull(),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  lastLoginAt: timestamp("last_login_at", {
+    withTimezone: true,
+    mode: "string",
+  }),
+});
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
+// Sessions table for JWT token management
+export const sessions = pgTable("sessions", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at", {
+    withTimezone: true,
+    mode: "string",
+  }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+    .default(sql`timezone('utc'::text, now())`)
+    .notNull(),
+});
+
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;
+
+// ============================================
+// LinkedIn Profiles
+// ============================================
 export const linkedinProfiles = pgTable(
   "linkedin_profiles",
   {
@@ -24,8 +75,10 @@ export const linkedinProfiles = pgTable(
       .default(sql`timezone('utc'::text, now())`)
       .notNull(),
 
-    // Owner (Supabase auth.users.id) - initially nullable to allow safe migration/backfill
-    ownerId: uuid("owner_id"),
+    // Owner - references users table
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
 
     profileUrl: text("profile_url").notNull(),
     fullName: text("full_name"),
@@ -101,3 +154,66 @@ export const linkedinProfiles = pgTable(
 
 export type LinkedInProfile = typeof linkedinProfiles.$inferSelect;
 export type NewLinkedInProfile = typeof linkedinProfiles.$inferInsert;
+
+// ============================================
+// RBAC & Quotas Schema
+// ============================================
+
+export const userRoles = pgTable("user_roles", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  role: text("role", { enum: ["admin", "user"] })
+    .notNull()
+    .default("user"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+    .default(sql`timezone('utc'::text, now())`)
+    .notNull(),
+});
+
+export type UserRole = typeof userRoles.$inferSelect;
+export type NewUserRole = typeof userRoles.$inferInsert;
+
+export const appSettings = pgTable("app_settings", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  registrationOpen: boolean("registration_open").notNull().default(true),
+  googleOauthOpen: boolean("google_oauth_open").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+    .default(sql`timezone('utc'::text, now())`)
+    .notNull(),
+});
+
+export const apifyQuotas = pgTable("apify_quotas", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  dailyLimit: integer("daily_limit").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+    .default(sql`timezone('utc'::text, now())`)
+    .notNull(),
+});
+
+export type ApifyQuota = typeof apifyQuotas.$inferSelect;
+export type NewApifyQuota = typeof apifyQuotas.$inferInsert;
+
+export const apifyUsage = pgTable(
+  "apify_usage",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: timestamp("day", { mode: "string" }).notNull(), // Using timestamp for date part
+    usedCount: integer("used_count").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .default(sql`timezone('utc'::text, now())`)
+      .notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.day] }),
+  })
+);
+
+export type ApifyUsage = typeof apifyUsage.$inferSelect;
+export type NewApifyUsage = typeof apifyUsage.$inferInsert;

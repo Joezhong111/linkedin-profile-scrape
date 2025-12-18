@@ -5,18 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:netlify": "netlify dev",
     "build": "vite build",
     "preview": "vite preview",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:health": "node scripts/db-health.js",
-    "db:smoke": "node scripts/db-smoke-insert.js"
+    "db:health": "node scripts/db-health.js"
   },
   "dependencies": {
     "@google/genai": "^1.33.0",
     "@heroicons/react": "^2.2.0",
-    "@supabase/supabase-js": "^2.87.1",
     "@types/recharts": "^2.0.1",
     "apify-client": "2.21.0",
     "drizzle-orm": "^0.45.1",
@@ -31,8 +30,10 @@
     "@vitejs/plugin-react": "^5.0.0",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.8",
+    "netlify-cli": "^23.13.0",
     "pg": "^8.16.3",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
-  }
+  },
+  "engines": { "node": ">=20.19.0" }
 }

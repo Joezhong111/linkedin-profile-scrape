@@ -4,7 +4,14 @@
   functions = "netlify/functions"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "20.19.0"
+
+
+[dev]
+  command = "npm run dev"
+  targetPort = 5173
+  port = 8888
+  functions = "netlify/functions"
 
 
 
@@ -39,6 +46,48 @@
 [[redirects]]
   from = "/api/admin/create-user"
   to = "/.netlify/functions/admin_create_user"
+  status = 200
+
+# Auth API endpoints
+[[redirects]]
+  from = "/api/auth/signin"
+  to = "/.netlify/functions/auth_signin"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/signup"
+  to = "/.netlify/functions/auth_signup"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/signout"
+  to = "/.netlify/functions/auth_signout"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/me"
+  to = "/.netlify/functions/auth_me"
+  status = 200
+
+# Profiles API endpoints
+[[redirects]]
+  from = "/api/profiles/list"
+  to = "/.netlify/functions/profiles_list"
+  status = 200
+
+[[redirects]]
+  from = "/api/profiles/save"
+  to = "/.netlify/functions/profiles_save"
+  status = 200
+
+[[redirects]]
+  from = "/api/profiles/delete"
+  to = "/.netlify/functions/profiles_delete"
+  status = 200
+
+[[redirects]]
+  from = "/api/profiles/update-ai"
+  to = "/.netlify/functions/profiles_update_ai"
   status = 200
 
 # SPA fallback

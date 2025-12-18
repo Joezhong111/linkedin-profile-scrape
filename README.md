@@ -1,114 +1,150 @@
-# LinkedIn Insights Pro
+# LinkedIn Insights Pro (Neon + Netlify + Custom Auth)
 
-A modern web application for scraping LinkedIn profiles and generating AI-powered insights using Apify, Supabase, and Google Gemini.
+This app scrapes LinkedIn profiles with Apify, stores data in Neon PostgreSQL via Drizzle ORM, and uses custom JWT authentication (no Supabase). It runs static UI with Vite and all backend endpoints as Netlify Functions.
 
 ## Features
 
-- 🔎 Scraping - Extract profile data using Apify's LinkedIn scraper
-- 💾 Database Storage - Save profiles to Supabase for persistent storage
-- ✨ AI Insights - Generate executive summaries using Google Gemini
-- 🗂️ Profile Management - View, manage, and analyze saved profiles
-- 📊 Talent Analytics Dashboard - Visualize profile data with interactive charts (Career Timeline, Network Influence)
-- 🎨 Modern UI - Built with React, Tailwind CSS, and Recharts
-- 🔐 Role-Based Access Control (RBAC) - Admin and User roles with a protected admin panel.
-- 📈 Usage Quotas - Per-user daily scraping limits enforced by the backend.
+- 🔎 Scraping via Apify Actor (People/Profiles)
+- 💾 Neon PostgreSQL + Drizzle ORM schema and migrations
+- 🔐 Custom JWT Auth (users, sessions) + RBAC (user_roles)
+- 📈 Per-user quotas for scraping (apify_quotas, apify_usage)
+- 📊 Profile visualization (Career Timeline, Network Influence)
+- ⚙️ Netlify Functions for all backend API endpoints
 
-## Netlify deploy checklist
+## Requirements
+
+- Node.js 20.19+
+- npm
+- Netlify account (for hosting) and Apify account (for scraping)
+
+## Environment Variables (.env.local)
+
+```
+# Server-side (not exposed to browser)
+DATABASE_URL="postgresql://<user>:<password>@<neon-host>/<db>?sslmode=require"
+APIFY_TOKEN=your_apify_token
+
+# Auth
+JWT_SECRET=your-strong-random-secret-min-32-chars
+```
+
+## First-time setup
+
+1. Install deps
+
+```
+npm install
+```
+
+2. Generate and push DB schema to Neon
+
+```
+npm run db:generate
+npx drizzle-kit push
+```
+
+3. Create an admin user
+
+```
+node scripts/create-admin.js admin@example.com your_password
+```
+
+## Development (with Functions)
+
+Use Netlify Dev so that /api/\* routes are proxied to Functions:
+
+```
+npm run dev:netlify
+# open http://localhost:8888
+```
+
+Note: plain `npm run dev` (Vite on 5173) only serves frontend and will return 404 for /api/\*.
+
+## Build
+
+```
+npm run build
+```
+
+Outputs static files in dist/ and compiles client bundle. Functions are executed by Netlify at runtime (TS sources in netlify/functions).
+
+## Deploy to Netlify
 
 - Build command: `npm run build`
 - Publish directory: `dist`
 - Functions directory: `netlify/functions`
-- Node version: `20` (set in `netlify.toml`)
-- Redirects (configured in `netlify.toml`):
-  - `/api/scrape` → `/.netlify/functions/scrape`
-  - `/api/health` → `/.netlify/functions/health`
-  - SPA fallback: `/*` → `/index.html`
-- Environment variables (Site settings → Build & deploy → Environment):
-  - `APIFY_TOKEN` (serverless functions)
-  - `SUPABASE_SERVICE_ROLE_KEY` (serverless functions, for admin actions)
-  - `VITE_SUPABASE_URL` (frontend)
-  - `VITE_SUPABASE_ANON_KEY` (frontend)
-  - `VITE_GEMINI_API_KEY` (optional, frontend)
-- Supabase Auth → URL Configuration:
-  - Site URL: your Netlify domain (e.g. `https://your-site.netlify.app`)
-  - Additional Redirect URLs: include your Netlify domain(s) and any previews
-- Google OAuth (in Google Cloud): Authorized redirect URI must include
-  `https://<your-ref>.supabase.co/auth/v1/callback`
-- Database & RLS: ensure `public.linkedin_profiles` has `owner_id uuid` and per-user RLS policies.
+- Node version: `20.19.0` (set in netlify.toml)
+- Redirects: already configured in netlify.toml (SPA + API)
+- Site environment variables:
+  - DATABASE_URL
+  - APIFY_TOKEN
+  - JWT_SECRET
 
-## Prerequisites
+You can initialize or link your site:
 
-- Node.js (v20 or higher)
-- npm or yarn
-- Accounts and API keys for:
-  - [Apify](https://apify.com) - For LinkedIn scraping
-  - [Supabase](https://supabase.com) - For data storage
-  - [Google Gemini](https://ai.google.dev) - For AI analysis (optional)
-
-## Setup
-
-### 1. Clone and Install
-
-```bash
-npm install
+```
+# one-time
+netlify init
+# or link an existing site
+netlify link
 ```
 
-### 2. Configure Environment Variables
+Then deploy from CI (recommended) or locally:
 
-Create a `.env.local` in the project root with at least the following:
-
-```env
-# Server-side (not exposed to browser)
-DATABASE_URL=postgresql://<user>:<password>@<host>:6543/postgres
-APIFY_TOKEN=your_apify_api_key_here
-
-# Front-end (browser) – Supabase Auth
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-
-# Optional – AI features
-# VITE_GEMINI_API_KEY=your_gemini_api_key_here
+```
+netlify deploy --build      # preview
+netlify deploy --prod --build
 ```
 
-### 3. Setup Supabase Database
+## API Endpoints (Netlify Functions)
 
-Run the Drizzle migrations to set up your database schema. This will create all necessary tables, including `linkedin_profiles`, `user_roles`, `apify_quotas`, and more, and will also apply the required Row Level Security (RLS) policies.
+- Auth: POST /api/auth/signin, /api/auth/signup, /api/auth/signout, GET /api/auth/me
+- Admin: GET /api/admin/me, GET/POST /api/admin/quotas, POST /api/admin/create-user, GET/POST /api/admin/toggles
+- Profiles: GET /api/profiles/list, POST /api/profiles/save, POST /api/profiles/delete, POST /api/profiles/update-ai
+- Misc: GET /api/health, POST /api/scrape
 
-```bash
-npm run db:migrate
+## Common issues
+
+- Login stuck on /login
+  - Use Netlify Dev (http://localhost:8888). Vite 5173 won’t proxy Functions.
+  - Hard refresh (Shift+Reload). Ensure localStorage has `auth_token`.
+- "Quota disabled"
+  - Set user quota in Admin page, or call POST /api/admin/quotas with { user_id, daily_limit }.
+- "APIFY token missing"
+  - Set APIFY_TOKEN in .env.local (dev) and Netlify site env (prod). `/api/health` returns `{ apify: true }` when ok.
+- DB connection errors
+  - Check DATABASE_URL (Neon), ensure `?sslmode=require` and server reachable.
+
+## Project structure (key files)
+
+```
+lib/
+  auth.ts              # Frontend auth client (localStorage session)
+  auth-server.ts       # Server-side helpers (hash/verify, sessions, roles)
+db/
+  schema.ts            # All tables: users, sessions, user_roles, apify_*, linkedin_profiles
+  client.ts            # pg Pool + drizzle
+etlify/functions/
+  auth_*.ts            # Auth API
+  admin_*.ts           # Admin API (quotas/toggles)
+  profiles_*.ts        # Profiles API
+  scrape.ts            # Apify scrape endpoint
+services/
+  auth.ts              # Auth wrapper for UI
+  supabase.ts          # Profiles service (now talks to /api/*)
+pages/
+  Login.tsx, Dashboard.tsx, Profiles.tsx, Admin.tsx
 ```
 
-### 4. Run the Application
+## Security notes
 
-```bash
-npm run dev
-```
+- Never commit .env.local
+- Use a strong JWT_SECRET in production (>= 32 chars)
+- Rotate secrets periodically
 
-The app will be available at `http://localhost:3000`
+## Legacy notes (Supabase)
 
-## Development
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-
-## Deploy
-
-This project is ready to deploy to Vercel or Netlify.
-
-### Vercel (recommended)
-
-1. Install CLI: `npm i -g vercel`
-2. Login: `vercel login`
-3. Deploy: `vercel`
-4. In the Vercel dashboard, set environment variables:
-   - `VITE_APIFY_TOKEN`
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_GEMINI_API_KEY` (optional)
-5. Promote to production: `vercel --prod`
-
-The repo includes `vercel.json` for sensible defaults.
+The project previously used Supabase for auth and DB. It now uses Neon + custom auth. Legacy references were removed from code; any remaining mentions in docs refer to the old setup.
 
 ### Netlify
 

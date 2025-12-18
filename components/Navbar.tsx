@@ -92,7 +92,7 @@ const Navbar: React.FC<Props> = ({
                 )}
               </div>
               <div className="hidden sm:flex items-center gap-1.5">
-                <span className="text-gray-500">Supabase:</span>
+                <span className="text-gray-500">Database:</span>
                 {supabaseConnected ? (
                   <span className="text-green-600 flex items-center gap-1">
                     <CheckCircleIcon className="h-4 w-4" /> Connected
