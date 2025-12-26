@@ -1,7 +1,7 @@
 // Server-side authentication utilities
 import { db } from "../db/client";
 import { users, sessions, userRoles } from "../db/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, sql } from "drizzle-orm";
 import * as crypto from "crypto";
 
 // Simple JWT-like token generation (in production, use a proper JWT library)
@@ -20,7 +20,7 @@ export function hashPassword(password: string): string {
 export function verifyPassword(password: string, hashedPassword: string): boolean {
   const [salt, hash] = hashedPassword.split(":");
   if (!salt || !hash) return false;
-  
+
   const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
   return hash === verifyHash;
 }
@@ -28,7 +28,7 @@ export function verifyPassword(password: string, hashedPassword: string): boolea
 // Create a new user
 export async function createUser(email: string, password: string, fullName?: string) {
   const passwordHash = hashPassword(password);
-  
+
   const [user] = await db
     .insert(users)
     .values({
@@ -68,26 +68,36 @@ export async function createSession(userId: string) {
 
 // Verify a token and return the user
 export async function verifyToken(token: string) {
-  const [session] = await db
-    .select()
-    .from(sessions)
-    .where(
-      and(
-        eq(sessions.token, token),
-        gt(sessions.expiresAt, new Date().toISOString())
-      )
-    )
-    .limit(1);
+  try {
+    // Find the session by token
+    const [session] = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.token, token))
+      .limit(1);
 
-  if (!session) return null;
+    // Check if session exists and is not expired
+    if (!session) return null;
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, session.userId))
-    .limit(1);
+    const expiry = new Date(session.expiresAt);
+    if (expiry < new Date()) {
+      console.log("Session expired:", session.id);
+      return null;
+    }
 
-  return user || null;
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, session.userId))
+      .limit(1);
+
+    return user || null;
+  } catch (err: any) {
+    console.error("verifyToken error:", err);
+    // Rethrow to let the handler see the full error if needed, 
+    // but the handler already logs it. We just want to see it in terminal.
+    throw err;
+  }
 }
 
 // Delete a session (logout)
@@ -126,11 +136,11 @@ export async function isAdmin(userId: string): Promise<boolean> {
 // Extract token from Authorization header
 export function extractToken(authHeader: string | undefined): string | null {
   if (!authHeader) return null;
-  
+
   if (authHeader.startsWith("Bearer ")) {
     return authHeader.slice(7);
   }
-  
+
   return null;
 }
 

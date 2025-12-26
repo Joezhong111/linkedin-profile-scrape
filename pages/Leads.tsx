@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LinkedInProfile } from "../types";
 import { fetchAllLeads, deleteLead } from "../services/api";
-import { MagnifyingGlassIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, TrashIcon, ChartBarIcon } from "@heroicons/react/24/outline";
 import ProfileRow from "../components/ProfileRow";
+import LeadDetails from "../components/LeadDetails";
 
 function toCsv(rows: LinkedInProfile[]) {
     const headers = [
@@ -50,6 +51,7 @@ export default function Leads() {
     const [companyFilter, setCompanyFilter] = useState("");
     const [locationFilter, setLocationFilter] = useState("");
     const [hasEmail, setHasEmail] = useState(false);
+    const [selectedLead, setSelectedLead] = useState<LinkedInProfile | null>(null);
 
     useEffect(() => {
         (async () => {
@@ -216,7 +218,11 @@ export default function Leads() {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filtered.map((p) => (
-                                <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                                <tr
+                                    key={p.id}
+                                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                    onClick={() => setSelectedLead(p)}
+                                >
                                     <td className="p-4">
                                         <div className="flex items-center gap-3">
                                             {p.photo_url ? (
@@ -234,39 +240,64 @@ export default function Leads() {
                                     </td>
                                     <td className="p-4">
                                         <div className="text-gray-900 font-medium">{p.job_title}</div>
-                                        <div className="text-xs text-blue-600 hover:underline cursor-pointer">{p.company_name}</div>
+                                        <div className="text-xs text-blue-600 hover:underline">{p.company_name}</div>
                                     </td>
                                     <td className="p-4">
                                         {p.email ? (
                                             <button
-                                                onClick={() => handleCopy(p.email)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCopy(p.email);
+                                                }}
                                                 className="text-gray-600 hover:text-blue-600 flex items-center gap-1 group"
                                             >
                                                 {p.email}
-                                                <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-gray-100 px-1 rounded">Copy</span>
+                                                <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-gray-100 px-1 rounded transition-opacity">Copy</span>
                                             </button>
                                         ) : (
                                             <span className="text-gray-400 italic">No email</span>
                                         )}
                                     </td>
                                     <td className="p-4">
-                                        <div className="text-xs text-gray-500 truncate max-w-[200px]" title={(p as any).source_company_url}>
+                                        <div className="text-xs text-gray-500 truncate max-w-[150px]" title={(p as any).source_company_url}>
                                             {(p as any).source_company_url || "Direct Batch"}
                                         </div>
                                     </td>
                                     <td className="p-4 text-center">
-                                        <button
-                                            onClick={() => handleDelete(p.id!)}
-                                            className="text-gray-400 hover:text-red-600 p-2"
-                                        >
-                                            <TrashIcon className="h-5 w-5" />
-                                        </button>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedLead(p);
+                                                }}
+                                                className="text-gray-400 hover:text-blue-600 p-2 transition-colors"
+                                                title="View Insights"
+                                            >
+                                                <ChartBarIcon className="h-5 w-5" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDelete(p.id!);
+                                                }}
+                                                className="text-gray-400 hover:text-red-600 p-2 transition-colors"
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
+            )}
+
+            {selectedLead && (
+                <LeadDetails
+                    lead={selectedLead}
+                    onClose={() => setSelectedLead(null)}
+                />
             )}
         </main>
     );
