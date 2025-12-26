@@ -1,7 +1,7 @@
 import { LinkedInProfile } from "../types";
 import { authClient } from "../lib/auth";
 
-export const isSupabaseReady = true; // Always ready with new auth system
+export const isApiReady = true; // Always ready with new auth system
 
 async function getCurrentUserId(): Promise<string> {
   const user = authClient.getUser();
@@ -108,6 +108,79 @@ export const deleteProfile = async (id: string) => {
   if (!res.ok) {
     const error = await res.text();
     throw new Error(error || "Failed to delete profile");
+  }
+};
+
+export const saveLead = async (lead: LinkedInProfile, sourceCompanyUrl?: string) => {
+  const userId = await getCurrentUserId();
+  const rd: any = lead.raw_data || {};
+
+  const payload = {
+    owner_id: userId,
+    profile_url: lead.profile_url,
+    raw_data: lead.raw_data,
+    ai_summary: lead.ai_summary,
+    full_name: lead.full_name,
+    first_name: lead.first_name || rd.firstName,
+    last_name: lead.last_name || rd.lastName,
+    headline: lead.headline || rd.headline,
+    location: lead.location || rd.location,
+    photo_url: lead.photo_url || rd.photoUrl,
+    email: lead.email || rd.email,
+    mobile_number: lead.mobile_number || rd.mobileNumber,
+    job_title: lead.job_title || rd.jobTitle,
+    company_name: lead.company_name || rd.companyName,
+    company_industry: lead.company_industry || rd.companyIndustry,
+    company_linkedin: lead.company_linkedin || rd.companyLinkedin,
+    followers: lead.followers || rd.followers,
+    source_company_url: sourceCompanyUrl,
+  };
+
+  const res = await fetch("/api/leads/save", {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+    console.error("Save lead failed:", res.status, errorBody);
+    throw new Error(`Failed to save lead (${res.status}): ${errorBody}`);
+  }
+
+  return await res.json();
+};
+
+export const fetchAllLeads = async () => {
+  try {
+    await getCurrentUserId();
+  } catch {
+    return [];
+  }
+
+  const res = await fetch("/api/leads/list", {
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+    console.error("Fetch leads failed:", res.status, errorBody);
+    throw new Error(`Failed to fetch leads (${res.status}): ${errorBody}`);
+  }
+
+  return (await res.json()) as LinkedInProfile[];
+};
+
+export const deleteLead = async (id: string) => {
+  const res = await fetch(`/api/leads/delete`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ id }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error || "Failed to delete lead");
   }
 };
 

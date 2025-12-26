@@ -9,7 +9,7 @@ type Props = {
   isAdmin?: boolean;
   route: string;
   apifyReady: boolean;
-  supabaseConnected: boolean;
+  dbConnected: boolean;
   onSignOut: () => void;
 };
 
@@ -18,7 +18,7 @@ const Navbar: React.FC<Props> = ({
   isAdmin,
   route,
   apifyReady,
-  supabaseConnected,
+  dbConnected,
   onSignOut,
 }) => {
   return (
@@ -35,33 +35,39 @@ const Navbar: React.FC<Props> = ({
             <nav className="hidden sm:flex items-center gap-3 text-sm">
               <a
                 href="#/dashboard"
-                className={`px-2 py-1 rounded-md ${
-                  route === "dashboard"
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-2 py-1 rounded-md ${route === "dashboard"
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 Dashboard
               </a>
               <a
                 href="#/profiles"
-                className={`px-2 py-1 rounded-md ${
-                  route === "profiles"
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-2 py-1 rounded-md ${route === "profiles"
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 Profiles
+              </a>
+              <a
+                href="#/leads"
+                className={`px-2 py-1 rounded-md ${route === "leads"
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
+              >
+                Leads
               </a>
               {/* Admin link only for admins */}
               {isAdmin && (
                 <a
                   href="#/admin"
-                  className={`px-2 py-1 rounded-md ${
-                    route === "admin"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className={`px-2 py-1 rounded-md ${route === "admin"
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
                 >
                   Admin
                 </a>
@@ -93,7 +99,7 @@ const Navbar: React.FC<Props> = ({
               </div>
               <div className="hidden sm:flex items-center gap-1.5">
                 <span className="text-gray-500">Database:</span>
-                {supabaseConnected ? (
+                {dbConnected ? (
                   <span className="text-green-600 flex items-center gap-1">
                     <CheckCircleIcon className="h-4 w-4" /> Connected
                   </span>

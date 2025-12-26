@@ -152,6 +152,66 @@ export const linkedinProfiles = pgTable(
   })
 );
 
+// ============================================
+// LinkedIn Leads (from Company Scrape)
+// ============================================
+export const linkedinLeads = pgTable(
+  "linkedin_leads",
+  {
+    id: uuid("id")
+      .default(sql`gen_random_uuid()`)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .default(sql`timezone('utc'::text, now())`)
+      .notNull(),
+
+    // Owner - references users table
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    profileUrl: text("profile_url").notNull(),
+    fullName: text("full_name"),
+    headline: text("headline"),
+    location: text("location"),
+    about: text("about"),
+    photoUrl: text("photo_url"),
+
+    rawData: jsonb("raw_data"),
+    aiSummary: text("ai_summary"),
+
+    linkedinPublicUrl: text("linkedin_public_url"),
+    linkedinId: text("linkedin_id"),
+    publicIdentifier: text("public_identifier"),
+    firstName: text("first_name"),
+    lastName: text("last_name"),
+
+    connections: integer("connections"),
+    followers: bigint("followers", { mode: "number" }),
+
+    email: text("email"),
+    mobileNumber: text("mobile_number"),
+
+    jobTitle: text("job_title"),
+    companyName: text("company_name"),
+    companyIndustry: text("company_industry"),
+    companyLinkedin: text("company_linkedin"),
+
+    // Specifically track which company URL this lead came from
+    sourceCompanyUrl: text("source_company_url"),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.id], name: "linkedin_leads_pkey" }),
+    uxOwnerUrl: uniqueIndex("ux_linkedin_leads_owner_url").on(
+      t.ownerId,
+      t.profileUrl
+    ),
+  })
+);
+
+export type LinkedInLead = typeof linkedinLeads.$inferSelect;
+export type NewLinkedInLead = typeof linkedinLeads.$inferInsert;
+
 export type LinkedInProfile = typeof linkedinProfiles.$inferSelect;
 export type NewLinkedInProfile = typeof linkedinProfiles.$inferInsert;
 

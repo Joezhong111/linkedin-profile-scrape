@@ -22,6 +22,12 @@
   to = "/.netlify/functions/scrape"
   status = 200
 
+# API route for company scraping
+[[redirects]]
+  from = "/api/scrape_company"
+  to = "/.netlify/functions/scrape_company"
+  status = 200
+
 # Health endpoint mapping for functions
 [[redirects]]
   from = "/api/health"
@@ -89,6 +95,22 @@
 [[redirects]]
   from = "/api/profiles/update-ai"
   to = "/.netlify/functions/profiles_update_ai"
+  status = 200
+
+# Leads API endpoints
+[[redirects]]
+  from = "/api/leads/list"
+  to = "/.netlify/functions/leads_list"
+  status = 200
+
+[[redirects]]
+  from = "/api/leads/save"
+  to = "/.netlify/functions/leads_save"
+  status = 200
+
+[[redirects]]
+  from = "/api/leads/delete"
+  to = "/.netlify/functions/leads_delete"
   status = 200
 
 # SPA fallback

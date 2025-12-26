@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Home from "./pages/Home";
 import Profiles from "./pages/Profiles";
+import Leads from "./pages/Leads";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
-import { isSupabaseReady } from "./services/supabase";
+import { isApiReady } from "./services/api";
 import { authClient } from "./lib/auth";
 import Navbar from "./components/Navbar";
 import { getMe } from "./services/admin";
@@ -21,7 +22,7 @@ export default function App() {
   const signOut = async () => {
     try {
       await authClient.signOut();
-    } catch {}
+    } catch { }
     window.location.hash = "#/login";
   };
 
@@ -88,6 +89,7 @@ export default function App() {
   const route = useMemo(() => {
     const h = (hash || "#/").toLowerCase();
     if (h.startsWith("#/profiles")) return "profiles";
+    if (h.startsWith("#/leads")) return "leads";
     if (h.startsWith("#/login")) return "login";
     if (h.startsWith("#/admin")) return "admin";
     // default and explicit dashboard both go to dashboard
@@ -118,12 +120,13 @@ export default function App() {
         isAdmin={isAdmin}
         route={route}
         apifyReady={apifyReady}
-        supabaseConnected={isSupabaseReady}
+        dbConnected={isApiReady}
         onSignOut={signOut}
       />
 
       {route === "login" && <Login />}
       {route === "profiles" && <Profiles />}
+      {route === "leads" && <Leads />}
       {route === "admin" && (isAdmin ? <Admin /> : <Home />)}
       {(route === "dashboard" || route === "home") && <Home />}
     </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LinkedInProfile } from "../types";
 
-import { fetchAllProfiles } from "../services/supabase";
+import { fetchAllProfiles } from "../services/api";
 import { MagnifyingGlassIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import ProfileRow from "../components/ProfileRow";
 
@@ -208,7 +208,7 @@ export default function Profiles() {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-    } catch {}
+    } catch { }
   };
 
   const sorted = useMemo(() => {
