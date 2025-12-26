@@ -1,10 +1,17 @@
 import { verifyToken, extractToken, isAdmin } from "../../lib/auth-server";
 import { db } from "../../db/client";
-import { apifyQuotas, apifyUsage } from "../../db/schema";
+import { monthlyQuotas, monthlyUsage, users } from "../../db/schema";
 import { eq, and } from "drizzle-orm";
 
-function utcDay(): string {
-  return new Date().toISOString().slice(0, 10);
+function getCurrentMonthPeriod(): { start: string; end: string } {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString()
+  };
 }
 
 export const handler = async (event: any) => {
@@ -21,52 +28,83 @@ export const handler = async (event: any) => {
     const admin = await isAdmin(user.id);
 
     if (event.httpMethod === "GET") {
-      const day = (event.queryStringParameters?.day as string) || utcDay();
-      const qUser = event.queryStringParameters?.user_id as string | undefined;
+      const period = getCurrentMonthPeriod();
+      const qEmail = event.queryStringParameters?.email as string | undefined;
+      const qUserId = event.queryStringParameters?.user_id as string | undefined;
 
-      if (qUser) {
+      // Query by email or user_id
+      if (qEmail || qUserId) {
+        const [targetUser] = qEmail
+          ? await db.select().from(users).where(eq(users.email, qEmail)).limit(1)
+          : await db.select().from(users).where(eq(users.id, qUserId!)).limit(1);
+
+        if (!targetUser) {
+          return { statusCode: 404, body: "User not found" };
+        }
+
         const [quota] = await db
           .select()
-          .from(apifyQuotas)
-          .where(eq(apifyQuotas.userId, qUser))
+          .from(monthlyQuotas)
+          .where(eq(monthlyQuotas.userId, targetUser.id))
           .limit(1);
 
         const [usage] = await db
           .select()
-          .from(apifyUsage)
-          .where(and(eq(apifyUsage.userId, qUser), eq(apifyUsage.day, day)))
+          .from(monthlyUsage)
+          .where(
+            and(
+              eq(monthlyUsage.userId, targetUser.id),
+              eq(monthlyUsage.periodStart, period.start)
+            )
+          )
           .limit(1);
 
         return {
           statusCode: 200,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            user_id: qUser,
-            daily_limit: quota?.dailyLimit ?? 0,
+            user_id: targetUser.id,
+            email: targetUser.email,
+            monthly_limit: quota?.monthlyLimit ?? 0,
             used_count: usage?.usedCount ?? 0,
-            day,
+            period_start: period.start,
+            period_end: period.end,
           }),
         };
       }
 
-      // list first N users with quotas (admin only)
+      // List all users with quotas (admin only)
       if (!admin) return { statusCode: 403, body: "Forbidden" };
 
-      const quotas = await db.select().from(apifyQuotas).limit(200);
+      // Get all users and their quotas
+      const allUsers = await db.select().from(users).limit(200);
 
       const result: any[] = [];
-      for (const q of quotas) {
-        const [u] = await db
+      for (const targetUser of allUsers) {
+        const [quota] = await db
           .select()
-          .from(apifyUsage)
-          .where(and(eq(apifyUsage.userId, q.userId), eq(apifyUsage.day, day)))
+          .from(monthlyQuotas)
+          .where(eq(monthlyQuotas.userId, targetUser.id))
+          .limit(1);
+
+        const [usage] = await db
+          .select()
+          .from(monthlyUsage)
+          .where(
+            and(
+              eq(monthlyUsage.userId, targetUser.id),
+              eq(monthlyUsage.periodStart, period.start)
+            )
+          )
           .limit(1);
 
         result.push({
-          user_id: q.userId,
-          daily_limit: q.dailyLimit,
-          used_count: u?.usedCount ?? 0,
-          day,
+          user_id: targetUser.id,
+          email: targetUser.email,
+          monthly_limit: quota?.monthlyLimit ?? 0,
+          used_count: usage?.usedCount ?? 0,
+          period_start: period.start,
+          period_end: period.end,
         });
       }
 
@@ -84,23 +122,34 @@ export const handler = async (event: any) => {
         typeof event.body === "string"
           ? JSON.parse(event.body || "{}")
           : event.body || {};
-      const user_id = body.user_id as string;
-      const daily_limit = Number(body.daily_limit);
 
-      if (!user_id || !Number.isFinite(daily_limit))
-        return { statusCode: 400, body: "user_id and daily_limit required" };
+      const email = body.email as string;
+      const user_id = body.user_id as string;
+      const monthly_limit = Number(body.monthly_limit);
+
+      if ((!email && !user_id) || !Number.isFinite(monthly_limit))
+        return { statusCode: 400, body: "email or user_id and monthly_limit required" };
+
+      // Find user by email or user_id
+      const [targetUser] = email
+        ? await db.select().from(users).where(eq(users.email, email)).limit(1)
+        : await db.select().from(users).where(eq(users.id, user_id)).limit(1);
+
+      if (!targetUser) {
+        return { statusCode: 404, body: "User not found" };
+      }
 
       await db
-        .insert(apifyQuotas)
+        .insert(monthlyQuotas)
         .values({
-          userId: user_id,
-          dailyLimit: daily_limit,
+          userId: targetUser.id,
+          monthlyLimit: monthly_limit,
           updatedAt: new Date().toISOString(),
         })
         .onConflictDoUpdate({
-          target: apifyQuotas.userId,
+          target: monthlyQuotas.userId,
           set: {
-            dailyLimit: daily_limit,
+            monthlyLimit: monthly_limit,
             updatedAt: new Date().toISOString(),
           },
         });
@@ -110,6 +159,7 @@ export const handler = async (event: any) => {
 
     return { statusCode: 405, body: "Method Not Allowed" };
   } catch (e: any) {
+    console.error("Quota handler error:", e);
     return { statusCode: 500, body: e?.message || "Server error" };
   }
 };

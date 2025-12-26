@@ -33,23 +33,26 @@ export async function setToggles(p: Partial<Toggles>): Promise<void> {
   if (!res.ok) throw new Error(await res.text());
 }
 
-export async function getQuota(user_id?: string): Promise<any> {
-  const url = user_id
-    ? `/api/admin/quotas?user_id=${encodeURIComponent(user_id)}`
-    : "/api/admin/quotas";
+export async function getQuota(email?: string, user_id?: string): Promise<any> {
+  let url = "/api/admin/quotas";
+  if (email) {
+    url += `?email=${encodeURIComponent(email)}`;
+  } else if (user_id) {
+    url += `?user_id=${encodeURIComponent(user_id)}`;
+  }
   const res = await fetch(url, { headers: await authHeaders() });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 export async function setQuota(
-  user_id: string,
-  daily_limit: number
+  email: string,
+  monthly_limit: number
 ): Promise<void> {
   const res = await fetch("/api/admin/quotas", {
     method: "POST",
     headers: await authHeaders(),
-    body: JSON.stringify({ user_id, daily_limit }),
+    body: JSON.stringify({ email, monthly_limit }),
   });
   if (!res.ok) throw new Error(await res.text());
 }
@@ -58,7 +61,7 @@ export async function adminCreateUser(params: {
   email: string;
   password?: string;
   invite?: boolean;
-  daily_limit?: number;
+  monthly_limit?: number;
 }): Promise<any> {
   const res = await fetch("/api/admin/create-user", {
     method: "POST",

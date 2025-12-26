@@ -5,7 +5,7 @@ import {
   createUser,
 } from "../../lib/auth-server";
 import { db } from "../../db/client";
-import { apifyQuotas } from "../../db/schema";
+import { monthlyQuotas } from "../../db/schema";
 
 export const handler = async (event: any) => {
   try {
@@ -31,8 +31,8 @@ export const handler = async (event: any) => {
     const email = String(body.email || "").trim();
     const password = body.password ? String(body.password) : undefined;
     const fullName = body.fullName ? String(body.fullName) : undefined;
-    const daily_limit = Number.isFinite(Number(body.daily_limit))
-      ? Number(body.daily_limit)
+    const monthly_limit = Number.isFinite(Number(body.monthly_limit))
+      ? Number(body.monthly_limit)
       : undefined;
 
     if (!email) return { statusCode: 400, body: "email required" };
@@ -42,10 +42,10 @@ export const handler = async (event: any) => {
     const newUser = await createUser(email, password, fullName);
 
     // Set quota if provided
-    if (daily_limit !== undefined) {
-      await db.insert(apifyQuotas).values({
+    if (monthly_limit !== undefined) {
+      await db.insert(monthlyQuotas).values({
         userId: newUser.id,
-        dailyLimit: daily_limit,
+        monthlyLimit: monthly_limit,
       });
     }
 
@@ -55,7 +55,7 @@ export const handler = async (event: any) => {
       body: JSON.stringify({
         user_id: newUser.id,
         email: newUser.email,
-        daily_limit,
+        monthly_limit,
       }),
     };
   } catch (e: any) {

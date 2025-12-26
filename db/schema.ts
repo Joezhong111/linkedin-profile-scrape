@@ -245,35 +245,36 @@ export const appSettings = pgTable("app_settings", {
     .notNull(),
 });
 
-export const apifyQuotas = pgTable("apify_quotas", {
+export const monthlyQuotas = pgTable("monthly_quotas", {
   userId: uuid("user_id")
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
-  dailyLimit: integer("daily_limit").notNull().default(0),
+  monthlyLimit: integer("monthly_limit").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
     .default(sql`timezone('utc'::text, now())`)
     .notNull(),
 });
 
-export type ApifyQuota = typeof apifyQuotas.$inferSelect;
-export type NewApifyQuota = typeof apifyQuotas.$inferInsert;
+export type MonthlyQuota = typeof monthlyQuotas.$inferSelect;
+export type NewMonthlyQuota = typeof monthlyQuotas.$inferInsert;
 
-export const apifyUsage = pgTable(
-  "apify_usage",
+export const monthlyUsage = pgTable(
+  "monthly_usage",
   {
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    day: timestamp("day", { mode: "string" }).notNull(), // Using timestamp for date part
+    periodStart: timestamp("period_start", { withTimezone: true, mode: "string" }).notNull(),
+    periodEnd: timestamp("period_end", { withTimezone: true, mode: "string" }).notNull(),
     usedCount: integer("used_count").notNull().default(0),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
       .default(sql`timezone('utc'::text, now())`)
       .notNull(),
   },
   (t) => ({
-    pk: primaryKey({ columns: [t.userId, t.day] }),
+    pk: primaryKey({ columns: [t.userId, t.periodStart] }),
   })
 );
 
-export type ApifyUsage = typeof apifyUsage.$inferSelect;
-export type NewApifyUsage = typeof apifyUsage.$inferInsert;
+export type MonthlyUsage = typeof monthlyUsage.$inferSelect;
+export type NewMonthlyUsage = typeof monthlyUsage.$inferInsert;

@@ -1,12 +1,9 @@
 import { ApifyClient } from "apify-client";
 import { verifyToken, extractToken } from "../../lib/auth-server";
 import { db } from "../../db/client";
-import { apifyQuotas, apifyUsage } from "../../db/schema";
+import { monthlyQuotas, monthlyUsage } from "../../db/schema";
 import { eq, and } from "drizzle-orm";
-
-function utcDay(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+import { getCurrentMonthPeriod } from "../../lib/quota-server";
 
 // Netlify Function: /.netlify/functions/scrape_company
 export const handler = async (event: any) => {
@@ -58,29 +55,29 @@ export const handler = async (event: any) => {
       };
     }
 
-    // Quota: count by requested maxItems to be safe
-    const day = utcDay();
+    // Quota: monthly limit
+    const period = getCurrentMonthPeriod();
 
     // Read quota and usage
     const [quotaRow] = await db
       .select()
-      .from(apifyQuotas)
-      .where(eq(apifyQuotas.userId, userId))
+      .from(monthlyQuotas)
+      .where(eq(monthlyQuotas.userId, userId))
       .limit(1);
 
-    const limit = Number(quotaRow?.dailyLimit ?? 0);
+    const limit = Number(quotaRow?.monthlyLimit ?? 0);
 
     if (!limit) {
       return {
         statusCode: 429,
-        body: JSON.stringify({ error: "Quota disabled", remaining: 0 }),
+        body: JSON.stringify({ error: "Quota disabled or not set", remaining: 0 }),
       };
     }
 
     const [usageRow] = await db
       .select()
-      .from(apifyUsage)
-      .where(and(eq(apifyUsage.userId, userId), eq(apifyUsage.day, day)))
+      .from(monthlyUsage)
+      .where(and(eq(monthlyUsage.userId, userId), eq(monthlyUsage.periodStart, period.start)))
       .limit(1);
 
     const used = Number(usageRow?.usedCount ?? 0);
@@ -89,7 +86,7 @@ export const handler = async (event: any) => {
     if (maxItems > remaining) {
       return {
         statusCode: 429,
-        body: JSON.stringify({ error: "Daily quota exceeded (based on maxItems)", remaining }),
+        body: JSON.stringify({ error: "Monthly quota exceeded (based on maxItems)", remaining }),
       };
     }
 
@@ -108,31 +105,24 @@ export const handler = async (event: any) => {
     if (yearsAtCurrentCompanyIds.length > 0) input.yearsAtCurrentCompanyIds = yearsAtCurrentCompanyIds;
     if (yearsOfExperienceIds.length > 0) input.yearsOfExperienceIds = yearsOfExperienceIds;
 
-    console.log("Apify Input:", JSON.stringify(input));
     const run = await client.actor("Vb6LZkh4EqRlR0Ka9").call(input);
-    console.log("Run finished:", run.id, run.status);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    console.log("Items fetched:", items.length);
 
-    // Update usage: consume by actual items returned? 
-    // Usually better to consume by what we asked for or what we got. 
-    // Let's consume by what we got + 1 (min charge) or just items.length. 
-    // Implementation plan said "update apifyUsage", let's use items.length for accuracy
-    // BUT if the user spams empty searches they might not be charged. 
-    // Let's stick to items.length for now as per "Results from dataset" logic.
+    // Update usage
     const consumed = items.length;
 
     try {
       await db
-        .insert(apifyUsage)
+        .insert(monthlyUsage)
         .values({
           userId,
-          day,
+          periodStart: period.start,
+          periodEnd: period.end,
           usedCount: used + consumed,
           updatedAt: new Date().toISOString(),
         })
         .onConflictDoUpdate({
-          target: [apifyUsage.userId, apifyUsage.day],
+          target: [monthlyUsage.userId, monthlyUsage.periodStart],
           set: {
             usedCount: used + consumed,
             updatedAt: new Date().toISOString(),

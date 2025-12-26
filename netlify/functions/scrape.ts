@@ -1,12 +1,9 @@
 import { ApifyClient } from "apify-client";
 import { verifyToken, extractToken } from "../../lib/auth-server";
 import { db } from "../../db/client";
-import { apifyQuotas, apifyUsage } from "../../db/schema";
+import { monthlyQuotas, monthlyUsage } from "../../db/schema";
 import { eq, and } from "drizzle-orm";
-
-function utcDay(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+import { getCurrentMonthPeriod } from "../../lib/quota-server";
 
 // Netlify Function: /.netlify/functions/scrape
 export const handler = async (event: any) => {
@@ -44,29 +41,29 @@ export const handler = async (event: any) => {
       (u: any) => typeof u === "string" && u.startsWith("http")
     );
 
-    // Quota: count by requested URLs (conservative, avoids running Apify when over limit)
-    const day = utcDay();
+    // Quota: monthly limit
+    const period = getCurrentMonthPeriod();
 
     // Read quota and usage
     const [quotaRow] = await db
       .select()
-      .from(apifyQuotas)
-      .where(eq(apifyQuotas.userId, userId))
+      .from(monthlyQuotas)
+      .where(eq(monthlyQuotas.userId, userId))
       .limit(1);
 
-    const limit = Number(quotaRow?.dailyLimit ?? 0);
+    const limit = Number(quotaRow?.monthlyLimit ?? 0);
 
     if (!limit) {
       return {
         statusCode: 429,
-        body: JSON.stringify({ error: "Quota disabled", remaining: 0 }),
+        body: JSON.stringify({ error: "Quota disabled or not set", remaining: 0 }),
       };
     }
 
     const [usageRow] = await db
       .select()
-      .from(apifyUsage)
-      .where(and(eq(apifyUsage.userId, userId), eq(apifyUsage.day, day)))
+      .from(monthlyUsage)
+      .where(and(eq(monthlyUsage.userId, userId), eq(monthlyUsage.periodStart, period.start)))
       .limit(1);
 
     const used = Number(usageRow?.usedCount ?? 0);
@@ -82,7 +79,7 @@ export const handler = async (event: any) => {
     if (urls.length > remaining) {
       return {
         statusCode: 429,
-        body: JSON.stringify({ error: "Daily quota exceeded", remaining }),
+        body: JSON.stringify({ error: "Monthly quota exceeded", remaining }),
       };
     }
 
@@ -92,27 +89,27 @@ export const handler = async (event: any) => {
     const run = await client.actor("2SyF0bVxmgGr8IVCZ").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-    // Update usage: consume by requested URLs (consistent with preflight)
+    // Update usage
     const consumed = urls.length;
 
     try {
       await db
-        .insert(apifyUsage)
+        .insert(monthlyUsage)
         .values({
           userId,
-          day,
+          periodStart: period.start,
+          periodEnd: period.end,
           usedCount: used + consumed,
           updatedAt: new Date().toISOString(),
         })
         .onConflictDoUpdate({
-          target: [apifyUsage.userId, apifyUsage.day],
+          target: [monthlyUsage.userId, monthlyUsage.periodStart],
           set: {
             usedCount: used + consumed,
             updatedAt: new Date().toISOString(),
           },
         });
     } catch (writeErr: any) {
-      // Non-fatal: log and continue
       console.error("usage upsert error", writeErr?.message);
     }
 
