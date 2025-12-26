@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getMe, getQuota, getToggles, setQuota, setToggles, adminCreateUser } from "../services/admin";
-import QuotaManager from "../components/QuotaManager";
+import UserManager from "../components/UserManager";
 
 export default function Admin() {
   const [loading, setLoading] = useState(true);
@@ -96,7 +96,7 @@ export default function Admin() {
         <div className="mt-3"><button onClick={createUser} disabled={creating} className="px-3 py-1.5 rounded border text-sm">Create</button></div>
       </section>
 
-      <QuotaManager />
+      <UserManager />
     </main>
   );
 }

@@ -71,3 +71,20 @@ export async function adminCreateUser(params: {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function updatePassword(user_id: string, password: string): Promise<void> {
+  const res = await fetch("/api/admin/users", {
+    method: "PATCH",
+    headers: await authHeaders(),
+    body: JSON.stringify({ user_id, password }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function deleteUser(user_id: string): Promise<void> {
+  const res = await fetch(`/api/admin/users?user_id=${user_id}`, {
+    method: "DELETE",
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}

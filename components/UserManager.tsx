@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { getQuota, setQuota } from "../services/admin";
+import { getQuota, setQuota, updatePassword, deleteUser } from "../services/admin";
 import {
     MagnifyingGlassIcon,
     PencilIcon,
     CheckIcon,
     XMarkIcon,
-    ExclamationTriangleIcon,
+    KeyIcon,
+    TrashIcon,
 } from "@heroicons/react/24/outline";
 
 interface QuotaItem {
@@ -17,13 +18,17 @@ interface QuotaItem {
     period_end: string;
 }
 
-export default function QuotaManager() {
+export default function UserManager() {
     const [loading, setLoading] = useState(true);
     const [quotas, setQuotas] = useState<QuotaItem[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [editingEmail, setEditingEmail] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
     const [saving, setSaving] = useState(false);
+
+    // Password Reset
+    const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+    const [newPassword, setNewPassword] = useState("");
 
     const loadQuotas = async () => {
         try {
@@ -74,6 +79,41 @@ export default function QuotaManager() {
         }
     };
 
+    const handleResetPassword = async () => {
+        if (!resettingUserId) return;
+        if (!newPassword) {
+            alert("请输入新密码");
+            return;
+        }
+        try {
+            setSaving(true);
+            await updatePassword(resettingUserId, newPassword);
+            alert("密码已重置");
+            setResettingUserId(null);
+            setNewPassword("");
+        } catch (e: any) {
+            alert(e?.message || "密码重置失败");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteUser = async (user_id: string, email: string) => {
+        if (!confirm(`确定要彻底删除用户 ${email} 吗？此操作不可逆，将清除该用户的所有任务和数据。`)) {
+            return;
+        }
+        try {
+            setSaving(true);
+            await deleteUser(user_id);
+            alert("用户已删除");
+            await loadQuotas();
+        } catch (e: any) {
+            alert(e?.message || "用户删除失败");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const getUsageColor = (used: number, limit: number) => {
         const percentage = limit > 0 ? (used / limit) * 100 : 0;
         if (percentage >= 100) return "text-red-600 bg-red-50";
@@ -98,18 +138,53 @@ export default function QuotaManager() {
     if (loading) {
         return (
             <div className="bg-white border rounded-xl p-6">
-                <div className="text-center text-gray-500">Loading monthly quotas...</div>
+                <div className="text-center text-gray-500">Loading user management...</div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white border rounded-xl p-6">
+        <div className="bg-white border rounded-xl p-6 relative">
+            {/* Password Reset Modal Overlay */}
+            {resettingUserId && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">重置用户密码</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                            重置用户 <b>{quotas.find(q => q.user_id === resettingUserId)?.email}</b> 的登录密码。
+                        </p>
+                        <input
+                            type="password"
+                            placeholder="输入新密码"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg text-sm mb-4"
+                            autoFocus
+                        />
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => { setResettingUserId(null); setNewPassword(""); }}
+                                className="px-4 py-2 text-sm text-gray-600 font-medium hover:bg-gray-100 rounded-lg"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={handleResetPassword}
+                                disabled={saving}
+                                className="px-4 py-2 text-sm bg-blue-600 text-white font-medium hover:bg-blue-700 rounded-lg disabled:opacity-50"
+                            >
+                                确定重置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Monthly Quota Management</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">User Management & Quotas</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        Manage monthly scraping limits and track periods
+                        Manage users, passwords, and monthly scraping limits
                     </p>
                 </div>
                 <button
@@ -186,7 +261,7 @@ export default function QuotaManager() {
                         {filteredQuotas.length === 0 ? (
                             <tr>
                                 <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
-                                    No quotas found
+                                    No users found
                                 </td>
                             </tr>
                         ) : (
@@ -240,34 +315,52 @@ export default function QuotaManager() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            {isEditing ? (
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => saveEdit(quota.email)}
-                                                        disabled={saving}
-                                                        className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
-                                                        title="Save"
-                                                    >
-                                                        <CheckIcon className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={cancelEdit}
-                                                        disabled={saving}
-                                                        className="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                                        title="Cancel"
-                                                    >
-                                                        <XMarkIcon className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => startEdit(quota.email, quota.monthly_limit)}
-                                                    className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                                    title="Edit Limit"
-                                                >
-                                                    <PencilIcon className="w-4 h-4" />
-                                                </button>
-                                            )}
+                                            <div className="flex items-center justify-end gap-1">
+                                                {isEditing ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => saveEdit(quota.email)}
+                                                            disabled={saving}
+                                                            className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+                                                            title="Save"
+                                                        >
+                                                            <CheckIcon className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={cancelEdit}
+                                                            disabled={saving}
+                                                            className="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                                            title="Cancel"
+                                                        >
+                                                            <XMarkIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={() => startEdit(quota.email, quota.monthly_limit)}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Edit Quota"
+                                                        >
+                                                            <PencilIcon className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setResettingUserId(quota.user_id)}
+                                                            className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                                            title="Reset Password"
+                                                        >
+                                                            <KeyIcon className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteUser(quota.user_id, quota.email)}
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Delete User"
+                                                        >
+                                                            <TrashIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -279,7 +372,7 @@ export default function QuotaManager() {
 
             {/* Footer Info */}
             <div className="mt-4 text-xs text-gray-500">
-                Showing {filteredQuotas.length} of {quotas.length} users • Updated: {quotas[0]?.day || "N/A"}
+                Showing {filteredQuotas.length} of {quotas.length} users
             </div>
         </div>
     );
