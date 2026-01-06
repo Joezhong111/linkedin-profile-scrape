@@ -1,7 +1,7 @@
 import { verifyToken, extractToken } from "../../lib/auth-server";
 import { db } from "../../db/client";
 import { linkedinLeads } from "../../db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, count } from "drizzle-orm";
 
 function mapRowToClient(r: any) {
     return {
@@ -43,6 +43,14 @@ export const handler = async (event: any) => {
         const user = await verifyToken(token);
         if (!user) return { statusCode: 401, body: "Unauthorized" };
 
+        // Parse pagination parameters from query string
+        const params = event.queryStringParameters || {};
+        const page = Math.max(1, parseInt(params.page) || 1);
+        const pageSize = Math.min(200, Math.max(10, parseInt(params.pageSize) || 50));
+        const offset = (page - 1) * pageSize;
+
+        console.log(`Pagination: page=${page}, pageSize=${pageSize}, offset=${offset}`);
+
         console.log("Checking DB connection...");
         try {
             const result = await db.execute(sql`SELECT 1 as health`);
@@ -59,17 +67,38 @@ export const handler = async (event: any) => {
 
         console.log("Fetching leads for user:", user.id);
         try {
-            const rows = await db
-                .select()
+            // Get total count first
+            const countResult = await db
+                .select({ count: count() })
                 .from(linkedinLeads)
                 .where(eq(linkedinLeads.ownerId, user.id));
 
-            console.log(`Found ${rows.length} leads`);
+            const total = countResult[0]?.count || 0;
+            const totalPages = Math.ceil(total / pageSize);
+
+            console.log(`Total leads: ${total}, Total pages: ${totalPages}`);
+
+            // Get paginated data
+            const rows = await db
+                .select()
+                .from(linkedinLeads)
+                .where(eq(linkedinLeads.ownerId, user.id))
+                .orderBy(desc(linkedinLeads.createdAt))
+                .limit(pageSize)
+                .offset(offset);
+
+            console.log(`Returned ${rows.length} leads for page ${page}`);
 
             return {
                 statusCode: 200,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(rows.map(mapRowToClient)),
+                body: JSON.stringify({
+                    data: rows.map(mapRowToClient),
+                    total,
+                    page,
+                    pageSize,
+                    totalPages
+                }),
             };
         } catch (queryErr: any) {
             console.error("Query Failed:", queryErr);

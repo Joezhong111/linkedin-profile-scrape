@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { LinkedInProfile } from "../types";
-import { fetchAllLeads, deleteLead } from "../services/api";
-import { MagnifyingGlassIcon, TrashIcon, ChartBarIcon } from "@heroicons/react/24/outline";
+import { fetchAllLeads, deleteLead, LeadsPaginatedResponse } from "../services/api";
+import { MagnifyingGlassIcon, TrashIcon, ChartBarIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import ProfileRow from "../components/ProfileRow";
 import LeadDetails from "../components/LeadDetails";
 
@@ -48,25 +48,47 @@ export default function Leads() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [total, setTotal] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
     const [companyFilter, setCompanyFilter] = useState("");
     const [locationFilter, setLocationFilter] = useState("");
     const [hasEmail, setHasEmail] = useState(false);
     const [selectedLead, setSelectedLead] = useState<LinkedInProfile | null>(null);
 
-    useEffect(() => {
-        (async () => {
-            try {
-                setLoading(true);
-                const rows = await fetchAllLeads();
-                setAll(rows);
-                setError(null);
-            } catch (e: any) {
-                setError(e?.message || "Load failed");
-            } finally {
-                setLoading(false);
-            }
-        })();
+    const loadLeads = useCallback(async (page: number, size: number) => {
+        try {
+            setLoading(true);
+            const response = await fetchAllLeads(page, size);
+            setAll(response.data);
+            setTotal(response.total);
+            setTotalPages(response.totalPages);
+            setCurrentPage(response.page);
+            setError(null);
+        } catch (e: any) {
+            setError(e?.message || "Load failed");
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        loadLeads(currentPage, pageSize);
+    }, [currentPage, pageSize, loadLeads]);
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    const handlePageSizeChange = (newSize: number) => {
+        setPageSize(newSize);
+        setCurrentPage(1); // Reset to first page when changing page size
+    };
 
     const companies = useMemo(() => {
         const set = new Set<string>();
@@ -205,92 +227,187 @@ export default function Leads() {
                     No leads found.
                 </div>
             ) : (
-                <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <table className="min-w-full text-sm">
-                        <thead className="bg-gray-50 text-gray-600 font-medium">
-                            <tr>
-                                <th className="p-4 text-left">Lead Info</th>
-                                <th className="p-4 text-left">Role & Company</th>
-                                <th className="p-4 text-left">Contact</th>
-                                <th className="p-4 text-left">Scraped From</th>
-                                <th className="p-4 text-center w-20">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {filtered.map((p) => (
-                                <tr
-                                    key={p.id}
-                                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                                    onClick={() => setSelectedLead(p)}
-                                >
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            {p.photo_url ? (
-                                                <img src={p.photo_url} className="h-10 w-10 rounded-full object-cover border border-gray-200" alt="" />
-                                            ) : (
-                                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                                                    {p.full_name?.[0] || "?"}
-                                                </div>
-                                            )}
-                                            <div>
-                                                <div className="font-semibold text-gray-900">{p.full_name}</div>
-                                                <div className="text-xs text-gray-500">{p.location}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="text-gray-900 font-medium">{p.job_title}</div>
-                                        <div className="text-xs text-blue-600 hover:underline">{p.company_name}</div>
-                                    </td>
-                                    <td className="p-4">
-                                        {p.email ? (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCopy(p.email);
-                                                }}
-                                                className="text-gray-600 hover:text-blue-600 flex items-center gap-1 group"
-                                            >
-                                                {p.email}
-                                                <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-gray-100 px-1 rounded transition-opacity">Copy</span>
-                                            </button>
-                                        ) : (
-                                            <span className="text-gray-400 italic">No email</span>
-                                        )}
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="text-xs text-gray-500 truncate max-w-[150px]" title={(p as any).source_company_url}>
-                                            {(p as any).source_company_url || "Direct Batch"}
-                                        </div>
-                                    </td>
-                                    <td className="p-4 text-center">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedLead(p);
-                                                }}
-                                                className="text-gray-400 hover:text-blue-600 p-2 transition-colors"
-                                                title="View Insights"
-                                            >
-                                                <ChartBarIcon className="h-5 w-5" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDelete(p.id!);
-                                                }}
-                                                className="text-gray-400 hover:text-red-600 p-2 transition-colors"
-                                            >
-                                                <TrashIcon className="h-5 w-5" />
-                                            </button>
-                                        </div>
-                                    </td>
+                <>
+                    <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table className="min-w-full text-sm">
+                            <thead className="bg-gray-50 text-gray-600 font-medium">
+                                <tr>
+                                    <th className="p-4 text-left">Lead Info</th>
+                                    <th className="p-4 text-left">Role & Company</th>
+                                    <th className="p-4 text-left">Contact</th>
+                                    <th className="p-4 text-left">Scraped From</th>
+                                    <th className="p-4 text-center w-20">Action</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {filtered.map((p) => (
+                                    <tr
+                                        key={p.id}
+                                        className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                        onClick={() => setSelectedLead(p)}
+                                    >
+                                        <td className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                {p.photo_url ? (
+                                                    <img src={p.photo_url} className="h-10 w-10 rounded-full object-cover border border-gray-200" alt="" />
+                                                ) : (
+                                                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                                                        {p.full_name?.[0] || "?"}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <div className="font-semibold text-gray-900">{p.full_name}</div>
+                                                    <div className="text-xs text-gray-500">{p.location}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="text-gray-900 font-medium">{p.job_title}</div>
+                                            <div className="text-xs text-blue-600 hover:underline">{p.company_name}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            {p.email ? (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCopy(p.email);
+                                                    }}
+                                                    className="text-gray-600 hover:text-blue-600 flex items-center gap-1 group"
+                                                >
+                                                    {p.email}
+                                                    <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-gray-100 px-1 rounded transition-opacity">Copy</span>
+                                                </button>
+                                            ) : (
+                                                <span className="text-gray-400 italic">No email</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="text-xs text-gray-500 truncate max-w-[150px]" title={(p as any).source_company_url}>
+                                                {(p as any).source_company_url || "Direct Batch"}
+                                            </div>
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedLead(p);
+                                                    }}
+                                                    className="text-gray-400 hover:text-blue-600 p-2 transition-colors"
+                                                    title="View Insights"
+                                                >
+                                                    <ChartBarIcon className="h-5 w-5" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(p.id!);
+                                                    }}
+                                                    className="text-gray-400 hover:text-red-600 p-2 transition-colors"
+                                                >
+                                                    <TrashIcon className="h-5 w-5" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                            {/* Page size selector */}
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <span>Show</span>
+                                <select
+                                    value={pageSize}
+                                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                    className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={25}>25</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                    <option value={200}>200</option>
+                                </select>
+                                <span>per page</span>
+                                <span className="text-gray-400 mx-2">|</span>
+                                <span className="font-medium text-gray-800">
+                                    {total.toLocaleString()} total leads
+                                </span>
+                            </div>
+
+                            {/* Pagination buttons */}
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handlePageChange(1)}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    First
+                                </button>
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="p-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronLeftIcon className="h-5 w-5" />
+                                </button>
+
+                                <div className="flex items-center gap-1">
+                                    {/* Page numbers */}
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        let pageNum;
+                                        if (totalPages <= 5) {
+                                            pageNum = i + 1;
+                                        } else if (currentPage <= 3) {
+                                            pageNum = i + 1;
+                                        } else if (currentPage >= totalPages - 2) {
+                                            pageNum = totalPages - 4 + i;
+                                        } else {
+                                            pageNum = currentPage - 2 + i;
+                                        }
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${currentPage === pageNum
+                                                        ? "bg-blue-600 text-white"
+                                                        : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                                    }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="p-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronRightIcon className="h-5 w-5" />
+                                </button>
+                                <button
+                                    onClick={() => handlePageChange(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Last
+                                </button>
+                            </div>
+
+                            {/* Current page info */}
+                            <div className="text-sm text-gray-600">
+                                Page <span className="font-medium text-gray-800">{currentPage}</span> of{" "}
+                                <span className="font-medium text-gray-800">{totalPages}</span>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
 
             {selectedLead && (

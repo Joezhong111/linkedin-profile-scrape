@@ -151,14 +151,22 @@ export const saveLead = async (lead: LinkedInProfile, sourceCompanyUrl?: string)
   return await res.json();
 };
 
-export const fetchAllLeads = async () => {
+export interface LeadsPaginatedResponse {
+  data: LinkedInProfile[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export const fetchAllLeads = async (page: number = 1, pageSize: number = 50): Promise<LeadsPaginatedResponse> => {
   try {
     await getCurrentUserId();
   } catch {
-    return [];
+    return { data: [], total: 0, page: 1, pageSize, totalPages: 0 };
   }
 
-  const res = await fetch("/api/leads/list", {
+  const res = await fetch(`/api/leads/list?page=${page}&pageSize=${pageSize}`, {
     headers: getAuthHeaders(),
   });
 
@@ -168,7 +176,7 @@ export const fetchAllLeads = async () => {
     throw new Error(`Failed to fetch leads (${res.status}): ${errorBody}`);
   }
 
-  return (await res.json()) as LinkedInProfile[];
+  return (await res.json()) as LeadsPaginatedResponse;
 };
 
 export const deleteLead = async (id: string) => {
