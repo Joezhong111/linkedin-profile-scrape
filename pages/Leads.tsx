@@ -12,7 +12,9 @@ import {
     BriefcaseIcon,
     FunnelIcon,
     XMarkIcon,
-    EllipsisVerticalIcon
+    EllipsisVerticalIcon,
+    QuestionMarkCircleIcon,
+    CommandLineIcon
 } from "@heroicons/react/24/outline";
 import LeadDetails from "../components/LeadDetails";
 
@@ -184,6 +186,10 @@ export default function Leads() {
     const [error, setError] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
 
+    // Keyboard Shortcuts State
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const [showShortcuts, setShowShortcuts] = useState(false);
+
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(50);
@@ -206,6 +212,8 @@ export default function Leads() {
         const timer = setTimeout(() => setDebouncedQ(q), 300);
         return () => clearTimeout(timer);
     }, [q]);
+
+
 
     const loadLeads = useCallback(async (page: number, size: number, filters: {
         q?: string;
@@ -342,6 +350,56 @@ export default function Leads() {
         } catch { }
     };
 
+    // Keyboard Shortcuts Handler
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if input/textarea focused (except Esc)
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+                if (e.key === 'Escape') {
+                    (target as HTMLElement).blur();
+                }
+                return;
+            }
+
+            // Search: / or Cmd+K
+            if (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+
+            // Help: ?
+            if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+                e.preventDefault();
+                setShowShortcuts(prev => !prev);
+            }
+
+            // Clear Selection / Close Modals: Esc
+            if (e.key === 'Escape') {
+                if (selectedLead) setSelectedLead(null);
+                else if (showFilters) setShowFilters(false);
+                else if (showShortcuts) setShowShortcuts(false);
+                else if (selectedIds.size > 0) setSelectedIds(new Set());
+            }
+
+            // Select All: Cmd+A
+            if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+                e.preventDefault();
+                if (selectedIds.size === all.length) setSelectedIds(new Set());
+                else setSelectedIds(new Set(all.map(p => p.id!)));
+            }
+
+            // Delete Selected: Backspace/Delete
+            if ((e.key === 'Backspace' || e.key === 'Delete') && selectedIds.size > 0) {
+                // Don't trigger if user is navigating back
+                handleBatchDelete();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [all, selectedIds, selectedLead, showFilters, showShortcuts]);
+
     return (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 sm:mt-6 pb-24 sm:pb-20">
             {/* Header - Mobile optimized */}
@@ -374,9 +432,10 @@ export default function Leads() {
                     <div className="flex-1 flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
                         <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-slate-400 flex-shrink-0" />
                         <input
+                            ref={searchInputRef}
                             value={q}
                             onChange={e => setQ(e.target.value)}
-                            placeholder="搜索姓名、公司、职位..."
+                            placeholder="搜索... (按下 / 聚焦)"
                             className="bg-transparent w-full focus:outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-400"
                         />
                         {q && (
@@ -388,8 +447,8 @@ export default function Leads() {
                     <button
                         onClick={() => setShowFilters(!showFilters)}
                         className={`p-2.5 rounded-xl border shadow-sm transition-colors relative ${showFilters || activeFilterCount > 0
-                                ? 'bg-blue-600 border-blue-600 text-white'
-                                : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300'
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300'
                             }`}
                     >
                         <FunnelIcon className="h-5 w-5" />
@@ -658,8 +717,8 @@ export default function Leads() {
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
                                                 className={`min-w-[40px] h-10 text-sm font-medium rounded-lg transition-colors active:scale-95 ${currentPage === pageNum
-                                                        ? "bg-blue-600 text-white"
-                                                        : "border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600"
+                                                    ? "bg-blue-600 text-white"
+                                                    : "border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600"
                                                     }`}
                                             >
                                                 {pageNum}
@@ -693,6 +752,49 @@ export default function Leads() {
                     lead={selectedLead}
                     onClose={() => setSelectedLead(null)}
                 />
+            )}
+
+            {/* Keyboard Shortcuts Modal */}
+            {showShortcuts && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-slate-700 overflow-hidden">
+                        <div className="p-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <CommandLineIcon className="h-5 w-5 text-blue-500" />
+                                Keyboard Shortcuts
+                            </h3>
+                            <button onClick={() => setShowShortcuts(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+                                <XMarkIcon className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="p-2">
+                            <div className="space-y-1">
+                                {[
+                                    { keys: ['/'], desc: 'Focus Search' },
+                                    { keys: ['Cmd', 'K'], desc: 'Focus Search' },
+                                    { keys: ['Esc'], desc: 'Clear Selection / Close' },
+                                    { keys: ['Cmd', 'A'], desc: 'Select All' },
+                                    { keys: ['Del'], desc: 'Delete Selected' },
+                                    { keys: ['?'], desc: 'Show Shortcuts' },
+                                ].map((item, i) => (
+                                    <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                                        <span className="text-sm font-medium text-gray-600 dark:text-slate-300">{item.desc}</span>
+                                        <div className="flex items-center gap-1">
+                                            {item.keys.map(k => (
+                                                <kbd key={k} className="px-2 py-1 text-xs font-bold text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700 rounded border border-gray-200 dark:border-slate-600 shadow-sm min-w-[1.5rem] text-center">
+                                                    {k}
+                                                </kbd>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="p-3 bg-gray-50 dark:bg-slate-900/50 text-xs text-center text-gray-500 dark:text-slate-400 border-t border-gray-100 dark:border-slate-700">
+                            Press <kbd className="font-bold">Esc</kbd> to close
+                        </div>
+                    </div>
+                </div>
             )}
         </main>
     );
