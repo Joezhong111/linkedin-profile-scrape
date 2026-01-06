@@ -134,6 +134,8 @@ export const saveLead = async (lead: LinkedInProfile, sourceCompanyUrl?: string)
     company_linkedin: lead.company_linkedin || rd.companyLinkedin,
     followers: lead.followers || rd.followers,
     source_company_url: sourceCompanyUrl,
+    current_job_duration: lead.current_job_duration || rd.currentJobDuration || (rd.experience?.[0]?.duration),
+    job_period: lead.job_period || (rd.experience?.[0] ? `${rd.experience[0].startDate?.text || ''} - ${rd.experience[0].endDate?.text || ''}` : null),
   };
 
   const res = await fetch("/api/leads/save", {

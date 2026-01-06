@@ -29,7 +29,9 @@ function mapRowToClient(r: any) {
         company_name: r.companyName,
         company_industry: r.companyIndustry,
         company_linkedin: r.companyLinkedin,
-        source_company_url: r.sourceCompanyUrl
+        source_company_url: r.sourceCompanyUrl,
+        current_job_duration: r.currentJobDuration,
+        job_period: r.jobPeriod
     };
 }
 
@@ -88,6 +90,8 @@ export const handler = async (event: any) => {
             companyIndustry: body.company_industry,
             companyLinkedin: body.company_linkedin,
             sourceCompanyUrl: body.source_company_url,
+            currentJobDuration: body.current_job_duration,
+            jobPeriod: body.job_period,
         };
 
         let result;

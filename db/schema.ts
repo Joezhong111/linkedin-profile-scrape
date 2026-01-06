@@ -199,6 +199,8 @@ export const linkedinLeads = pgTable(
 
     // Specifically track which company URL this lead came from
     sourceCompanyUrl: text("source_company_url"),
+    currentJobDuration: text("current_job_duration"),
+    jobPeriod: text("job_period"),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.id], name: "linkedin_leads_pkey" }),

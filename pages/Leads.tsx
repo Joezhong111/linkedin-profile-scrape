@@ -15,6 +15,8 @@ function toCsv(rows: LinkedInProfile[]) {
         "location",
         "company",
         "title",
+        "duration",
+        "period",
         "email",
         "source_company_url"
     ];
@@ -34,6 +36,8 @@ function toCsv(rows: LinkedInProfile[]) {
                 esc(r.location),
                 esc(r.company_name),
                 esc(r.job_title),
+                esc(r.current_job_duration),
+                esc(r.job_period),
                 esc(r.email),
                 esc((r as any).source_company_url),
             ].join(",")
@@ -234,6 +238,8 @@ export default function Leads() {
                                 <tr>
                                     <th className="p-4 text-left">Lead Info</th>
                                     <th className="p-4 text-left">Role & Company</th>
+                                    <th className="p-4 text-left">Duration</th>
+                                    <th className="p-4 text-left">Period</th>
                                     <th className="p-4 text-left">Contact</th>
                                     <th className="p-4 text-left">Scraped From</th>
                                     <th className="p-4 text-center w-20">Action</th>
@@ -264,6 +270,12 @@ export default function Leads() {
                                         <td className="p-4">
                                             <div className="text-gray-900 font-medium">{p.job_title}</div>
                                             <div className="text-xs text-blue-600 hover:underline">{p.company_name}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="text-gray-700">{p.current_job_duration || "-"}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="text-gray-700 whitespace-nowrap">{p.job_period || "-"}</div>
                                         </td>
                                         <td className="p-4">
                                             {p.email ? (
@@ -374,8 +386,8 @@ export default function Leads() {
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
                                                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${currentPage === pageNum
-                                                        ? "bg-blue-600 text-white"
-                                                        : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                                    ? "bg-blue-600 text-white"
+                                                    : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                                                     }`}
                                             >
                                                 {pageNum}

@@ -59,6 +59,7 @@ export interface LinkedInProfile {
   company_size?: string;
   current_job_duration?: string;
   current_job_duration_years?: number;
+  job_period?: string;
 
   // Non-column convenience fields for UI
   experiences?: any[];

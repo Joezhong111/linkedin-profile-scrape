@@ -4,6 +4,12 @@ import { linkedinLeads } from "../../db/schema";
 import { eq, desc, sql, count } from "drizzle-orm";
 
 function mapRowToClient(r: any) {
+    // Extract duration and period from raw_data if available
+    const rawData = r.rawData || {};
+    const currentExp = rawData.experience?.[0];
+    const duration = currentExp?.duration || null;
+    const period = currentExp ? `${currentExp.startDate?.text || ''} - ${currentExp.endDate?.text || ''}`.trim() : null;
+
     return {
         id: r.id,
         created_at: r.createdAt,
@@ -29,7 +35,9 @@ function mapRowToClient(r: any) {
         company_name: r.companyName,
         company_industry: r.companyIndustry,
         company_linkedin: r.companyLinkedin,
-        source_company_url: r.sourceCompanyUrl
+        source_company_url: r.sourceCompanyUrl,
+        current_job_duration: duration,
+        job_period: period
     };
 }
 
