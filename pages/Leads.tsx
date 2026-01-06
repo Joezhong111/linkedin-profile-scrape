@@ -320,7 +320,7 @@ export default function Leads() {
                             </button>
                         </div>
                     )}
-                    <div className="mt-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+                    <div className="mt-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-x-auto">
                         <table className="min-w-full text-sm">
                             <thead className="bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 font-medium">
                                 <tr>
@@ -333,12 +333,12 @@ export default function Leads() {
                                             onClick={e => e.stopPropagation()}
                                         />
                                     </th>
-                                    <th className="p-4 text-left">Lead Info</th>
-                                    <th className="p-4 text-left">Role & Company</th>
-                                    <th className="p-4 text-left">Duration</th>
-                                    <th className="p-4 text-left">Period</th>
+                                    <th className="p-4 text-left min-w-[200px]">Lead Info</th>
+                                    <th className="p-4 text-left min-w-[150px]">Role & Company</th>
+                                    <th className="p-4 text-left hidden lg:table-cell">Duration</th>
+                                    <th className="p-4 text-left hidden xl:table-cell">Period</th>
                                     <th className="p-4 text-left">Contact</th>
-                                    <th className="p-4 text-left">Scraped From</th>
+                                    <th className="p-4 text-left hidden 2xl:table-cell">Scraped From</th>
                                     <th className="p-4 text-center w-20">Action</th>
                                 </tr>
                             </thead>
@@ -376,10 +376,10 @@ export default function Leads() {
                                             <div className="text-gray-900 dark:text-white font-medium">{p.job_title}</div>
                                             <div className="text-xs text-blue-600 dark:text-blue-400 hover:underline">{p.company_name}</div>
                                         </td>
-                                        <td className="p-4">
+                                        <td className="p-4 hidden lg:table-cell">
                                             <div className="text-gray-700 dark:text-slate-300">{p.current_job_duration || "-"}</div>
                                         </td>
-                                        <td className="p-4">
+                                        <td className="p-4 hidden xl:table-cell">
                                             <div className="text-gray-700 dark:text-slate-300 whitespace-nowrap">{p.job_period || "-"}</div>
                                         </td>
                                         <td className="p-4">
@@ -398,7 +398,7 @@ export default function Leads() {
                                                 <span className="text-gray-400 dark:text-slate-500 italic">No email</span>
                                             )}
                                         </td>
-                                        <td className="p-4">
+                                        <td className="p-4 hidden 2xl:table-cell">
                                             <div className="text-xs text-gray-500 dark:text-slate-400 truncate max-w-[150px]" title={(p as any).source_company_url}>
                                                 {(p as any).source_company_url || "Direct Batch"}
                                             </div>
@@ -433,15 +433,15 @@ export default function Leads() {
                     </div>
 
                     {/* Pagination Controls */}
-                    <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                    <div className="mt-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             {/* Page size selector */}
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-400">
                                 <span>Show</span>
                                 <select
                                     value={pageSize}
                                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                                    className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value={10}>10</option>
                                     <option value={25}>25</option>
@@ -450,8 +450,8 @@ export default function Leads() {
                                     <option value={200}>200</option>
                                 </select>
                                 <span>per page</span>
-                                <span className="text-gray-400 mx-2">|</span>
-                                <span className="font-medium text-gray-800">
+                                <span className="text-gray-400 dark:text-slate-500 mx-2">|</span>
+                                <span className="font-medium text-gray-800 dark:text-slate-200">
                                     {total.toLocaleString()} total leads
                                 </span>
                             </div>
@@ -461,14 +461,14 @@ export default function Leads() {
                                 <button
                                     onClick={() => handlePageChange(1)}
                                     disabled={currentPage === 1}
-                                    className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                     First
                                 </button>
                                 <button
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
-                                    className="p-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="p-1.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                     <ChevronLeftIcon className="h-5 w-5" />
                                 </button>
@@ -492,7 +492,7 @@ export default function Leads() {
                                                 onClick={() => handlePageChange(pageNum)}
                                                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${currentPage === pageNum
                                                     ? "bg-blue-600 text-white"
-                                                    : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                                    : "border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600"
                                                     }`}
                                             >
                                                 {pageNum}
@@ -504,23 +504,23 @@ export default function Leads() {
                                 <button
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages}
-                                    className="p-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="p-1.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                     <ChevronRightIcon className="h-5 w-5" />
                                 </button>
                                 <button
                                     onClick={() => handlePageChange(totalPages)}
                                     disabled={currentPage === totalPages}
-                                    className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                     Last
                                 </button>
                             </div>
 
                             {/* Current page info */}
-                            <div className="text-sm text-gray-600">
-                                Page <span className="font-medium text-gray-800">{currentPage}</span> of{" "}
-                                <span className="font-medium text-gray-800">{totalPages}</span>
+                            <div className="text-sm text-gray-600 dark:text-slate-400">
+                                Page <span className="font-medium text-gray-800 dark:text-slate-200">{currentPage}</span> of{" "}
+                                <span className="font-medium text-gray-800 dark:text-slate-200">{totalPages}</span>
                             </div>
                         </div>
                     </div>

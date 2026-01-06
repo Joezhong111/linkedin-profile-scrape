@@ -280,3 +280,47 @@ export const monthlyUsage = pgTable(
 
 export type MonthlyUsage = typeof monthlyUsage.$inferSelect;
 export type NewMonthlyUsage = typeof monthlyUsage.$inferInsert;
+
+// ============================================
+// Tags System (for Leads)
+// ============================================
+
+export const tags = pgTable("tags", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  ownerId: uuid("owner_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("#3b82f6"), // Default blue
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+    .default(sql`timezone('utc'::text, now())`)
+    .notNull(),
+});
+
+export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
+
+// Junction table for many-to-many relationship between leads and tags
+export const leadTags = pgTable(
+  "lead_tags",
+  {
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => linkedinLeads.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .default(sql`timezone('utc'::text, now())`)
+      .notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.leadId, t.tagId] }),
+  })
+);
+
+export type LeadTag = typeof leadTags.$inferSelect;
+export type NewLeadTag = typeof leadTags.$inferInsert;
+

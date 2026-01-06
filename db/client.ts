@@ -11,7 +11,21 @@ const ssl = /supabase\.co|neon\.tech|aws/.test(connectionString)
   ? { rejectUnauthorized: false }
   : undefined;
 
-export const pool = new Pool({ connectionString, ssl, max: 3 });
+// Configure pool with connection lifecycle management to prevent SSL timeouts
+export const pool = new Pool({
+  connectionString,
+  ssl,
+  max: 5,                        // Max connections
+  idleTimeoutMillis: 30000,      // Close idle connections after 30s
+  connectionTimeoutMillis: 10000, // Timeout for new connections
+  allowExitOnIdle: true,          // Allow process to exit when pool is idle
+});
+
+// Handle pool errors gracefully
+pool.on('error', (err) => {
+  console.error('Unexpected pool error:', err.message);
+});
+
 export const db = drizzle(pool);
 
 // Example: import { db } from "../db/client"; then use db.select().from(...)

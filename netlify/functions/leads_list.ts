@@ -48,134 +48,128 @@ export const handler = async (event: any) => {
 
         if (!token) return { statusCode: 401, body: "Unauthorized" };
 
-        const user = await verifyToken(token);
-        if (!user) return { statusCode: 401, body: "Unauthorized" };
+        const payload = await verifyToken(token);
+        if (!payload) return { statusCode: 401, body: "Invalid token" };
+        const userId = payload.id;
 
-        // Parse pagination and filter parameters from query string
+        // Parse pagination parameters
         const params = event.queryStringParameters || {};
-        const page = Math.max(1, parseInt(params.page) || 1);
-        const pageSize = Math.min(200, Math.max(10, parseInt(params.pageSize) || 50));
+        const page = Math.max(1, parseInt(params.page || "1", 10));
+        const pageSize = Math.min(200, Math.max(1, parseInt(params.pageSize || "50", 10)));
         const offset = (page - 1) * pageSize;
 
         // Parse filter parameters
-        const searchQuery = params.q?.trim() || '';
-        const companyFilter = params.company?.trim() || '';
-        const locationFilter = params.location?.trim() || '';
-        const jobTitleFilter = params.jobTitle?.trim() || '';
-        const hasEmail = params.hasEmail === 'true';
+        const searchQuery = params.q?.trim() || "";
+        const companyFilter = params.company?.trim() || "";
+        const locationFilter = params.location?.trim() || "";
+        const jobTitleFilter = params.jobTitle?.trim() || "";
+        const hasEmail = params.hasEmail === "true";
 
         console.log(`Pagination: page=${page}, pageSize=${pageSize}, offset=${offset}`);
         console.log(`Filters: q=${searchQuery}, company=${companyFilter}, location=${locationFilter}, jobTitle=${jobTitleFilter}, hasEmail=${hasEmail}`);
 
-        if (!linkedinLeads) {
-            console.error("linkedinLeads is undefined");
-            throw new Error("linkedinLeads table definition is missing");
+        console.log("Fetching leads for user:", userId);
+
+        // Build dynamic filter conditions
+        const conditions = [eq(linkedinLeads.ownerId, userId)];
+
+        // Text search across multiple fields
+        if (searchQuery) {
+            const searchPattern = `%${searchQuery}%`;
+            conditions.push(
+                or(
+                    ilike(linkedinLeads.fullName, searchPattern),
+                    ilike(linkedinLeads.headline, searchPattern),
+                    ilike(linkedinLeads.jobTitle, searchPattern),
+                    ilike(linkedinLeads.companyName, searchPattern),
+                    ilike(linkedinLeads.location, searchPattern),
+                    ilike(linkedinLeads.email, searchPattern)
+                )!
+            );
         }
 
-        console.log("Fetching leads for user:", user.id);
-        try {
-            // Build WHERE conditions
-            const conditions: any[] = [eq(linkedinLeads.ownerId, user.id)];
-
-            // Add company filter
-            if (companyFilter) {
-                conditions.push(ilike(linkedinLeads.companyName, `%${companyFilter}%`));
-            }
-
-            // Add location filter
-            if (locationFilter) {
-                conditions.push(ilike(linkedinLeads.location, `%${locationFilter}%`));
-            }
-
-            // Add job title filter
-            if (jobTitleFilter) {
-                conditions.push(ilike(linkedinLeads.jobTitle, `%${jobTitleFilter}%`));
-            }
-
-            // Add hasEmail filter
-            if (hasEmail) {
-                conditions.push(isNotNull(linkedinLeads.email));
-            }
-
-            // Add full-text search across multiple fields
-            if (searchQuery) {
-                conditions.push(
-                    or(
-                        ilike(linkedinLeads.fullName, `%${searchQuery}%`),
-                        ilike(linkedinLeads.headline, `%${searchQuery}%`),
-                        ilike(linkedinLeads.email, `%${searchQuery}%`),
-                        ilike(linkedinLeads.companyName, `%${searchQuery}%`),
-                        ilike(linkedinLeads.jobTitle, `%${searchQuery}%`),
-                        ilike(linkedinLeads.location, `%${searchQuery}%`)
-                    )
-                );
-            }
-
-            const whereClause = and(...conditions);
-
-            // Get total count with filters
-            const countResult = await db
-                .select({ count: count() })
-                .from(linkedinLeads)
-                .where(whereClause);
-
-            const total = countResult[0]?.count || 0;
-            const totalPages = Math.ceil(total / pageSize);
-
-            console.log(`Total leads: ${total}, Total pages: ${totalPages}`);
-
-            // Get paginated data with filters
-            const rows = await db
-                .select()
-                .from(linkedinLeads)
-                .where(whereClause)
-                .orderBy(desc(linkedinLeads.createdAt))
-                .limit(pageSize)
-                .offset(offset);
-
-            console.log(`Returned ${rows.length} leads for page ${page}`);
-
-            // Get unique companies and locations for filter dropdowns
-            const allRows = await db
-                .select({
-                    companyName: linkedinLeads.companyName,
-                    location: linkedinLeads.location
-                })
-                .from(linkedinLeads)
-                .where(eq(linkedinLeads.ownerId, user.id));
-
-            const companies = [...new Set(allRows.map(r => r.companyName).filter(Boolean))].sort();
-            const locations = [...new Set(allRows.map(r => r.location).filter(Boolean))].sort();
-
-            return {
-                statusCode: 200,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    data: rows.map(mapRowToClient),
-                    total,
-                    page,
-                    pageSize,
-                    totalPages,
-                    filters: {
-                        companies,
-                        locations
-                    }
-                }),
-            };
-        } catch (queryErr: any) {
-            console.error("Query Failed:", queryErr);
-            throw new Error("Querying leads failed: " + queryErr.message);
+        // Company filter
+        if (companyFilter) {
+            conditions.push(eq(linkedinLeads.companyName, companyFilter));
         }
-    } catch (e: any) {
-        console.error("CRITICAL: Leads list error:", e);
+
+        // Location filter (uses ILIKE for partial matching)
+        if (locationFilter) {
+            conditions.push(ilike(linkedinLeads.location, `%${locationFilter}%`));
+        }
+
+        // Job title filter
+        if (jobTitleFilter) {
+            conditions.push(ilike(linkedinLeads.jobTitle, `%${jobTitleFilter}%`));
+        }
+
+        // Has email filter
+        if (hasEmail) {
+            conditions.push(isNotNull(linkedinLeads.email));
+        }
+
+        const whereClause = and(...conditions);
+
+        // Get total count with filters
+        const countResult = await db
+            .select({ count: count() })
+            .from(linkedinLeads)
+            .where(whereClause);
+
+        const total = countResult[0]?.count || 0;
+        const totalPages = Math.ceil(total / pageSize);
+
+        console.log(`Total leads: ${total}, Total pages: ${totalPages}`);
+
+        // Get paginated data with filters
+        const rows = await db
+            .select()
+            .from(linkedinLeads)
+            .where(whereClause)
+            .orderBy(desc(linkedinLeads.createdAt))
+            .limit(pageSize)
+            .offset(offset);
+
+        console.log(`Returned ${rows.length} leads for page ${page}`);
+
+        // Get unique companies and locations for filter dropdowns
+        const allRows = await db
+            .select({
+                companyName: linkedinLeads.companyName,
+                location: linkedinLeads.location,
+            })
+            .from(linkedinLeads)
+            .where(eq(linkedinLeads.ownerId, userId));
+
+        const companies = [...new Set(allRows.map(r => r.companyName).filter(Boolean))].sort() as string[];
+
+        // Extract region from location (first part before comma usually)
+        const locationsRaw = allRows.map(r => r.location).filter(Boolean) as string[];
+        const regions = [...new Set(locationsRaw.map(l => {
+            // Try to extract a meaningful region
+            const parts = l.split(',').map(s => s.trim());
+            return parts[parts.length - 1] || parts[0]; // Take last part (usually country/region)
+        }))].sort();
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                data: rows.map(r => mapRowToClient(r)),
+                page,
+                pageSize,
+                total,
+                totalPages,
+                filters: {
+                    companies,
+                    locations: regions,
+                },
+            }),
+        };
+    } catch (error: any) {
+        console.error("CRITICAL: Leads list error:", error);
         return {
             statusCode: 500,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                error: e?.message || "Server error",
-                stack: e?.stack,
-                tableExists: !!linkedinLeads
-            })
+            body: JSON.stringify({ error: "Internal server error", details: error.message }),
         };
     }
 };

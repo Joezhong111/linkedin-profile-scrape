@@ -77,10 +77,10 @@ export default function LeadDetails({ lead, onClose }: Props) {
                         <div className="min-w-0">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">{lead.full_name}</h2>
                             <p className="text-sm text-gray-500 dark:text-slate-400 truncate">{lead.job_title} at {lead.company_name}</p>
-                            <div className="hidden sm:flex gap-3 mt-1 text-xs text-gray-400 dark:text-slate-500">
-                                <span className="flex items-center gap-1"><BriefcaseIcon className="w-3 h-3" /> {stats.experienceCount} Roles</span>
-                                <span className="flex items-center gap-1"><CodeBracketIcon className="w-3 h-3" /> {stats.skillsCount} Skills</span>
-                                <span className="flex items-center gap-1"><LanguageIcon className="w-3 h-3" /> {stats.languagesCount} Langs</span>
+                            <div className="hidden sm:flex items-center gap-3 mt-1">
+                                <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500"><BriefcaseIcon className="w-3 h-3" /> {stats.experienceCount} Roles</span>
+                                <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500"><CodeBracketIcon className="w-3 h-3" /> {stats.skillsCount} Skills</span>
+                                <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500"><LanguageIcon className="w-3 h-3" /> {stats.languagesCount} Langs</span>
                             </div>
                         </div>
                     </div>

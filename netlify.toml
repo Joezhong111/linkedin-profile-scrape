@@ -113,6 +113,17 @@
   to = "/.netlify/functions/leads_delete"
   status = 200
 
+[[redirects]]
+  from = "/api/leads/batch-delete"
+  to = "/.netlify/functions/leads_batch_delete"
+  status = 200
+
+# Admin users management
+[[redirects]]
+  from = "/api/admin/users"
+  to = "/.netlify/functions/admin_users"
+  status = 200
+
 # SPA fallback
 [[redirects]]
   from = "/*"
