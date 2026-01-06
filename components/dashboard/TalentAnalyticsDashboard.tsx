@@ -65,7 +65,7 @@ const TalentAnalyticsDashboard: React.FC<TalentAnalyticsDashboardProps> = ({
   };
 
   return (
-    <div className="p-4 bg-slate-50">
+    <div className="p-4 bg-slate-50 dark:bg-slate-900/50">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Column 1: Profile Header, About, Skills */}
         <div className="lg:col-span-1 space-y-6">

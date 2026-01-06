@@ -18,27 +18,27 @@ export default function Dashboard() {
 
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
         {userId ? (
-          <div className="mt-4 text-gray-700">
+          <div className="mt-4 text-gray-700 dark:text-slate-300">
             <p>
               Signed in as <span className="font-mono">{email || userId}</span>
             </p>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
               user_id: <span className="font-mono">{userId}</span>
             </p>
             <button
               onClick={signOut}
-              className="mt-4 inline-flex items-center px-3 py-1.5 rounded-md border text-sm hover:bg-gray-50"
+              className="mt-4 inline-flex items-center px-3 py-1.5 rounded-md border border-gray-200 dark:border-slate-600 text-sm hover:bg-gray-50 dark:hover:bg-slate-700 dark:text-slate-300"
             >
               Sign out
             </button>
           </div>
         ) : (
-          <div className="mt-4 text-gray-700">
+          <div className="mt-4 text-gray-700 dark:text-slate-300">
             <p>You are not signed in.</p>
-            <a href="#/login" className="text-blue-600 hover:underline">
+            <a href="#/login" className="text-blue-600 dark:text-blue-400 hover:underline">
               Go to Login
             </a>
           </div>

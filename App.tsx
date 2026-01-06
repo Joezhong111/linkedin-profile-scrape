@@ -8,6 +8,9 @@ import { isApiReady } from "./services/api";
 import { authClient } from "./lib/auth";
 import Navbar from "./components/Navbar";
 import { getMe } from "./services/admin";
+import { ThemeProvider } from "./lib/ThemeContext";
+import { ToastProvider } from "./lib/ToastContext";
+import ToastContainer from "./components/ToastContainer";
 
 export default function App() {
   const [hash, setHash] = useState<string>(window.location.hash || "#/");
@@ -114,21 +117,26 @@ export default function App() {
   }, [authed]);
 
   return (
-    <div className="min-h-screen pb-12 bg-gray-50">
-      <Navbar
-        authed={authed}
-        isAdmin={isAdmin}
-        route={route}
-        apifyReady={apifyReady}
-        dbConnected={isApiReady}
-        onSignOut={signOut}
-      />
+    <ThemeProvider>
+      <ToastProvider>
+        <div className="min-h-screen pb-12 bg-gray-50 dark:bg-gray-900 transition-colors">
+          <Navbar
+            authed={authed}
+            isAdmin={isAdmin}
+            route={route}
+            apifyReady={apifyReady}
+            dbConnected={isApiReady}
+            onSignOut={signOut}
+          />
 
-      {route === "login" && <Login />}
-      {route === "profiles" && <Profiles />}
-      {route === "leads" && <Leads />}
-      {route === "admin" && (isAdmin ? <Admin /> : <Home />)}
-      {(route === "dashboard" || route === "home") && <Home />}
-    </div>
+          {route === "login" && <Login />}
+          {route === "profiles" && <Profiles />}
+          {route === "leads" && <Leads />}
+          {route === "admin" && (isAdmin ? <Admin /> : <Home />)}
+          {(route === "dashboard" || route === "home") && <Home />}
+        </div>
+        <ToastContainer />
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

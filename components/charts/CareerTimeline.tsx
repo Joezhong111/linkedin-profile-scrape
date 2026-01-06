@@ -32,8 +32,8 @@ export default function CareerTimeline({ data }: Props) {
     }));
 
     return (
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Career Timeline</h3>
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">Career Timeline</h3>
             <div className="h-[350px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart
@@ -41,18 +41,20 @@ export default function CareerTimeline({ data }: Props) {
                         data={chartData}
                         margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
                     >
-                        <CartesianGrid stroke="#f3f4f6" strokeDasharray="3 3" horizontal={true} vertical={false} />
+                        <CartesianGrid stroke="currentColor" className="text-gray-100 dark:text-slate-700/50" strokeDasharray="3 3" horizontal={true} vertical={false} />
                         <XAxis
                             type="number"
                             domain={[minYear, maxYear]}
                             tickCount={maxYear - minYear}
-                            tick={{ fontSize: 10, fill: '#9ca3af' }}
+                            tick={{ fontSize: 10, fill: 'currentColor' }}
+                            className="text-gray-400 dark:text-slate-500"
                         />
                         <YAxis
                             type="category"
                             dataKey="company"
                             width={130}
-                            tick={{ fontSize: 10, fill: '#374151' }}
+                            tick={{ fontSize: 10, fill: 'currentColor' }}
+                            className="text-gray-700 dark:text-slate-300"
                             interval={0}
                         />
                         <Tooltip
@@ -62,10 +64,10 @@ export default function CareerTimeline({ data }: Props) {
                                 if (active && payload && payload.length) {
                                     const d = payload[0].payload;
                                     return (
-                                        <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-lg text-xs">
-                                            <p className="font-bold text-gray-800">{d.role}</p>
-                                            <p className="text-blue-600 font-semibold">{d.company}</p>
-                                            <p className="text-gray-500 mt-1">
+                                        <div className="bg-white dark:bg-slate-800 p-3 border border-gray-100 dark:border-slate-700 shadow-lg rounded-lg text-xs">
+                                            <p className="font-bold text-gray-800 dark:text-white">{d.role}</p>
+                                            <p className="text-blue-600 dark:text-blue-400 font-semibold">{d.company}</p>
+                                            <p className="text-gray-500 dark:text-slate-400 mt-1">
                                                 {d.start} - {d.isCurrent ? 'Present' : d.end} ({d.duration})
                                             </p>
                                         </div>

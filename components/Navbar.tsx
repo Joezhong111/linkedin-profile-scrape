@@ -3,6 +3,7 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+import ThemeToggle from "./ThemeToggle";
 
 type Props = {
   authed: boolean;
@@ -22,12 +23,12 @@ const Navbar: React.FC<Props> = ({
   onSignOut,
 }) => {
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
+    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <a
             href="#/"
-            className="text-xl font-bold text-gray-900 tracking-tight"
+            className="text-xl font-bold text-gray-900 dark:text-white tracking-tight"
           >
             LinkedIn Insights Pro
           </a>
@@ -79,9 +80,10 @@ const Navbar: React.FC<Props> = ({
         <div className="flex items-center gap-4 text-sm font-medium">
           {authed ? (
             <>
+              <ThemeToggle />
               <button
                 onClick={onSignOut}
-                className="px-2 py-1 rounded-md text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50"
+                className="px-2 py-1 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Logout
               </button>

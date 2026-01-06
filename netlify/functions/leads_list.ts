@@ -1,7 +1,7 @@
 import { verifyToken, extractToken } from "../../lib/auth-server";
 import { db } from "../../db/client";
 import { linkedinLeads } from "../../db/schema";
-import { eq, desc, sql, count } from "drizzle-orm";
+import { eq, desc, sql, count, and, or, ilike, isNotNull } from "drizzle-orm";
 
 function mapRowToClient(r: any) {
     // Extract duration and period from raw_data if available
@@ -51,22 +51,21 @@ export const handler = async (event: any) => {
         const user = await verifyToken(token);
         if (!user) return { statusCode: 401, body: "Unauthorized" };
 
-        // Parse pagination parameters from query string
+        // Parse pagination and filter parameters from query string
         const params = event.queryStringParameters || {};
         const page = Math.max(1, parseInt(params.page) || 1);
         const pageSize = Math.min(200, Math.max(10, parseInt(params.pageSize) || 50));
         const offset = (page - 1) * pageSize;
 
-        console.log(`Pagination: page=${page}, pageSize=${pageSize}, offset=${offset}`);
+        // Parse filter parameters
+        const searchQuery = params.q?.trim() || '';
+        const companyFilter = params.company?.trim() || '';
+        const locationFilter = params.location?.trim() || '';
+        const jobTitleFilter = params.jobTitle?.trim() || '';
+        const hasEmail = params.hasEmail === 'true';
 
-        console.log("Checking DB connection...");
-        try {
-            const result = await db.execute(sql`SELECT 1 as health`);
-            console.log("DB health check success:", result);
-        } catch (dbErr: any) {
-            console.error("DB Health Check Failed:", dbErr);
-            throw new Error("Database connection failed: " + dbErr.message);
-        }
+        console.log(`Pagination: page=${page}, pageSize=${pageSize}, offset=${offset}`);
+        console.log(`Filters: q=${searchQuery}, company=${companyFilter}, location=${locationFilter}, jobTitle=${jobTitleFilter}, hasEmail=${hasEmail}`);
 
         if (!linkedinLeads) {
             console.error("linkedinLeads is undefined");
@@ -75,27 +74,78 @@ export const handler = async (event: any) => {
 
         console.log("Fetching leads for user:", user.id);
         try {
-            // Get total count first
+            // Build WHERE conditions
+            const conditions: any[] = [eq(linkedinLeads.ownerId, user.id)];
+
+            // Add company filter
+            if (companyFilter) {
+                conditions.push(ilike(linkedinLeads.companyName, `%${companyFilter}%`));
+            }
+
+            // Add location filter
+            if (locationFilter) {
+                conditions.push(ilike(linkedinLeads.location, `%${locationFilter}%`));
+            }
+
+            // Add job title filter
+            if (jobTitleFilter) {
+                conditions.push(ilike(linkedinLeads.jobTitle, `%${jobTitleFilter}%`));
+            }
+
+            // Add hasEmail filter
+            if (hasEmail) {
+                conditions.push(isNotNull(linkedinLeads.email));
+            }
+
+            // Add full-text search across multiple fields
+            if (searchQuery) {
+                conditions.push(
+                    or(
+                        ilike(linkedinLeads.fullName, `%${searchQuery}%`),
+                        ilike(linkedinLeads.headline, `%${searchQuery}%`),
+                        ilike(linkedinLeads.email, `%${searchQuery}%`),
+                        ilike(linkedinLeads.companyName, `%${searchQuery}%`),
+                        ilike(linkedinLeads.jobTitle, `%${searchQuery}%`),
+                        ilike(linkedinLeads.location, `%${searchQuery}%`)
+                    )
+                );
+            }
+
+            const whereClause = and(...conditions);
+
+            // Get total count with filters
             const countResult = await db
                 .select({ count: count() })
                 .from(linkedinLeads)
-                .where(eq(linkedinLeads.ownerId, user.id));
+                .where(whereClause);
 
             const total = countResult[0]?.count || 0;
             const totalPages = Math.ceil(total / pageSize);
 
             console.log(`Total leads: ${total}, Total pages: ${totalPages}`);
 
-            // Get paginated data
+            // Get paginated data with filters
             const rows = await db
                 .select()
                 .from(linkedinLeads)
-                .where(eq(linkedinLeads.ownerId, user.id))
+                .where(whereClause)
                 .orderBy(desc(linkedinLeads.createdAt))
                 .limit(pageSize)
                 .offset(offset);
 
             console.log(`Returned ${rows.length} leads for page ${page}`);
+
+            // Get unique companies and locations for filter dropdowns
+            const allRows = await db
+                .select({
+                    companyName: linkedinLeads.companyName,
+                    location: linkedinLeads.location
+                })
+                .from(linkedinLeads)
+                .where(eq(linkedinLeads.ownerId, user.id));
+
+            const companies = [...new Set(allRows.map(r => r.companyName).filter(Boolean))].sort();
+            const locations = [...new Set(allRows.map(r => r.location).filter(Boolean))].sort();
 
             return {
                 statusCode: 200,
@@ -105,7 +155,11 @@ export const handler = async (event: any) => {
                     total,
                     page,
                     pageSize,
-                    totalPages
+                    totalPages,
+                    filters: {
+                        companies,
+                        locations
+                    }
                 }),
             };
         } catch (queryErr: any) {

@@ -231,9 +231,9 @@ export default function Profiles() {
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Captured Profiles</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Captured Profiles</h1>
         <div className="flex items-center gap-2">
-          <a href="#/" className="text-sm text-blue-600 hover:underline">
+          <a href="#/" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
             ← Back to Home
           </a>
           <button
@@ -246,35 +246,36 @@ export default function Profiles() {
         </div>
       </div>
 
-      <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+      <div className="mt-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 flex-1">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-slate-500" />
             <input
               value={q}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setQ(e.target.value)
               }
               placeholder="Search name / headline / location / company / about"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
             <input
               type="checkbox"
               checked={aiOnly}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setAiOnly(e.target.checked)
               }
+              className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
             />
             <span className="flex items-center gap-1">
-              <SparklesIcon className="h-4 w-4 text-blue-600" />
+              <SparklesIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               AI only
             </span>
           </label>
           <div className="flex items-center gap-3">
             <div className="text-sm">
-              <label className="mr-2 text-gray-600">Sort</label>
+              <label className="mr-2 text-gray-600 dark:text-slate-400">Sort</label>
               <select
                 value={sortBy}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -282,27 +283,27 @@ export default function Profiles() {
                     e.target.value as "default" | "followers" | "newest"
                   )
                 }
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                className="border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-2 py-1 text-sm"
               >
                 <option value="default">Default</option>
                 <option value="followers">Followers desc</option>
                 <option value="newest">Newest</option>
               </select>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-slate-400">
               {filtered.length} / {all.length}
             </div>
           </div>
         </div>
         <div className="mt-3 grid grid-cols-1 md:grid-cols-6 gap-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Location</label>
+            <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Location</label>
             <select
               value={locationFilter}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setLocationFilter(e.target.value)
               }
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
             >
               <option value="">All</option>
               {locations.map((loc: string) => (
@@ -314,8 +315,8 @@ export default function Profiles() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Contact</label>
-            <div className="flex items-center gap-4 text-sm">
+            <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Contact</label>
+            <div className="flex items-center gap-4 text-sm text-gray-700 dark:text-slate-300">
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -323,6 +324,7 @@ export default function Profiles() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setHasEmail(e.target.checked)
                   }
+                  className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
                 />
                 <span>Has Email</span>
               </label>
@@ -333,6 +335,7 @@ export default function Profiles() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setHasPhone(e.target.checked)
                   }
+                  className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
                 />
                 <span>Has Phone</span>
               </label>
@@ -340,7 +343,7 @@ export default function Profiles() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">
               Min Followers
             </label>
             <input
@@ -351,13 +354,13 @@ export default function Profiles() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setMinFollowers(Number(e.target.value) || 0)
               }
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
               placeholder="e.g. 100000"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">
               Industry contains
             </label>
             <input
@@ -366,13 +369,13 @@ export default function Profiles() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setIndustryQ(e.target.value)
               }
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
               placeholder="Software / Non-profit / Energy"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">
               Company contains
             </label>
             <input
@@ -381,13 +384,13 @@ export default function Profiles() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setCompanyQ(e.target.value)
               }
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
               placeholder="e.g. Google / Microsoft / OpenAI"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">
               Created From
             </label>
             <input
@@ -396,12 +399,12 @@ export default function Profiles() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setDateFrom(e.target.value)
               }
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">
               Created To
             </label>
             <input
@@ -410,14 +413,14 @@ export default function Profiles() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setDateTo(e.target.value)
               }
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
             />
           </div>
 
           <div className="md:col-span-6 flex justify-end">
             <button
               onClick={clearFilters}
-              className="px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700"
             >
               Clear filters
             </button>
@@ -430,13 +433,13 @@ export default function Profiles() {
       ) : error ? (
         <div className="mt-6 text-red-600">{error}</div>
       ) : filtered.length === 0 ? (
-        <div className="mt-6 bg-white border border-dashed border-gray-300 rounded-xl p-12 text-center text-gray-500">
+        <div className="mt-6 bg-white dark:bg-slate-800 border border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-12 text-center text-gray-500 dark:text-slate-400">
           No profiles match your filters.
         </div>
       ) : (
-        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+        <div className="mt-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
+            <thead className="bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 border-b border-gray-100 dark:border-slate-700">
               <tr>
                 <th className="p-3 text-left w-10"></th>
                 <th className="p-3 text-left">Name</th>

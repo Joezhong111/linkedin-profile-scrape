@@ -63,12 +63,12 @@ export default function Home() {
   const loadCount = useCallback(async () => {
     if (!isApiReady) return;
     try {
-      const [profiles, leads] = await Promise.all([
+      const [profiles, leadsResponse] = await Promise.all([
         fetchAllProfiles(),
         fetchAllLeads(),
       ]);
       setSavedCount(profiles.length);
-      setSavedLeadsCount(leads.length);
+      setSavedLeadsCount(leadsResponse.total);
     } catch (e) {
       // ignore
     }
@@ -174,18 +174,18 @@ export default function Home() {
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <CloudArrowUpIcon className="h-5 w-5 text-blue-600" />
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <h2 className="text-lg font-semibold dark:text-white mb-4 flex items-center gap-2">
+              <CloudArrowUpIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               Scrape New Profiles
             </h2>
 
             {/* Tabs */}
-            <div className="flex border-b border-gray-200 mb-4">
+            <div className="flex border-b border-gray-200 dark:border-slate-700 mb-4">
               <button
                 className={`py-2 px-4 text-sm font-medium ${scrapeMode === "profiles"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
+                  : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
                   }`}
                 onClick={() => setScrapeMode("profiles")}
               >
@@ -193,8 +193,8 @@ export default function Home() {
               </button>
               <button
                 className={`py-2 px-4 text-sm font-medium ${scrapeMode === "company"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
+                  : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
                   }`}
                 onClick={() => setScrapeMode("company")}
               >
@@ -222,13 +222,13 @@ export default function Home() {
                 <div className="space-y-4">
                   {/* Company URL */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Company LinkedIn URL <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       disabled={state.isLoading}
-                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      className="w-full p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                       placeholder="https://www.linkedin.com/company/google"
                       value={companyUrl}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -240,7 +240,7 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-4">
                     {/* Max Items */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                         Max Items <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -248,7 +248,7 @@ export default function Home() {
                         min={1}
                         max={100}
                         disabled={state.isLoading}
-                        className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         value={maxItems}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setMaxItems(Number(e.target.value))
@@ -257,13 +257,13 @@ export default function Home() {
                     </div>
                     {/* Scraper Mode */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                         Scraper Mode <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={profileScraperMode}
                         onChange={(e) => setProfileScraperMode(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         disabled={state.isLoading}
                       >
                         <option value="Full + email search ($12 per 1k)">Full + email search ($12 per 1k)</option>
@@ -275,7 +275,7 @@ export default function Home() {
 
                   {/* Job Titles */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Job Titles (Keywords)
                     </label>
                     <div className="flex gap-2 mb-2">
@@ -283,17 +283,17 @@ export default function Home() {
                         value={jobTitleInput}
                         onChange={e => setJobTitleInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addJobTitle())}
-                        className="flex-1 p-2 border border-gray-300 rounded text-sm"
+                        className="flex-1 p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded text-sm focus:ring-2 focus:ring-blue-500"
                         placeholder="e.g. CEO"
                         disabled={state.isLoading}
                       />
-                      <button type="button" onClick={addJobTitle} disabled={state.isLoading} className="px-3 py-1 bg-gray-100 border rounded text-sm font-semibold hover:bg-gray-200">Add</button>
+                      <button type="button" onClick={addJobTitle} disabled={state.isLoading} className="px-3 py-1 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 dark:text-slate-200">Add</button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {jobTitles.map((t, i) => (
-                        <span key={i} className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded flex items-center gap-1">
+                        <span key={i} className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs px-2 py-1 rounded flex items-center gap-1">
                           {t}
-                          <button type="button" onClick={() => removeJobTitle(i)} className="hover:text-blue-900">×</button>
+                          <button type="button" onClick={() => removeJobTitle(i)} className="hover:text-blue-900 dark:hover:text-blue-100">×</button>
                         </span>
                       ))}
                     </div>
@@ -301,7 +301,7 @@ export default function Home() {
 
                   {/* Locations */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Locations
                     </label>
                     <div className="flex gap-2 mb-2">
@@ -309,17 +309,17 @@ export default function Home() {
                         value={locationInput}
                         onChange={e => setLocationInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addLocation())}
-                        className="flex-1 p-2 border border-gray-300 rounded text-sm"
+                        className="flex-1 p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded text-sm focus:ring-2 focus:ring-blue-500"
                         placeholder="e.g. Guangzhou"
                         disabled={state.isLoading}
                       />
-                      <button type="button" onClick={addLocation} disabled={state.isLoading} className="px-3 py-1 bg-gray-100 border rounded text-sm font-semibold hover:bg-gray-200">Add</button>
+                      <button type="button" onClick={addLocation} disabled={state.isLoading} className="px-3 py-1 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 dark:text-slate-200">Add</button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {locations.map((t, i) => (
-                        <span key={i} className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded flex items-center gap-1">
+                        <span key={i} className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs px-2 py-1 rounded flex items-center gap-1">
                           {t}
-                          <button type="button" onClick={() => removeLocation(i)} className="hover:text-green-900">×</button>
+                          <button type="button" onClick={() => removeLocation(i)} className="hover:text-green-900 dark:hover:text-green-100">×</button>
                         </span>
                       ))}
                     </div>
@@ -329,7 +329,7 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-4">
                     {/* Years at Current Company */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
                         Years at Current Company
                       </label>
                       <div className="space-y-1">
@@ -340,7 +340,7 @@ export default function Home() {
                           { id: '4', label: '6 to 10 years' },
                           { id: '5', label: '> 10 years' },
                         ].map(opt => (
-                          <label key={opt.id} className="flex items-center gap-2 text-sm text-gray-700">
+                          <label key={opt.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
                             <input
                               type="checkbox"
                               checked={yearsAtCurrentCompany.has(opt.id)}
@@ -355,7 +355,7 @@ export default function Home() {
 
                     {/* Years of Experience */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
                         Years of Experience
                       </label>
                       <div className="space-y-1">
@@ -366,12 +366,13 @@ export default function Home() {
                           { id: '4', label: '6 to 10 years' },
                           { id: '5', label: '> 10 years' },
                         ].map(opt => (
-                          <label key={opt.id} className="flex items-center gap-2 text-sm text-gray-700">
+                          <label key={opt.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
                             <input
                               type="checkbox"
                               checked={yearsOfExperience.has(opt.id)}
                               onChange={() => setYearsOfExperience(toggleSet(yearsOfExperience, opt.id))}
                               disabled={state.isLoading}
+                              className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
                             />
                             {opt.label}
                           </label>
@@ -401,33 +402,33 @@ export default function Home() {
               </button>
             </form>
             {state.error && (
-              <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100">
+              <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded-lg border border-red-100 dark:border-red-800">
                 {state.error}
               </div>
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                <CircleStackIcon className="h-4 w-4 text-gray-500" />
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <CircleStackIcon className="h-4 w-4 text-gray-500 dark:text-slate-400" />
                 Database Stats
               </h3>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900">
+              <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
                   {savedCount}
                 </div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                <div className="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
                   Saved Profiles
                 </div>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900">
+              <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
                   {savedLeadsCount}
                 </div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                <div className="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
                   Saved Leads
                 </div>
               </div>
@@ -438,7 +439,7 @@ export default function Home() {
         {/* Right: Preview */}
         <div className="lg:col-span-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               {previewItems.length > 0
                 ? "Preview from Apify"
                 : "Ready to scrape"}
@@ -446,16 +447,16 @@ export default function Home() {
           </div>
 
           {previewItems.length === 0 ? (
-            <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-12 text-center">
-              <MagnifyingGlassIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 font-medium">
+            <div className="bg-white dark:bg-slate-800 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-12 text-center">
+              <MagnifyingGlassIcon className="h-12 w-12 text-gray-300 dark:text-slate-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-slate-400 font-medium">
                 Enter LinkedIn URLs and click Start Scraping.
               </p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="p-4 flex items-center justify-between gap-3 border-b border-gray-100">
-                <div className="text-sm text-gray-600">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+              <div className="p-4 flex items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-700">
+                <div className="text-sm text-gray-600 dark:text-slate-400">
                   {selectedIndexes.size} selected / {previewItems.length} total
                 </div>
                 <div className="flex items-center gap-2">
@@ -465,19 +466,19 @@ export default function Home() {
                         new Set(previewItems.map((_: any, i: number) => i))
                       )
                     }
-                    className="px-3 py-1.5 text-xs font-semibold border rounded-md hover:bg-gray-50"
+                    className="px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-slate-600 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700 dark:text-slate-200"
                   >
                     Select All
                   </button>
                   <button
                     onClick={() => setSelectedIndexes(new Set())}
-                    className="px-3 py-1.5 text-xs font-semibold border rounded-md hover:bg-gray-50"
+                    className="px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-slate-600 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700 dark:text-slate-200"
                   >
                     Clear Selection
                   </button>
                   <button
                     onClick={clearPreview}
-                    className="px-3 py-1.5 text-xs font-semibold border rounded-md hover:bg-gray-50"
+                    className="px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-slate-600 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700 dark:text-slate-200"
                   >
                     Discard Preview
                   </button>
@@ -492,7 +493,7 @@ export default function Home() {
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 text-gray-600">
+                  <thead className="bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 border-b border-gray-100 dark:border-slate-700">
                     <tr>
                       <th className="p-3 w-10"></th>
                       <th className="p-3 text-left">Name</th>
@@ -510,7 +511,7 @@ export default function Home() {
                       return (
                         <tr
                           key={idx}
-                          className="border-t border-gray-100 hover:bg-gray-50"
+                          className="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700"
                         >
                           <td className="p-3">
                             <input

@@ -22,8 +22,8 @@ export default function SkillsChart({ data }: Props) {
     }
 
     return (
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Top Skills by Endorsements</h3>
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">Top Skills by Endorsements</h3>
             <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
@@ -38,13 +38,21 @@ export default function SkillsChart({ data }: Props) {
                             type="category"
                             width={140}
                             fontSize={11}
-                            tick={{ fill: '#4b5563' }}
+                            tick={{ fill: 'currentColor' }}
+                            className="text-gray-600 dark:text-slate-400"
                             axisLine={false}
                             tickLine={false}
                         />
                         <Tooltip
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                            cursor={{ fill: '#f3f4f6' }}
+                            contentStyle={{
+                                borderRadius: '8px',
+                                border: 'none',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                backgroundColor: 'var(--tooltip-bg, #ffffff)',
+                                color: 'var(--tooltip-text, #374151)'
+                            }}
+                            itemStyle={{ color: 'inherit' }}
+                            cursor={{ fill: 'currentColor', opacity: 0.1 }}
                             wrapperStyle={{ zIndex: 10000 }}
                             allowEscapeViewBox={{ x: true, y: true }}
                         />

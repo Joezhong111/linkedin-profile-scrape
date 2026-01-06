@@ -24,15 +24,16 @@ export default function LanguageRadar({ data }: Props) {
         : data;
 
     return (
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm h-full flex flex-col items-center">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2 w-full text-left">Language Proficiency</h3>
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm h-full flex flex-col items-center">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2 w-full text-left">Language Proficiency</h3>
             <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
-                        <PolarGrid stroke="#e5e7eb" />
+                        <PolarGrid stroke="currentColor" className="text-gray-200 dark:text-slate-700" />
                         <PolarAngleAxis
                             dataKey="language"
-                            tick={{ fill: '#4b5563', fontSize: 11, fontWeight: 600 }}
+                            tick={{ fill: 'currentColor', fontSize: 11, fontWeight: 600 }}
+                            className="text-gray-600 dark:text-slate-400"
                         />
                         <PolarRadiusAxis angle={30} domain={[0, 5]} tick={false} axisLine={false} />
                         <Radar
@@ -43,7 +44,13 @@ export default function LanguageRadar({ data }: Props) {
                             fillOpacity={0.5}
                         />
                         <Tooltip
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                            contentStyle={{
+                                borderRadius: '8px',
+                                border: 'none',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                backgroundColor: 'var(--tooltip-bg, #ffffff)'
+                            }}
+                            itemStyle={{ color: 'inherit' }}
                             wrapperStyle={{ zIndex: 10000 }}
                             allowEscapeViewBox={{ x: true, y: true }}
                             formatter={(value, name, props) => [props.payload.proficiency, 'Level']}
@@ -51,7 +58,7 @@ export default function LanguageRadar({ data }: Props) {
                     </RadarChart>
                 </ResponsiveContainer>
             </div>
-            <div className="mt-2 text-xs text-gray-400">
+            <div className="mt-2 text-xs text-gray-400 dark:text-slate-500">
                 Native (5) • Professional (4) • Working (3) • Limited (2)
             </div>
         </div>

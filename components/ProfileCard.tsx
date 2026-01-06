@@ -48,38 +48,38 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
 
   return (
     <>
-      <td className="p-3 font-medium text-gray-900 whitespace-nowrap">
+      <td className="p-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
         <div className="flex items-center gap-3">
           <img
             src={photo}
             alt={name}
-            className="h-12 w-12 rounded-full object-cover bg-gray-200"
+            className="h-12 w-12 rounded-full object-cover bg-gray-200 dark:bg-slate-700"
           />
           <div>
             <div className="font-bold">{name}</div>
           </div>
         </div>
       </td>
-      <td className="p-3 text-gray-700">{title}</td>
-      <td className="p-3 text-gray-700">{company}</td>
-      <td className="p-3 text-gray-700">{region}</td>
-      <td className="p-3 text-gray-700 truncate max-w-[16rem]">
+      <td className="p-3 text-gray-700 dark:text-slate-300">{title}</td>
+      <td className="p-3 text-gray-700 dark:text-slate-300">{company}</td>
+      <td className="p-3 text-gray-700 dark:text-slate-300">{region}</td>
+      <td className="p-3 text-gray-700 dark:text-slate-300 truncate max-w-[16rem]">
         {email || "-"}
         {email && (
           <button
             onClick={() => handleCopy(email)}
-            className="ml-2 text-gray-400 hover:text-gray-700"
+            className="ml-2 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300"
           >
             <ClipboardDocumentIcon className="h-4 w-4" />
           </button>
         )}
       </td>
-      <td className="p-3 text-gray-700 truncate max-w-[12rem]">
+      <td className="p-3 text-gray-700 dark:text-slate-300 truncate max-w-[12rem]">
         {phone || "-"}
         {phone && (
           <button
             onClick={() => handleCopy(phone)}
-            className="ml-2 text-gray-400 hover:text-gray-700"
+            className="ml-2 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300"
           >
             <ClipboardDocumentIcon className="h-4 w-4" />
           </button>
@@ -90,7 +90,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           href={link}
           target="_blank"
           rel="noreferrer"
-          className="text-blue-600 hover:underline inline-flex items-center gap-1"
+          className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
         >
           Open <ArrowTopRightOnSquareIcon className="h-4 w-4" />
         </a>

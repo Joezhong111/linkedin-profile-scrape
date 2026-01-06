@@ -63,37 +63,55 @@ export default function Admin() {
     }
   };
 
-  if (loading) return <main className="max-w-5xl mx-auto px-4 mt-8">Loading admin...</main>;
-  if (!me?.isAdmin) return <main className="max-w-5xl mx-auto px-4 mt-8">Forbidden</main>;
+  if (loading) return <main className="max-w-5xl mx-auto px-4 mt-8 text-gray-900 dark:text-white">Loading admin...</main>;
+  if (!me?.isAdmin) return <main className="max-w-5xl mx-auto px-4 mt-8 text-gray-900 dark:text-white">Forbidden</main>;
 
   return (
     <main className="max-w-6xl mx-auto px-4 mt-8 space-y-6 pb-12">
-      {error && <div className="p-3 bg-red-50 text-red-700 border border-red-100 rounded">{error}</div>}
+      {error && <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-800 rounded">{error}</div>}
 
-      <section className="bg-white border rounded-xl p-6">
-        <h2 className="text-lg font-semibold">System Settings</h2>
+      <section className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">System Settings</h2>
         <div className="mt-4 flex items-center gap-6">
-          <label className="inline-flex items-center gap-2">
-            <input type="checkbox" checked={registrationOpen} onChange={(e) => setRegistrationOpen(e.target.checked)} />
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={registrationOpen}
+              onChange={(e) => setRegistrationOpen(e.target.checked)}
+              className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
+            />
             <span>Registration Open</span>
           </label>
-          <label className="inline-flex items-center gap-2">
-            <input type="checkbox" checked={googleOpen} onChange={(e) => setGoogleOpen(e.target.checked)} />
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={googleOpen}
+              onChange={(e) => setGoogleOpen(e.target.checked)}
+              className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
+            />
             <span>Google OAuth Open</span>
           </label>
-          <button onClick={saveToggles} disabled={savingToggles} className="px-3 py-1.5 rounded border text-sm">Save</button>
+          <button onClick={saveToggles} disabled={savingToggles} className="px-3 py-1.5 rounded border border-gray-300 dark:border-slate-600 text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700">Save</button>
         </div>
       </section>
 
-      <section className="bg-white border rounded-xl p-6">
-        <h2 className="text-lg font-semibold">Create User</h2>
+      <section className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create User</h2>
         <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
-          <input placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} className="border rounded px-3 py-2 text-sm" />
-          <input placeholder="initial password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="border rounded px-3 py-2 text-sm" disabled={invite} />
-          <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} /> send invite</label>
-          <input placeholder="monthly limit (optional)" value={initLimit} onChange={(e) => setInitLimit(e.target.value)} className="border rounded px-3 py-2 text-sm" />
+          <input placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input placeholder="initial password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" disabled={invite} />
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={invite}
+              onChange={(e) => setInvite(e.target.checked)}
+              className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
+            />
+            send invite
+          </label>
+          <input placeholder="monthly limit (optional)" value={initLimit} onChange={(e) => setInitLimit(e.target.value)} className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-        <div className="mt-3"><button onClick={createUser} disabled={creating} className="px-3 py-1.5 rounded border text-sm">Create</button></div>
+        <div className="mt-3"><button onClick={createUser} disabled={creating} className="px-3 py-1.5 rounded border border-gray-300 dark:border-slate-600 text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700">Create</button></div>
       </section>
 
       <UserManager />

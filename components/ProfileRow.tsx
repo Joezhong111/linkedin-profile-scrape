@@ -21,7 +21,7 @@ const ProfileRow: React.FC<ProfileRowProps> = ({ profile, handleCopy }) => {
               e.preventDefault();
               setIsOpen(!isOpen);
             }}
-            className="text-gray-400 hover:text-gray-700"
+            className="text-gray-400 hover:text-gray-700 dark:hover:text-slate-300"
           >
             {isOpen ? (
               <ChevronUpIcon className="h-5 w-5" />
@@ -34,7 +34,7 @@ const ProfileRow: React.FC<ProfileRowProps> = ({ profile, handleCopy }) => {
       </tr>
       {isOpen && (
         <tr>
-          <td colSpan={8} className="p-0 bg-slate-50">
+          <td colSpan={8} className="p-0 bg-slate-50 dark:bg-slate-900/50">
             <TalentAnalyticsDashboard profile={profile} />
           </td>
         </tr>

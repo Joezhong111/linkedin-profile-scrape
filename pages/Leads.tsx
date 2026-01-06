@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { LinkedInProfile } from "../types";
-import { fetchAllLeads, deleteLead, LeadsPaginatedResponse } from "../services/api";
+import { fetchAllLeads, deleteLead, batchDeleteLeads, LeadsPaginatedResponse } from "../services/api";
 import { MagnifyingGlassIcon, TrashIcon, ChartBarIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import ProfileRow from "../components/ProfileRow";
 import LeadDetails from "../components/LeadDetails";
@@ -58,19 +58,41 @@ export default function Leads() {
     const [total, setTotal] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
+    // Filter state (server-side)
     const [companyFilter, setCompanyFilter] = useState("");
     const [locationFilter, setLocationFilter] = useState("");
     const [hasEmail, setHasEmail] = useState(false);
     const [selectedLead, setSelectedLead] = useState<LinkedInProfile | null>(null);
 
-    const loadLeads = useCallback(async (page: number, size: number) => {
+    // Filter options from server
+    const [companies, setCompanies] = useState<string[]>([]);
+    const [locations, setLocations] = useState<string[]>([]);
+
+    // Debounce search
+    const [debouncedQ, setDebouncedQ] = useState("");
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedQ(q), 300);
+        return () => clearTimeout(timer);
+    }, [q]);
+
+    const loadLeads = useCallback(async (page: number, size: number, filters: {
+        q?: string;
+        company?: string;
+        location?: string;
+        hasEmail?: boolean;
+    }) => {
         try {
             setLoading(true);
-            const response = await fetchAllLeads(page, size);
+            const response = await fetchAllLeads(page, size, filters);
             setAll(response.data);
             setTotal(response.total);
             setTotalPages(response.totalPages);
             setCurrentPage(response.page);
+            // Update filter options from server
+            if (response.filters) {
+                setCompanies(response.filters.companies);
+                setLocations(response.filters.locations);
+            }
             setError(null);
         } catch (e: any) {
             setError(e?.message || "Load failed");
@@ -79,60 +101,89 @@ export default function Leads() {
         }
     }, []);
 
+    // Reload when filters change
     useEffect(() => {
-        loadLeads(currentPage, pageSize);
-    }, [currentPage, pageSize, loadLeads]);
+        loadLeads(1, pageSize, {
+            q: debouncedQ,
+            company: companyFilter,
+            location: locationFilter,
+            hasEmail: hasEmail || undefined,
+        });
+    }, [debouncedQ, companyFilter, locationFilter, hasEmail, pageSize, loadLeads]);
 
+    // Reload on page change (but not on filter change)
     const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= totalPages) {
-            setCurrentPage(newPage);
+        if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
+            loadLeads(newPage, pageSize, {
+                q: debouncedQ,
+                company: companyFilter,
+                location: locationFilter,
+                hasEmail: hasEmail || undefined,
+            });
         }
     };
 
     const handlePageSizeChange = (newSize: number) => {
         setPageSize(newSize);
-        setCurrentPage(1); // Reset to first page when changing page size
+        // Will trigger reload via useEffect
     };
 
-    const companies = useMemo(() => {
-        const set = new Set<string>();
-        for (const p of all) {
-            if (p.company_name) set.add(p.company_name);
+    const resetFilters = () => {
+        setQ("");
+        setCompanyFilter("");
+        setLocationFilter("");
+        setHasEmail(false);
+    };
+
+    // Batch selection state
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === all.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(all.map(p => p.id!)));
         }
-        return Array.from(set).sort();
-    }, [all]);
+    };
 
-    const locations = useMemo(() => {
-        const set = new Set<string>();
-        for (const p of all) {
-            if (p.location) set.add(p.location);
+    const toggleSelect = (id: string) => {
+        const newSet = new Set(selectedIds);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
         }
-        return Array.from(set).sort();
-    }, [all]);
+        setSelectedIds(newSet);
+    };
 
-    const filtered = useMemo(() => {
-        const term = q.trim().toLowerCase();
-        return all.filter((p: any) => {
-            if (companyFilter && p.company_name !== companyFilter) return false;
-            if (locationFilter && p.location !== locationFilter) return false;
-            if (hasEmail && !p.email) return false;
+    const handleBatchDelete = async () => {
+        if (selectedIds.size === 0) return;
+        if (!window.confirm(`Delete ${selectedIds.size} selected leads?`)) return;
 
-            if (!term) return true;
-            const hay = [
-                p.full_name,
-                p.headline,
-                p.location,
-                p.company_name,
-                p.job_title,
-                p.email,
-                p.profile_url
-            ].map(v => (v || "").toLowerCase()).join(" ");
-            return hay.includes(term);
-        });
-    }, [all, q, companyFilter, locationFilter, hasEmail]);
+        try {
+            await batchDeleteLeads(Array.from(selectedIds));
+            setAll(all.filter(p => !selectedIds.has(p.id!)));
+            setTotal(t => t - selectedIds.size);
+            setSelectedIds(new Set());
+        } catch (e: any) {
+            alert("Batch delete failed: " + e.message);
+        }
+    };
+
+    const exportSelected = () => {
+        const selectedLeads = all.filter(p => selectedIds.has(p.id!));
+        const csv = toCsv(selectedLeads.length > 0 ? selectedLeads : all);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `leads_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
 
     const exportCsv = () => {
-        const csv = toCsv(filtered);
+        const csv = toCsv(all);
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -162,14 +213,14 @@ export default function Leads() {
     return (
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-20">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-bold text-gray-900">Company Leads</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Company Leads</h1>
                 <div className="flex items-center gap-2">
-                    <a href="#/" className="text-sm text-blue-600 hover:underline">
+                    <a href="#/" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
                         ← Back to Home
                     </a>
                     <button
                         onClick={exportCsv}
-                        disabled={filtered.length === 0}
+                        disabled={all.length === 0}
                         className="px-4 py-2 text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-sm"
                     >
                         Export CSV
@@ -177,22 +228,22 @@ export default function Leads() {
                 </div>
             </div>
 
-            <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="mt-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
                 <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1 flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
-                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                    <div className="flex-1 flex items-center gap-2 bg-gray-50 dark:bg-slate-700 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-slate-400" />
                         <input
                             value={q}
                             onChange={e => setQ(e.target.value)}
                             placeholder="Search leads..."
-                            className="bg-transparent w-full focus:outline-none text-sm"
+                            className="bg-transparent w-full focus:outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-400"
                         />
                     </div>
                     <div className="flex flex-wrap items-center gap-4">
                         <select
                             value={companyFilter}
                             onChange={e => setCompanyFilter(e.target.value)}
-                            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                            className="border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">All Companies</option>
                             {companies.map(c => <option key={c} value={c}>{c}</option>)}
@@ -200,12 +251,12 @@ export default function Leads() {
                         <select
                             value={locationFilter}
                             onChange={e => setLocationFilter(e.target.value)}
-                            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                            className="border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">All Regions</option>
                             {locations.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
                             <input
                                 type="checkbox"
                                 checked={hasEmail}
@@ -214,7 +265,18 @@ export default function Leads() {
                             />
                             Has Email
                         </label>
+                        {(q || companyFilter || locationFilter || hasEmail) && (
+                            <button
+                                onClick={resetFilters}
+                                className="text-sm text-gray-500 hover:text-red-600 underline"
+                            >
+                                Reset Filters
+                            </button>
+                        )}
                     </div>
+                </div>
+                <div className="mt-3 text-sm text-gray-500 dark:text-slate-400">
+                    Showing {all.length} of {total} leads
                 </div>
             </div>
 
@@ -223,19 +285,54 @@ export default function Leads() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
                 </div>
             ) : error ? (
-                <div className="mt-12 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 text-center">
+                <div className="mt-12 p-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg border border-red-200 dark:border-red-800 text-center">
                     {error}
                 </div>
-            ) : filtered.length === 0 ? (
-                <div className="mt-12 bg-white border-2 border-dashed border-gray-200 rounded-xl p-20 text-center text-gray-500">
+            ) : all.length === 0 ? (
+                <div className="mt-12 bg-white dark:bg-slate-800 border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-xl p-20 text-center text-gray-500 dark:text-slate-400">
                     No leads found.
                 </div>
             ) : (
                 <>
-                    <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    {/* Batch action toolbar */}
+                    {selectedIds.size > 0 && (
+                        <div className="mt-4 flex items-center gap-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                {selectedIds.size} selected
+                            </span>
+                            <button
+                                onClick={handleBatchDelete}
+                                className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-white dark:bg-slate-800 rounded-lg border border-red-200 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"
+                            >
+                                Delete Selected
+                            </button>
+                            <button
+                                onClick={exportSelected}
+                                className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800 rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                            >
+                                Export Selected
+                            </button>
+                            <button
+                                onClick={() => setSelectedIds(new Set())}
+                                className="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white"
+                            >
+                                Clear Selection
+                            </button>
+                        </div>
+                    )}
+                    <div className="mt-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
                         <table className="min-w-full text-sm">
-                            <thead className="bg-gray-50 text-gray-600 font-medium">
+                            <thead className="bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 font-medium">
                                 <tr>
+                                    <th className="p-4 w-12">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.size === all.length && all.length > 0}
+                                            onChange={toggleSelectAll}
+                                            className="rounded border-gray-300 dark:border-slate-500 text-blue-600 bg-white dark:bg-slate-600"
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    </th>
                                     <th className="p-4 text-left">Lead Info</th>
                                     <th className="p-4 text-left">Role & Company</th>
                                     <th className="p-4 text-left">Duration</th>
@@ -245,37 +342,45 @@ export default function Leads() {
                                     <th className="p-4 text-center w-20">Action</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {filtered.map((p) => (
+                            <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                                {all.map((p) => (
                                     <tr
                                         key={p.id}
-                                        className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                        className={`hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${selectedIds.has(p.id!) ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
                                         onClick={() => setSelectedLead(p)}
                                     >
+                                        <td className="p-4" onClick={e => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.has(p.id!)}
+                                                onChange={() => toggleSelect(p.id!)}
+                                                className="rounded border-gray-300 dark:border-slate-500 text-blue-600 bg-white dark:bg-slate-600"
+                                            />
+                                        </td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
                                                 {p.photo_url ? (
-                                                    <img src={p.photo_url} className="h-10 w-10 rounded-full object-cover border border-gray-200" alt="" />
+                                                    <img src={p.photo_url} className="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-slate-600" alt="" />
                                                 ) : (
-                                                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                                                    <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
                                                         {p.full_name?.[0] || "?"}
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <div className="font-semibold text-gray-900">{p.full_name}</div>
-                                                    <div className="text-xs text-gray-500">{p.location}</div>
+                                                    <div className="font-semibold text-gray-900 dark:text-white">{p.full_name}</div>
+                                                    <div className="text-xs text-gray-500 dark:text-slate-400">{p.location}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            <div className="text-gray-900 font-medium">{p.job_title}</div>
-                                            <div className="text-xs text-blue-600 hover:underline">{p.company_name}</div>
+                                            <div className="text-gray-900 dark:text-white font-medium">{p.job_title}</div>
+                                            <div className="text-xs text-blue-600 dark:text-blue-400 hover:underline">{p.company_name}</div>
                                         </td>
                                         <td className="p-4">
-                                            <div className="text-gray-700">{p.current_job_duration || "-"}</div>
+                                            <div className="text-gray-700 dark:text-slate-300">{p.current_job_duration || "-"}</div>
                                         </td>
                                         <td className="p-4">
-                                            <div className="text-gray-700 whitespace-nowrap">{p.job_period || "-"}</div>
+                                            <div className="text-gray-700 dark:text-slate-300 whitespace-nowrap">{p.job_period || "-"}</div>
                                         </td>
                                         <td className="p-4">
                                             {p.email ? (
@@ -284,17 +389,17 @@ export default function Leads() {
                                                         e.stopPropagation();
                                                         handleCopy(p.email);
                                                     }}
-                                                    className="text-gray-600 hover:text-blue-600 flex items-center gap-1 group"
+                                                    className="text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 group"
                                                 >
                                                     {p.email}
-                                                    <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-gray-100 px-1 rounded transition-opacity">Copy</span>
+                                                    <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-gray-100 dark:bg-slate-600 px-1 rounded transition-opacity">Copy</span>
                                                 </button>
                                             ) : (
-                                                <span className="text-gray-400 italic">No email</span>
+                                                <span className="text-gray-400 dark:text-slate-500 italic">No email</span>
                                             )}
                                         </td>
                                         <td className="p-4">
-                                            <div className="text-xs text-gray-500 truncate max-w-[150px]" title={(p as any).source_company_url}>
+                                            <div className="text-xs text-gray-500 dark:text-slate-400 truncate max-w-[150px]" title={(p as any).source_company_url}>
                                                 {(p as any).source_company_url || "Direct Batch"}
                                             </div>
                                         </td>

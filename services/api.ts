@@ -153,22 +153,50 @@ export const saveLead = async (lead: LinkedInProfile, sourceCompanyUrl?: string)
   return await res.json();
 };
 
+export interface LeadsFilterParams {
+  q?: string;
+  company?: string;
+  location?: string;
+  jobTitle?: string;
+  hasEmail?: boolean;
+}
+
 export interface LeadsPaginatedResponse {
   data: LinkedInProfile[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
+  filters?: {
+    companies: string[];
+    locations: string[];
+  };
 }
 
-export const fetchAllLeads = async (page: number = 1, pageSize: number = 50): Promise<LeadsPaginatedResponse> => {
+export const fetchAllLeads = async (
+  page: number = 1,
+  pageSize: number = 50,
+  filters?: LeadsFilterParams
+): Promise<LeadsPaginatedResponse> => {
   try {
     await getCurrentUserId();
   } catch {
     return { data: [], total: 0, page: 1, pageSize, totalPages: 0 };
   }
 
-  const res = await fetch(`/api/leads/list?page=${page}&pageSize=${pageSize}`, {
+  // Build query string with filters
+  const params = new URLSearchParams({
+    page: page.toString(),
+    pageSize: pageSize.toString(),
+  });
+
+  if (filters?.q) params.append('q', filters.q);
+  if (filters?.company) params.append('company', filters.company);
+  if (filters?.location) params.append('location', filters.location);
+  if (filters?.jobTitle) params.append('jobTitle', filters.jobTitle);
+  if (filters?.hasEmail) params.append('hasEmail', 'true');
+
+  const res = await fetch(`/api/leads/list?${params.toString()}`, {
     headers: getAuthHeaders(),
   });
 
@@ -205,4 +233,19 @@ export const updateProfileAI = async (id: string, summary: string) => {
     const error = await res.text();
     throw new Error(error || "Failed to update AI summary");
   }
+};
+
+export const batchDeleteLeads = async (ids: string[]): Promise<{ deleted: number }> => {
+  const res = await fetch(`/api/leads/batch-delete`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ ids }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error || "Failed to batch delete leads");
+  }
+
+  return await res.json();
 };
