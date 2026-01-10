@@ -24,22 +24,26 @@ Password: admin123
 ## 🎯 快速测试
 
 ### 1. 登录测试
+
 1. 打开浏览器访问：http://localhost:5174/
 2. 点击 "Login"
 3. 使用上面的管理员账户登录
 4. 应该能看到 Dashboard
 
 ### 2. 创建新用户（管理员功能）
+
 1. 登录后，点击顶部导航的 "Admin"
 2. 在 "Create User" 部分输入新用户信息
 3. 点击 "Create User"
 
 ### 3. 设置配额（管理员功能）
+
 1. 在 Admin 页面的 "Set Quota" 部分
 2. 输入用户 ID 和每日限额
 3. 点击 "Set Quota"
 
 ### 4. 测试 Profile 功能
+
 1. 点击 "Profiles" 查看所有 profiles
 2. 点击 "Dashboard" 返回主页
 3. 输入 LinkedIn URL 进行抓取（需要 Apify 配额）
@@ -109,16 +113,19 @@ node scripts/create-admin.js <email> <password>
 ## 🐛 常见问题
 
 ### 无法登录
+
 - 清除浏览器 localStorage：`localStorage.clear()`
 - 检查数据库连接：`npm run db:health`
 - 查看浏览器控制台错误
 
 ### 数据库连接失败
+
 - 检查 `.env.local` 中的 `DATABASE_URL`
 - 确认 Neon 数据库在线
 - 测试连接：`npm run db:health`
 
 ### API 请求失败
+
 - 检查 Netlify Functions 是否正常运行
 - 查看浏览器 Network 标签
 - 检查认证 token 是否有效
@@ -126,18 +133,21 @@ node scripts/create-admin.js <email> <password>
 ## 📚 API 文档
 
 ### 认证 API
+
 - `POST /api/auth/signin` - 登录
 - `POST /api/auth/signup` - 注册
 - `POST /api/auth/signout` - 登出
 - `GET /api/auth/me` - 获取当前用户
 
 ### Profiles API
+
 - `GET /api/profiles/list` - 列出所有 profiles
 - `POST /api/profiles/save` - 保存 profile
 - `POST /api/profiles/delete` - 删除 profile
 - `POST /api/profiles/update-ai` - 更新 AI 摘要
 
 ### Admin API
+
 - `GET /api/admin/me` - 获取用户角色
 - `POST /api/admin/create-user` - 创建用户
 - `GET /api/admin/quotas` - 获取配额
@@ -166,4 +176,3 @@ node scripts/create-admin.js <email> <password>
 **数据库**: Neon PostgreSQL  
 **认证**: 自定义 JWT  
 **状态**: ✅ 成功运行
-

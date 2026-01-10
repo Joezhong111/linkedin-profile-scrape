@@ -1,27 +1,27 @@
 // Server-side authentication utilities
-import { db } from "../db/client";
-import { users, sessions, userRoles } from "../db/schema";
-import { eq, and, gt, sql } from "drizzle-orm";
-import * as crypto from "crypto";
+import { db } from '../db/client';
+import { users, sessions, userRoles } from '../db/schema';
+import { eq, and, gt, sql } from 'drizzle-orm';
+import * as crypto from 'crypto';
 
 // Simple JWT-like token generation (in production, use a proper JWT library)
 export function generateToken(): string {
-  return crypto.randomBytes(32).toString("hex");
+  return crypto.randomBytes(32).toString('hex');
 }
 
 // Hash password using crypto
 export function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
   return `${salt}:${hash}`;
 }
 
 // Verify password
 export function verifyPassword(password: string, hashedPassword: string): boolean {
-  const [salt, hash] = hashedPassword.split(":");
+  const [salt, hash] = hashedPassword.split(':');
   if (!salt || !hash) return false;
 
-  const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
+  const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
   return hash === verifyHash;
 }
 
@@ -42,7 +42,7 @@ export async function createUser(email: string, password: string, fullName?: str
   // Create default role
   await db.insert(userRoles).values({
     userId: user.id,
-    role: "user",
+    role: 'user',
   });
 
   return user;
@@ -70,31 +70,23 @@ export async function createSession(userId: string) {
 export async function verifyToken(token: string) {
   try {
     // Find the session by token
-    const [session] = await db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.token, token))
-      .limit(1);
+    const [session] = await db.select().from(sessions).where(eq(sessions.token, token)).limit(1);
 
     // Check if session exists and is not expired
     if (!session) return null;
 
     const expiry = new Date(session.expiresAt);
     if (expiry < new Date()) {
-      console.log("Session expired:", session.id);
+      console.log('Session expired:', session.id);
       return null;
     }
 
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, session.userId))
-      .limit(1);
+    const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
 
     return user || null;
   } catch (err: any) {
-    console.error("verifyToken error:", err);
-    // Rethrow to let the handler see the full error if needed, 
+    console.error('verifyToken error:', err);
+    // Rethrow to let the handler see the full error if needed,
     // but the handler already logs it. We just want to see it in terminal.
     throw err;
   }
@@ -118,26 +110,22 @@ export async function getUserByEmail(email: string) {
 
 // Get user role
 export async function getUserRole(userId: string) {
-  const [role] = await db
-    .select()
-    .from(userRoles)
-    .where(eq(userRoles.userId, userId))
-    .limit(1);
+  const [role] = await db.select().from(userRoles).where(eq(userRoles.userId, userId)).limit(1);
 
-  return role?.role || "user";
+  return role?.role || 'user';
 }
 
 // Check if user is admin
 export async function isAdmin(userId: string): Promise<boolean> {
   const role = await getUserRole(userId);
-  return role === "admin";
+  return role === 'admin';
 }
 
 // Extract token from Authorization header
 export function extractToken(authHeader: string | undefined): string | null {
   if (!authHeader) return null;
 
-  if (authHeader.startsWith("Bearer ")) {
+  if (authHeader.startsWith('Bearer ')) {
     return authHeader.slice(7);
   }
 
@@ -146,9 +134,5 @@ export function extractToken(authHeader: string | undefined): string | null {
 
 // Update user's last login
 export async function updateLastLogin(userId: string) {
-  await db
-    .update(users)
-    .set({ lastLoginAt: new Date().toISOString() })
-    .where(eq(users.id, userId));
+  await db.update(users).set({ lastLoginAt: new Date().toISOString() }).where(eq(users.id, userId));
 }
-

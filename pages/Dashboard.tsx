@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { authClient } from "../lib/auth";
+import React, { useEffect, useState } from 'react';
+import { authClient } from '../lib/auth';
 
 export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -13,7 +13,7 @@ export default function Dashboard() {
 
   const signOut = async () => {
     await authClient.signOut();
-    window.location.hash = "#/";
+    window.location.hash = '#/';
   };
 
   return (

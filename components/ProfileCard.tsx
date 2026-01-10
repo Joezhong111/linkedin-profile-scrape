@@ -1,19 +1,13 @@
-import React from "react";
-import { LinkedInProfile } from "../types";
-import {
-  ArrowTopRightOnSquareIcon,
-  ClipboardDocumentIcon,
-} from "@heroicons/react/24/outline";
+import React from 'react';
+import { LinkedInProfile } from '../types';
+import { ArrowTopRightOnSquareIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 
 interface ProfileCardProps {
   profile: LinkedInProfile;
   handleCopy: (text: string) => void;
 }
 
-const ProfileCard: React.FC<ProfileCardProps> = ({
-  profile: p,
-  handleCopy,
-}) => {
+const ProfileCard: React.FC<ProfileCardProps> = ({ profile: p, handleCopy }) => {
   const rd: any = p.raw_data || {};
 
   const photo =
@@ -26,25 +20,21 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   const name =
     p.full_name ||
     rd.fullName ||
-    [rd.firstName, rd.lastName].filter(Boolean).join(" ") ||
-    "Unknown";
-  const title = p.job_title || rd.jobTitle || "-";
-  const company = p.company_name || rd.companyName || "-";
+    [rd.firstName, rd.lastName].filter(Boolean).join(' ') ||
+    'Unknown';
+  const title = p.job_title || rd.jobTitle || '-';
+  const company = p.company_name || rd.companyName || '-';
   const region =
     p.job_location ||
     p.location ||
     rd.jobLocation ||
     rd.addressWithCountry ||
     rd.addressWithoutCountry ||
-    "-";
-  const email = p.email || rd.email || "";
-  const phone = p.mobile_number || rd.mobileNumber || "";
+    '-';
+  const email = p.email || rd.email || '';
+  const phone = p.mobile_number || rd.mobileNumber || '';
   const link =
-    p.linkedin_public_url ||
-    p.profile_url ||
-    rd.linkedinPublicUrl ||
-    rd.linkedinUrl ||
-    "#";
+    p.linkedin_public_url || p.profile_url || rd.linkedinPublicUrl || rd.linkedinUrl || '#';
 
   return (
     <>
@@ -64,7 +54,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
       <td className="p-3 text-gray-700 dark:text-slate-300">{company}</td>
       <td className="p-3 text-gray-700 dark:text-slate-300">{region}</td>
       <td className="p-3 text-gray-700 dark:text-slate-300 truncate max-w-[16rem]">
-        {email || "-"}
+        {email || '-'}
         {email && (
           <button
             onClick={() => handleCopy(email)}
@@ -75,7 +65,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
         )}
       </td>
       <td className="p-3 text-gray-700 dark:text-slate-300 truncate max-w-[12rem]">
-        {phone || "-"}
+        {phone || '-'}
         {phone && (
           <button
             onClick={() => handleCopy(phone)}

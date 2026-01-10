@@ -1,27 +1,27 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { LinkedInProfile } from "../types";
+import React, { useEffect, useMemo, useState } from 'react';
+import { LinkedInProfile } from '../types';
 
-import { fetchAllProfiles } from "../services/api";
-import { MagnifyingGlassIcon, SparklesIcon } from "@heroicons/react/24/outline";
-import ProfileRow from "../components/ProfileRow";
+import { fetchAllProfiles } from '../services/api';
+import { MagnifyingGlassIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import ProfileRow from '../components/ProfileRow';
 
 function toCsv(rows: LinkedInProfile[]) {
   const headers = [
-    "id",
-    "created_at",
-    "profile_url",
-    "full_name",
-    "headline",
-    "location",
-    "about",
-    "photo_url",
-    "ai_summary",
+    'id',
+    'created_at',
+    'profile_url',
+    'full_name',
+    'headline',
+    'location',
+    'about',
+    'photo_url',
+    'ai_summary',
   ];
   const esc = (v: any) => {
-    const s = v === undefined || v === null ? "" : String(v);
+    const s = v === undefined || v === null ? '' : String(v);
     return '"' + s.replace(/"/g, '""') + '"';
   };
-  const lines = [headers.join(",")];
+  const lines = [headers.join(',')];
   for (const r of rows) {
     lines.push(
       [
@@ -34,15 +34,15 @@ function toCsv(rows: LinkedInProfile[]) {
         esc(r.about),
         esc(r.photo_url),
         esc(r.ai_summary),
-      ].join(",")
+      ].join(',')
     );
   }
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 export default function Profiles() {
   const [all, setAll] = useState<LinkedInProfile[]>([]);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState('');
   const [aiOnly, setAiOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,19 +50,17 @@ export default function Profiles() {
   const [hasEmail, setHasEmail] = useState(false);
   const [hasPhone, setHasPhone] = useState(false);
   const [minFollowers, setMinFollowers] = useState<number>(0);
-  const [industryQ, setIndustryQ] = useState("");
+  const [industryQ, setIndustryQ] = useState('');
 
-  const [companyQ, setCompanyQ] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
+  const [companyQ, setCompanyQ] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
   const [hasPhoto, setHasPhoto] = useState(false);
   const [hasExp, setHasExp] = useState(false);
   const [hasEdu, setHasEdu] = useState(false);
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
 
-  const [sortBy, setSortBy] = useState<"newest" | "followers" | "default">(
-    "default"
-  );
+  const [sortBy, setSortBy] = useState<'newest' | 'followers' | 'default'>('default');
 
   const locations = useMemo(() => {
     const set = new Set<string>();
@@ -73,19 +71,19 @@ export default function Profiles() {
   }, [all]);
 
   const clearFilters = () => {
-    setQ("");
+    setQ('');
     setAiOnly(false);
     setHasEmail(false);
     setHasPhone(false);
     setMinFollowers(0);
-    setIndustryQ("");
-    setCompanyQ("");
-    setLocationFilter("");
+    setIndustryQ('');
+    setCompanyQ('');
+    setLocationFilter('');
     setHasPhoto(false);
     setHasExp(false);
     setHasEdu(false);
-    setDateFrom("");
-    setDateTo("");
+    setDateFrom('');
+    setDateTo('');
   };
 
   useEffect(() => {
@@ -96,7 +94,7 @@ export default function Profiles() {
         setAll(rows);
         setError(null);
       } catch (e: any) {
-        setError(e?.message || "Load failed");
+        setError(e?.message || 'Load failed');
       } finally {
         setLoading(false);
       }
@@ -106,55 +104,38 @@ export default function Profiles() {
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     return all.filter((p: LinkedInProfile) => {
-      const followers =
-        (p.followers as any) ?? (p as any).raw_data?.followers ?? 0;
+      const followers = (p.followers as any) ?? (p as any).raw_data?.followers ?? 0;
       const emailVal = (p.email as any) ?? (p as any).raw_data?.email;
-      const phoneVal =
-        (p.mobile_number as any) ?? (p as any).raw_data?.mobileNumber;
-      const industryVal =
-        (p.company_industry as any) ??
-        (p as any).raw_data?.companyIndustry ??
-        "";
-      const companyVal =
-        (p.company_name as any) ?? (p as any).raw_data?.companyName ?? "";
+      const phoneVal = (p.mobile_number as any) ?? (p as any).raw_data?.mobileNumber;
+      const industryVal = (p.company_industry as any) ?? (p as any).raw_data?.companyIndustry ?? '';
+      const companyVal = (p.company_name as any) ?? (p as any).raw_data?.companyName ?? '';
       const loc =
         p.location ||
         (p as any).address_with_country ||
         (p as any).raw_data?.addressWithCountry ||
-        "";
+        '';
 
       if (aiOnly && !p.ai_summary) return false;
       if (hasEmail && !emailVal) return false;
       if (hasPhone && !phoneVal) return false;
       if (minFollowers && followers < minFollowers) return false;
-      if (
-        industryQ &&
-        !String(industryVal).toLowerCase().includes(industryQ.toLowerCase())
-      )
+      if (industryQ && !String(industryVal).toLowerCase().includes(industryQ.toLowerCase()))
         return false;
-      if (
-        companyQ &&
-        !String(companyVal).toLowerCase().includes(companyQ.toLowerCase())
-      )
+      if (companyQ && !String(companyVal).toLowerCase().includes(companyQ.toLowerCase()))
         return false;
 
       if (locationFilter && loc !== locationFilter) return false;
       if (hasPhoto && !p.photo_url) return false;
-      const expList =
-        (p.experiences as any[]) || (p as any).raw_data?.experiences || [];
+      const expList = (p.experiences as any[]) || (p as any).raw_data?.experiences || [];
       if (hasExp && expList.length === 0) return false;
-      const eduList =
-        (p.education as any[]) || (p as any).raw_data?.educations || [];
+      const eduList = (p.education as any[]) || (p as any).raw_data?.educations || [];
       if (hasEdu && eduList.length === 0) return false;
 
       if (dateFrom || dateTo) {
         const created = p.created_at ? new Date(p.created_at).getTime() : NaN;
         if (!isNaN(created)) {
           if (dateFrom && created < new Date(dateFrom).getTime()) return false;
-          if (
-            dateTo &&
-            created > new Date(dateTo).getTime() + 24 * 60 * 60 * 1000 - 1
-          )
+          if (dateTo && created > new Date(dateTo).getTime() + 24 * 60 * 60 * 1000 - 1)
             return false;
         }
       }
@@ -172,8 +153,8 @@ export default function Profiles() {
         p.ai_summary,
         String(industryVal),
       ]
-        .map((v) => (v || "").toLowerCase())
-        .join(" ");
+        .map((v) => (v || '').toLowerCase())
+        .join(' ');
       return hay.includes(term);
     });
   }, [
@@ -195,9 +176,9 @@ export default function Profiles() {
 
   const exportCsv = () => {
     const csv = toCsv(sorted);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = `profiles_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
@@ -208,21 +189,19 @@ export default function Profiles() {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-    } catch { }
+    } catch {}
   };
 
   const sorted = useMemo(() => {
     const base = filtered.slice() as LinkedInProfile[];
-    if (sortBy === "followers") {
+    if (sortBy === 'followers') {
       base.sort(
-        (a: LinkedInProfile, b: LinkedInProfile) =>
-          (b.followers || 0) - (a.followers || 0)
+        (a: LinkedInProfile, b: LinkedInProfile) => (b.followers || 0) - (a.followers || 0)
       );
-    } else if (sortBy === "newest") {
+    } else if (sortBy === 'newest') {
       base.sort(
         (a: LinkedInProfile, b: LinkedInProfile) =>
-          new Date(b.created_at || 0).getTime() -
-          new Date(a.created_at || 0).getTime()
+          new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
       );
     }
     return base;
@@ -252,9 +231,7 @@ export default function Profiles() {
             <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-slate-500" />
             <input
               value={q}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setQ(e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQ(e.target.value)}
               placeholder="Search name / headline / location / company / about"
               className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -263,9 +240,7 @@ export default function Profiles() {
             <input
               type="checkbox"
               checked={aiOnly}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setAiOnly(e.target.checked)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiOnly(e.target.checked)}
               className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
             />
             <span className="flex items-center gap-1">
@@ -279,9 +254,7 @@ export default function Profiles() {
               <select
                 value={sortBy}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                  setSortBy(
-                    e.target.value as "default" | "followers" | "newest"
-                  )
+                  setSortBy(e.target.value as 'default' | 'followers' | 'newest')
                 }
                 className="border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-2 py-1 text-sm"
               >
@@ -366,9 +339,7 @@ export default function Profiles() {
             <input
               type="text"
               value={industryQ}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setIndustryQ(e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIndustryQ(e.target.value)}
               className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
               placeholder="Software / Non-profit / Energy"
             />
@@ -381,9 +352,7 @@ export default function Profiles() {
             <input
               type="text"
               value={companyQ}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setCompanyQ(e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompanyQ(e.target.value)}
               className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
               placeholder="e.g. Google / Microsoft / OpenAI"
             />
@@ -396,9 +365,7 @@ export default function Profiles() {
             <input
               type="date"
               value={dateFrom}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setDateFrom(e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDateFrom(e.target.value)}
               className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
             />
           </div>
@@ -410,9 +377,7 @@ export default function Profiles() {
             <input
               type="date"
               value={dateTo}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setDateTo(e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDateTo(e.target.value)}
               className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
             />
           </div>
@@ -453,11 +418,7 @@ export default function Profiles() {
             </thead>
             <tbody>
               {sorted.map((p: LinkedInProfile) => (
-                <ProfileRow
-                  key={p.id || p.profile_url}
-                  profile={p}
-                  handleCopy={handleCopy}
-                />
+                <ProfileRow key={p.id || p.profile_url} profile={p} handleCopy={handleCopy} />
               ))}
             </tbody>
           </table>

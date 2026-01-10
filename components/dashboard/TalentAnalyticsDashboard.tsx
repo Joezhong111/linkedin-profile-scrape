@@ -1,18 +1,16 @@
-import React from "react";
-import { LinkedInProfile } from "../../types";
-import ProfileHeader from "./ProfileHeader";
-import AboutSection from "./AboutSection";
-import SkillsSection from "./SkillsSection";
-import CareerTimeline from "./CareerTimeline";
-import NetworkTreemap from "./NetworkTreemap";
+import React from 'react';
+import { LinkedInProfile } from '../../types';
+import ProfileHeader from './ProfileHeader';
+import AboutSection from './AboutSection';
+import SkillsSection from './SkillsSection';
+import CareerTimeline from './CareerTimeline';
+import NetworkTreemap from './NetworkTreemap';
 
 interface TalentAnalyticsDashboardProps {
   profile: LinkedInProfile;
 }
 
-const TalentAnalyticsDashboard: React.FC<TalentAnalyticsDashboardProps> = ({
-  profile,
-}) => {
+const TalentAnalyticsDashboard: React.FC<TalentAnalyticsDashboardProps> = ({ profile }) => {
   const rd0: any = (profile as any).raw_data || {};
 
   // Build a resilient view-model by merging flat columns as fallback
@@ -21,17 +19,12 @@ const TalentAnalyticsDashboard: React.FC<TalentAnalyticsDashboardProps> = ({
     fullName:
       rd0.fullName ||
       (profile as any).full_name ||
-      [
-        rd0.firstName || (profile as any).first_name,
-        rd0.lastName || (profile as any).last_name,
-      ]
+      [rd0.firstName || (profile as any).first_name, rd0.lastName || (profile as any).last_name]
         .filter(Boolean)
-        .join(" "),
+        .join(' '),
     headline: rd0.headline || (profile as any).headline,
     addressWithCountry:
-      rd0.addressWithCountry ||
-      (profile as any).address_with_country ||
-      (profile as any).location,
+      rd0.addressWithCountry || (profile as any).address_with_country || (profile as any).location,
 
     // media
     profilePicHighQuality:
@@ -54,14 +47,13 @@ const TalentAnalyticsDashboard: React.FC<TalentAnalyticsDashboardProps> = ({
     // numbers
     followers: rd0.followers ?? (profile as any).followers ?? 0,
     connections: rd0.connections ?? (profile as any).connections ?? 0,
-    totalExperienceYears:
-      rd0.totalExperienceYears ?? (profile as any).total_experience_years ?? 0,
+    totalExperienceYears: rd0.totalExperienceYears ?? (profile as any).total_experience_years ?? 0,
 
     // collections (prefer raw)
     skills: rd0.skills || [],
     experiences: rd0.experiences || [],
     peopleAlsoViewed: rd0.peopleAlsoViewed || [],
-    about: rd0.about || (profile as any).about || "",
+    about: rd0.about || (profile as any).about || '',
   };
 
   return (

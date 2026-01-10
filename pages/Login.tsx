@@ -1,11 +1,11 @@
-import React, { useState } from "react";
-import { authClient } from "../lib/auth";
-import { getToggles } from "../services/admin";
+import React, { useState } from 'react';
+import { authClient } from '../lib/auth';
+import { getToggles } from '../services/admin';
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [toggles, setToggles] = useState({
@@ -24,8 +24,8 @@ export default function Login() {
       try {
         const t = await getToggles();
         setToggles(t);
-        if (!t.registration_open) setMode("signin");
-      } catch { }
+        if (!t.registration_open) setMode('signin');
+      } catch {}
     })();
 
     const unsubscribe = authClient.onAuthStateChange((_user) => {
@@ -40,7 +40,7 @@ export default function Login() {
     setLoading(true);
     setError(null);
     try {
-      if (mode === "signin") {
+      if (mode === 'signin') {
         await authClient.signIn(email, password);
         // App.tsx will handle redirect to dashboard based on auth state
       } else {
@@ -48,7 +48,7 @@ export default function Login() {
         // App.tsx will handle redirect to dashboard based on auth state
       }
     } catch (err: any) {
-      setError(err?.message || "Authentication failed");
+      setError(err?.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -58,7 +58,7 @@ export default function Login() {
     <main className="max-w-lg mx-auto px-4 sm:px-6 lg:px-8 mt-12">
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {mode === "signin" ? "Sign in" : "Sign up"}
+          {mode === 'signin' ? 'Sign in' : 'Sign up'}
         </h1>
         <p className="text-gray-600 dark:text-slate-400 mt-2">
           Use email/password or Google to continue.
@@ -93,23 +93,25 @@ export default function Login() {
             disabled={loading}
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading
-              ? "Processing..."
-              : mode === "signin"
-                ? "Sign in"
-                : "Sign up"}
+            {loading ? 'Processing...' : mode === 'signin' ? 'Sign in' : 'Sign up'}
           </button>
         </form>
 
         <div className="mt-4 text-sm text-gray-600 dark:text-slate-400">
-          {mode === "signin" ? (
+          {mode === 'signin' ? (
             toggles.registration_open && (
-              <button className="underline hover:text-blue-600 dark:hover:text-blue-400" onClick={() => setMode("signup")}>
+              <button
+                className="underline hover:text-blue-600 dark:hover:text-blue-400"
+                onClick={() => setMode('signup')}
+              >
                 Need an account? Sign up
               </button>
             )
           ) : (
-            <button className="underline hover:text-blue-600 dark:hover:text-blue-400" onClick={() => setMode("signin")}>
+            <button
+              className="underline hover:text-blue-600 dark:hover:text-blue-400"
+              onClick={() => setMode('signin')}
+            >
               Already have an account? Sign in
             </button>
           )}

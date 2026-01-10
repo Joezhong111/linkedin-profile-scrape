@@ -1,4 +1,5 @@
 import { getUserByEmail, verifyPassword, createSession, updateLastLogin } from "../../lib/auth-server";
+import { signInSchema } from "../../lib/validation";
 
 export const handler = async (event: any) => {
   try {
@@ -7,12 +8,15 @@ export const handler = async (event: any) => {
     }
 
     const body = typeof event.body === "string" ? JSON.parse(event.body || "{}") : event.body || {};
-    const email = String(body.email || "").trim();
-    const password = String(body.password || "");
 
-    if (!email || !password) {
-      return { statusCode: 400, body: "Email and password are required" };
+    // Validate input using Zod
+    const validationResult = signInSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errors = validationResult.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join("; ");
+      return { statusCode: 400, body: errors };
     }
+
+    const { email, password } = validationResult.data;
 
     // Find user
     const user = await getUserByEmail(email);
@@ -27,6 +31,9 @@ export const handler = async (event: any) => {
 
     // Create session
     const session = await createSession(user.id);
+    if (!session) {
+      return { statusCode: 500, body: "Failed to create session" };
+    }
 
     // Update last login
     await updateLastLogin(user.id);

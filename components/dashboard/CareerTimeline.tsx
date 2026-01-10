@@ -17,10 +17,14 @@ const CareerTimeline: React.FC<CareerTimelineProps> = ({ experiences }) => {
           <div key={index} className="relative mb-6">
             <div className="absolute -left-1.5 top-1.5 w-4 h-4 bg-indigo-600 rounded-full border-4 border-white dark:border-slate-800"></div>
             <div className="ml-8">
-              <p className="text-xs text-slate-500 dark:text-slate-400">{exp.jobStartedOn} - {exp.jobEndedOn || 'Present'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {exp.jobStartedOn} - {exp.jobEndedOn || 'Present'}
+              </p>
               <h4 className="font-semibold text-slate-800 dark:text-white mt-1">{exp.title}</h4>
               <p className="text-sm text-slate-600 dark:text-slate-300">{exp.companyName}</p>
-              {exp.jobLocation && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{exp.jobLocation}</p>}
+              {exp.jobLocation && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{exp.jobLocation}</p>
+              )}
             </div>
           </div>
         ))}
@@ -30,4 +34,3 @@ const CareerTimeline: React.FC<CareerTimelineProps> = ({ experiences }) => {
 };
 
 export default CareerTimeline;
-

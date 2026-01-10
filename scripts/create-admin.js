@@ -1,23 +1,21 @@
 // Script to create an admin user
-import { config } from "dotenv";
-import { existsSync } from "node:fs";
-import { Pool } from "pg";
-import * as crypto from "crypto";
+import { config } from 'dotenv';
+import { existsSync } from 'node:fs';
+import { Pool } from 'pg';
+import * as crypto from 'crypto';
 
 // Load env
-config({ path: existsSync(".env.local") ? ".env.local" : ".env" });
+config({ path: existsSync('.env.local') ? '.env.local' : '.env' });
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
-  console.error("DATABASE_URL is not set");
+  console.error('DATABASE_URL is not set');
   process.exit(1);
 }
 
 function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto
-    .pbkdf2Sync(password, salt, 10000, 64, "sha512")
-    .toString("hex");
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
   return `${salt}:${hash}`;
 }
 
@@ -35,15 +33,14 @@ async function createAdmin() {
     const password = process.argv[3];
 
     if (!email || !password) {
-      console.error("Usage: node scripts/create-admin.js <email> <password>");
+      console.error('Usage: node scripts/create-admin.js <email> <password>');
       process.exit(1);
     }
 
     // Check if user already exists
-    const existingUser = await pool.query(
-      "SELECT id FROM users WHERE email = $1",
-      [email.toLowerCase().trim()]
-    );
+    const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [
+      email.toLowerCase().trim(),
+    ]);
 
     let userId;
 
@@ -74,7 +71,7 @@ async function createAdmin() {
 
     console.log(`✅ User ${email} is now an admin!`);
   } catch (error) {
-    console.error("Error creating admin:", error);
+    console.error('Error creating admin:', error);
     process.exit(1);
   } finally {
     await pool.end();
@@ -82,4 +79,3 @@ async function createAdmin() {
 }
 
 createAdmin();
-

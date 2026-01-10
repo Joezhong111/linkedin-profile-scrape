@@ -1,4 +1,4 @@
-import { authClient } from "../lib/auth";
+import { authClient } from '../lib/auth';
 
 async function authHeaders() {
   return authClient.getAuthHeaders();
@@ -9,7 +9,7 @@ export async function getMe(): Promise<{
   role?: string;
   isAdmin?: boolean;
 }> {
-  const res = await fetch("/api/admin/me", { headers: await authHeaders() });
+  const res = await fetch('/api/admin/me', { headers: await authHeaders() });
   if (!res.ok) return { isAdmin: false };
   return res.json();
 }
@@ -19,14 +19,14 @@ export type Toggles = {
   google_oauth_open: boolean;
 };
 export async function getToggles(): Promise<Toggles> {
-  const res = await fetch("/api/admin/toggles");
+  const res = await fetch('/api/admin/toggles');
   if (!res.ok) return { registration_open: true, google_oauth_open: true };
   return res.json();
 }
 
 export async function setToggles(p: Partial<Toggles>): Promise<void> {
-  const res = await fetch("/api/admin/toggles", {
-    method: "POST",
+  const res = await fetch('/api/admin/toggles', {
+    method: 'POST',
     headers: await authHeaders(),
     body: JSON.stringify(p),
   });
@@ -34,7 +34,7 @@ export async function setToggles(p: Partial<Toggles>): Promise<void> {
 }
 
 export async function getQuota(email?: string, user_id?: string): Promise<any> {
-  let url = "/api/admin/quotas";
+  let url = '/api/admin/quotas';
   if (email) {
     url += `?email=${encodeURIComponent(email)}`;
   } else if (user_id) {
@@ -45,12 +45,9 @@ export async function getQuota(email?: string, user_id?: string): Promise<any> {
   return res.json();
 }
 
-export async function setQuota(
-  email: string,
-  monthly_limit: number
-): Promise<void> {
-  const res = await fetch("/api/admin/quotas", {
-    method: "POST",
+export async function setQuota(email: string, monthly_limit: number): Promise<void> {
+  const res = await fetch('/api/admin/quotas', {
+    method: 'POST',
     headers: await authHeaders(),
     body: JSON.stringify({ email, monthly_limit }),
   });
@@ -63,8 +60,8 @@ export async function adminCreateUser(params: {
   invite?: boolean;
   monthly_limit?: number;
 }): Promise<any> {
-  const res = await fetch("/api/admin/create-user", {
-    method: "POST",
+  const res = await fetch('/api/admin/create-user', {
+    method: 'POST',
     headers: await authHeaders(),
     body: JSON.stringify(params),
   });
@@ -73,8 +70,8 @@ export async function adminCreateUser(params: {
 }
 
 export async function updatePassword(user_id: string, password: string): Promise<void> {
-  const res = await fetch("/api/admin/users", {
-    method: "PATCH",
+  const res = await fetch('/api/admin/users', {
+    method: 'PATCH',
     headers: await authHeaders(),
     body: JSON.stringify({ user_id, password }),
   });
@@ -83,7 +80,7 @@ export async function updatePassword(user_id: string, password: string): Promise
 
 export async function deleteUser(user_id: string): Promise<void> {
   const res = await fetch(`/api/admin/users?user_id=${user_id}`, {
-    method: "DELETE",
+    method: 'DELETE',
     headers: await authHeaders(),
   });
   if (!res.ok) throw new Error(await res.text());

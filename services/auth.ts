@@ -1,11 +1,11 @@
 // New auth service using custom JWT authentication
-import { authClient } from "../lib/auth";
+import { authClient } from '../lib/auth';
 
 export const isAuthReady = true; // Always ready since we're using our own auth
 
 async function getCurrentUserId(): Promise<string> {
   const user = authClient.getUser();
-  if (!user?.id) throw new Error("Not authenticated");
+  if (!user?.id) throw new Error('Not authenticated');
   return user.id;
 }
 
@@ -32,4 +32,3 @@ export const getUser = () => {
 export const onAuthStateChange = (callback: (user: any) => void) => {
   return authClient.onAuthStateChange(callback);
 };
-

@@ -1,11 +1,11 @@
-import { LinkedInProfile } from "../types";
-import { authClient } from "../lib/auth";
+import { LinkedInProfile } from '../types';
+import { authClient } from '../lib/auth';
 
 export const isApiReady = true; // Always ready with new auth system
 
 async function getCurrentUserId(): Promise<string> {
   const user = authClient.getUser();
-  if (!user?.id) throw new Error("Not authenticated");
+  if (!user?.id) throw new Error('Not authenticated');
   return user.id;
 }
 
@@ -66,15 +66,15 @@ export const saveProfile = async (profile: LinkedInProfile) => {
     urn: rd.urn,
   };
 
-  const res = await fetch("/api/profiles/save", {
-    method: "POST",
+  const res = await fetch('/api/profiles/save', {
+    method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(error || "Failed to save profile");
+    throw new Error(error || 'Failed to save profile');
   }
 
   return await res.json();
@@ -87,12 +87,12 @@ export const fetchAllProfiles = async () => {
     return [];
   }
 
-  const res = await fetch("/api/profiles/list", {
+  const res = await fetch('/api/profiles/list', {
     headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
-    throw new Error("Failed to fetch profiles");
+    throw new Error('Failed to fetch profiles');
   }
 
   return (await res.json()) as LinkedInProfile[];
@@ -100,14 +100,14 @@ export const fetchAllProfiles = async () => {
 
 export const deleteProfile = async (id: string) => {
   const res = await fetch(`/api/profiles/delete`, {
-    method: "POST",
+    method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ id }),
   });
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(error || "Failed to delete profile");
+    throw new Error(error || 'Failed to delete profile');
   }
 };
 
@@ -134,19 +134,24 @@ export const saveLead = async (lead: LinkedInProfile, sourceCompanyUrl?: string)
     company_linkedin: lead.company_linkedin || rd.companyLinkedin,
     followers: lead.followers || rd.followers,
     source_company_url: sourceCompanyUrl,
-    current_job_duration: lead.current_job_duration || rd.currentJobDuration || (rd.experience?.[0]?.duration),
-    job_period: lead.job_period || (rd.experience?.[0] ? `${rd.experience[0].startDate?.text || ''} - ${rd.experience[0].endDate?.text || ''}` : null),
+    current_job_duration:
+      lead.current_job_duration || rd.currentJobDuration || rd.experience?.[0]?.duration,
+    job_period:
+      lead.job_period ||
+      (rd.experience?.[0]
+        ? `${rd.experience[0].startDate?.text || ''} - ${rd.experience[0].endDate?.text || ''}`
+        : null),
   };
 
-  const res = await fetch("/api/leads/save", {
-    method: "POST",
+  const res = await fetch('/api/leads/save', {
+    method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
     const errorBody = await res.text();
-    console.error("Save lead failed:", res.status, errorBody);
+    console.error('Save lead failed:', res.status, errorBody);
     throw new Error(`Failed to save lead (${res.status}): ${errorBody}`);
   }
 
@@ -202,7 +207,7 @@ export const fetchAllLeads = async (
 
   if (!res.ok) {
     const errorBody = await res.text();
-    console.error("Fetch leads failed:", res.status, errorBody);
+    console.error('Fetch leads failed:', res.status, errorBody);
     throw new Error(`Failed to fetch leads (${res.status}): ${errorBody}`);
   }
 
@@ -211,40 +216,40 @@ export const fetchAllLeads = async (
 
 export const deleteLead = async (id: string) => {
   const res = await fetch(`/api/leads/delete`, {
-    method: "POST",
+    method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ id }),
   });
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(error || "Failed to delete lead");
+    throw new Error(error || 'Failed to delete lead');
   }
 };
 
 export const updateProfileAI = async (id: string, summary: string) => {
   const res = await fetch(`/api/profiles/update-ai`, {
-    method: "POST",
+    method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ id, ai_summary: summary }),
   });
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(error || "Failed to update AI summary");
+    throw new Error(error || 'Failed to update AI summary');
   }
 };
 
 export const batchDeleteLeads = async (ids: string[]): Promise<{ deleted: number }> => {
   const res = await fetch(`/api/leads/batch-delete`, {
-    method: "POST",
+    method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ ids }),
   });
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(error || "Failed to batch delete leads");
+    throw new Error(error || 'Failed to batch delete leads');
   }
 
   return await res.json();

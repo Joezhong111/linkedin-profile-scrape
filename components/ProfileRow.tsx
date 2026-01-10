@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { LinkedInProfile } from "../types";
-import ProfileCard from "./ProfileCard";
-import TalentAnalyticsDashboard from "./dashboard/TalentAnalyticsDashboard";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import React, { useState } from 'react';
+import { LinkedInProfile } from '../types';
+import ProfileCard from './ProfileCard';
+import TalentAnalyticsDashboard from './dashboard/TalentAnalyticsDashboard';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
 interface ProfileRowProps {
   profile: LinkedInProfile;

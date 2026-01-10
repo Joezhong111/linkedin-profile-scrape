@@ -1,72 +1,81 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { LinkedInProfile, ScraperState } from "../types";
+import React, { useCallback, useEffect, useState } from 'react';
+import { LinkedInProfile, ScraperState } from '../types';
 import {
   scrapeLinkedInProfiles,
   scrapeCompany,
   mapApifyToLinkedInProfile,
-} from "../services/apify";
+} from '../services/apify';
 import {
   saveProfile,
   saveLead,
   fetchAllProfiles,
   fetchAllLeads,
   isApiReady,
-} from "../services/api";
+} from '../services/api';
 import {
   CloudArrowUpIcon,
   CircleStackIcon,
   MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
-import ProfileCard from "../components/ProfileCard";
+} from '@heroicons/react/24/outline';
+import ProfileCard from '../components/ProfileCard';
 
 export default function Home() {
-  const [scrapeMode, setScrapeMode] = useState<"profiles" | "company">("profiles");
+  const [scrapeMode, setScrapeMode] = useState<'profiles' | 'company'>('profiles');
 
   // Profile Scrape State
-  const [urls, setUrls] = useState<string>("");
+  const [urls, setUrls] = useState<string>('');
 
   // Company Scrape State
-  const [companyUrl, setCompanyUrl] = useState<string>("");
+  const [companyUrl, setCompanyUrl] = useState<string>('');
   const [maxItems, setMaxItems] = useState<number>(10);
-  const [profileScraperMode, setProfileScraperMode] = useState<string>("Full ($8 per 1k)");
+  const [profileScraperMode, setProfileScraperMode] = useState<string>('Full ($8 per 1k)');
   const [jobTitles, setJobTitles] = useState<string[]>([]);
-  const [jobTitleInput, setJobTitleInput] = useState("");
+  const [jobTitleInput, setJobTitleInput] = useState('');
   const [locations, setLocations] = useState<string[]>([]);
-  const [locationInput, setLocationInput] = useState("");
+  const [locationInput, setLocationInput] = useState('');
   const [yearsAtCurrentCompany, setYearsAtCurrentCompany] = useState<Set<string>>(new Set());
   const [yearsOfExperience, setYearsOfExperience] = useState<Set<string>>(new Set());
 
   // Input helpers
-  const addJobTitle = () => { if (jobTitleInput.trim()) { setJobTitles([...jobTitles, jobTitleInput.trim()]); setJobTitleInput(""); } };
+  const addJobTitle = () => {
+    if (jobTitleInput.trim()) {
+      setJobTitles([...jobTitles, jobTitleInput.trim()]);
+      setJobTitleInput('');
+    }
+  };
   const removeJobTitle = (i: number) => setJobTitles(jobTitles.filter((_, idx) => idx !== i));
-  const addLocation = () => { if (locationInput.trim()) { setLocations([...locations, locationInput.trim()]); setLocationInput(""); } };
+  const addLocation = () => {
+    if (locationInput.trim()) {
+      setLocations([...locations, locationInput.trim()]);
+      setLocationInput('');
+    }
+  };
   const removeLocation = (i: number) => setLocations(locations.filter((_, idx) => idx !== i));
-  const toggleSet = (set: Set<string>, val: string) => { const next = new Set(set); next.has(val) ? next.delete(val) : next.add(val); return next; };
+  const toggleSet = (set: Set<string>, val: string) => {
+    const next = new Set(set);
+    next.has(val) ? next.delete(val) : next.add(val);
+    return next;
+  };
   const [state, setState] = useState<ScraperState>({
     isLoading: false,
     error: null,
     results: [],
   });
   const [previewItems, setPreviewItems] = useState<any[]>([]);
-  const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(
-    new Set()
-  );
+  const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(new Set());
   const [savedCount, setSavedCount] = useState<number>(0);
   const [savedLeadsCount, setSavedLeadsCount] = useState<number>(0);
 
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-    } catch { }
+    } catch {}
   };
 
   const loadCount = useCallback(async () => {
     if (!isApiReady) return;
     try {
-      const [profiles, leadsResponse] = await Promise.all([
-        fetchAllProfiles(),
-        fetchAllLeads(),
-      ]);
+      const [profiles, leadsResponse] = await Promise.all([fetchAllProfiles(), fetchAllLeads()]);
       setSavedCount(profiles.length);
       setSavedLeadsCount(leadsResponse.total);
     } catch (e) {
@@ -91,21 +100,21 @@ export default function Home() {
     }));
 
     try {
-      if (scrapeMode === "profiles") {
+      if (scrapeMode === 'profiles') {
         const urlList = urls
-          .split("\n")
+          .split('\n')
           .map((u: string) => u.trim())
-          .filter((u: string) => u.startsWith("http"));
+          .filter((u: string) => u.startsWith('http'));
 
         if (urlList.length === 0) {
-          throw new Error("Please enter at least one valid LinkedIn URL");
+          throw new Error('Please enter at least one valid LinkedIn URL');
         }
         items = await scrapeLinkedInProfiles(urlList);
-        setUrls("");
+        setUrls('');
       } else {
         // Company mode
-        if (!companyUrl.trim().startsWith("http")) {
-          throw new Error("Please enter a valid Company LinkedIn URL");
+        if (!companyUrl.trim().startsWith('http')) {
+          throw new Error('Please enter a valid Company LinkedIn URL');
         }
         items = await scrapeCompany({
           companyUrl: companyUrl.trim(),
@@ -145,7 +154,7 @@ export default function Home() {
 
   const importSelected = async () => {
     if (!isApiReady) {
-      alert("API is not configured.");
+      alert('API is not configured.');
       return;
     }
     const toImport = previewItems
@@ -153,11 +162,11 @@ export default function Home() {
       .filter(({ idx }) => selectedIndexes.has(idx))
       .map(({ item }: { item: any }) => mapApifyToLinkedInProfile(item));
     if (toImport.length === 0) {
-      alert("No rows selected.");
+      alert('No rows selected.');
       return;
     }
     try {
-      if (scrapeMode === "profiles") {
+      if (scrapeMode === 'profiles') {
         await Promise.all(toImport.map((p: LinkedInProfile) => saveProfile(p)));
       } else {
         // Company mode leads
@@ -166,7 +175,7 @@ export default function Home() {
       await loadCount();
       clearPreview();
     } catch (e: any) {
-      alert("Import failed: " + (e?.message || "unknown error"));
+      alert('Import failed: ' + (e?.message || 'unknown error'));
     }
   };
 
@@ -183,27 +192,29 @@ export default function Home() {
             {/* Tabs */}
             <div className="flex border-b border-gray-200 dark:border-slate-700 mb-4">
               <button
-                className={`py-2 px-4 text-sm font-medium ${scrapeMode === "profiles"
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
-                  : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
-                  }`}
-                onClick={() => setScrapeMode("profiles")}
+                className={`py-2 px-4 text-sm font-medium ${
+                  scrapeMode === 'profiles'
+                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+                }`}
+                onClick={() => setScrapeMode('profiles')}
               >
                 Profile URLs
               </button>
               <button
-                className={`py-2 px-4 text-sm font-medium ${scrapeMode === "company"
-                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
-                  : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
-                  }`}
-                onClick={() => setScrapeMode("company")}
+                className={`py-2 px-4 text-sm font-medium ${
+                  scrapeMode === 'company'
+                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+                }`}
+                onClick={() => setScrapeMode('company')}
               >
                 Company Search
               </button>
             </div>
 
             <form onSubmit={handleScrape} className="space-y-4">
-              {scrapeMode === "profiles" ? (
+              {scrapeMode === 'profiles' ? (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Profile URLs (One per line)
@@ -266,7 +277,9 @@ export default function Home() {
                         className="w-full p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         disabled={state.isLoading}
                       >
-                        <option value="Full + email search ($12 per 1k)">Full + email search ($12 per 1k)</option>
+                        <option value="Full + email search ($12 per 1k)">
+                          Full + email search ($12 per 1k)
+                        </option>
                         <option value="Full ($8 per 1k)">Full ($8 per 1k)</option>
                         <option value="Short ($4 per 1k)">Short ($4 per 1k)</option>
                       </select>
@@ -281,19 +294,35 @@ export default function Home() {
                     <div className="flex gap-2 mb-2">
                       <input
                         value={jobTitleInput}
-                        onChange={e => setJobTitleInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addJobTitle())}
+                        onChange={(e) => setJobTitleInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addJobTitle())}
                         className="flex-1 p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded text-sm focus:ring-2 focus:ring-blue-500"
                         placeholder="e.g. CEO"
                         disabled={state.isLoading}
                       />
-                      <button type="button" onClick={addJobTitle} disabled={state.isLoading} className="px-3 py-1 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 dark:text-slate-200">Add</button>
+                      <button
+                        type="button"
+                        onClick={addJobTitle}
+                        disabled={state.isLoading}
+                        className="px-3 py-1 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 dark:text-slate-200"
+                      >
+                        Add
+                      </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {jobTitles.map((t, i) => (
-                        <span key={i} className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs px-2 py-1 rounded flex items-center gap-1">
+                        <span
+                          key={i}
+                          className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs px-2 py-1 rounded flex items-center gap-1"
+                        >
                           {t}
-                          <button type="button" onClick={() => removeJobTitle(i)} className="hover:text-blue-900 dark:hover:text-blue-100">×</button>
+                          <button
+                            type="button"
+                            onClick={() => removeJobTitle(i)}
+                            className="hover:text-blue-900 dark:hover:text-blue-100"
+                          >
+                            ×
+                          </button>
                         </span>
                       ))}
                     </div>
@@ -307,19 +336,35 @@ export default function Home() {
                     <div className="flex gap-2 mb-2">
                       <input
                         value={locationInput}
-                        onChange={e => setLocationInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addLocation())}
+                        onChange={(e) => setLocationInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addLocation())}
                         className="flex-1 p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded text-sm focus:ring-2 focus:ring-blue-500"
                         placeholder="e.g. Guangzhou"
                         disabled={state.isLoading}
                       />
-                      <button type="button" onClick={addLocation} disabled={state.isLoading} className="px-3 py-1 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 dark:text-slate-200">Add</button>
+                      <button
+                        type="button"
+                        onClick={addLocation}
+                        disabled={state.isLoading}
+                        className="px-3 py-1 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 dark:text-slate-200"
+                      >
+                        Add
+                      </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {locations.map((t, i) => (
-                        <span key={i} className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs px-2 py-1 rounded flex items-center gap-1">
+                        <span
+                          key={i}
+                          className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs px-2 py-1 rounded flex items-center gap-1"
+                        >
                           {t}
-                          <button type="button" onClick={() => removeLocation(i)} className="hover:text-green-900 dark:hover:text-green-100">×</button>
+                          <button
+                            type="button"
+                            onClick={() => removeLocation(i)}
+                            className="hover:text-green-900 dark:hover:text-green-100"
+                          >
+                            ×
+                          </button>
                         </span>
                       ))}
                     </div>
@@ -339,12 +384,17 @@ export default function Home() {
                           { id: '3', label: '3 to 5 years' },
                           { id: '4', label: '6 to 10 years' },
                           { id: '5', label: '> 10 years' },
-                        ].map(opt => (
-                          <label key={opt.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+                        ].map((opt) => (
+                          <label
+                            key={opt.id}
+                            className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300"
+                          >
                             <input
                               type="checkbox"
                               checked={yearsAtCurrentCompany.has(opt.id)}
-                              onChange={() => setYearsAtCurrentCompany(toggleSet(yearsAtCurrentCompany, opt.id))}
+                              onChange={() =>
+                                setYearsAtCurrentCompany(toggleSet(yearsAtCurrentCompany, opt.id))
+                              }
                               disabled={state.isLoading}
                             />
                             {opt.label}
@@ -365,12 +415,17 @@ export default function Home() {
                           { id: '3', label: '3 to 5 years' },
                           { id: '4', label: '6 to 10 years' },
                           { id: '5', label: '> 10 years' },
-                        ].map(opt => (
-                          <label key={opt.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+                        ].map((opt) => (
+                          <label
+                            key={opt.id}
+                            className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300"
+                          >
                             <input
                               type="checkbox"
                               checked={yearsOfExperience.has(opt.id)}
-                              onChange={() => setYearsOfExperience(toggleSet(yearsOfExperience, opt.id))}
+                              onChange={() =>
+                                setYearsOfExperience(toggleSet(yearsOfExperience, opt.id))
+                              }
                               disabled={state.isLoading}
                               className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
                             />
@@ -380,7 +435,6 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-
                 </div>
               )}
 
@@ -392,12 +446,10 @@ export default function Home() {
                 {state.isLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                    {scrapeMode === "profiles"
-                      ? "Scraping via Apify..."
-                      : "Searching Company..."}
+                    {scrapeMode === 'profiles' ? 'Scraping via Apify...' : 'Searching Company...'}
                   </>
                 ) : (
-                  "Start Scraping"
+                  'Start Scraping'
                 )}
               </button>
             </form>
@@ -417,9 +469,7 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {savedCount}
-                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{savedCount}</div>
                 <div className="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
                   Saved Profiles
                 </div>
@@ -440,9 +490,7 @@ export default function Home() {
         <div className="lg:col-span-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {previewItems.length > 0
-                ? "Preview from Apify"
-                : "Ready to scrape"}
+              {previewItems.length > 0 ? 'Preview from Apify' : 'Ready to scrape'}
             </h2>
           </div>
 
@@ -462,9 +510,7 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() =>
-                      setSelectedIndexes(
-                        new Set(previewItems.map((_: any, i: number) => i))
-                      )
+                      setSelectedIndexes(new Set(previewItems.map((_: any, i: number) => i)))
                     }
                     className="px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-slate-600 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700 dark:text-slate-200"
                   >
@@ -520,10 +566,7 @@ export default function Home() {
                               onChange={() => toggleSelect(idx)}
                             />
                           </td>
-                          <ProfileCard
-                            profile={profile}
-                            handleCopy={handleCopy}
-                          />
+                          <ProfileCard profile={profile} handleCopy={handleCopy} />
                         </tr>
                       );
                     })}
@@ -539,6 +582,6 @@ export default function Home() {
           )}
         </div>
       </div>
-    </main >
+    </main>
   );
 }

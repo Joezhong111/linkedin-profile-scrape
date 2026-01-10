@@ -1,5 +1,5 @@
 // Authentication utilities for JWT-based auth
-import { User, Session } from "../db/schema";
+import { User, Session } from '../db/schema';
 
 export interface AuthUser {
   id: string;
@@ -15,9 +15,9 @@ export interface AuthSession {
 
 // Client-side auth state management
 class AuthClient {
-  private static TOKEN_KEY = "auth_token";
-  private static USER_KEY = "auth_user";
-  private static EVENT = "auth_state_changed";
+  private static TOKEN_KEY = 'auth_token';
+  private static USER_KEY = 'auth_user';
+  private static EVENT = 'auth_state_changed';
 
   // Get current session from localStorage
   getSession(): AuthSession | null {
@@ -31,7 +31,7 @@ class AuthClient {
 
       // Check if token is expired (basic check)
       // In production, you'd want to validate the JWT
-      return { user, token, expiresAt: "" };
+      return { user, token, expiresAt: '' };
     } catch {
       return null;
     }
@@ -65,15 +65,15 @@ class AuthClient {
 
   // Sign in with email/password
   async signIn(email: string, password: string): Promise<AuthSession> {
-    const res = await fetch("/api/auth/signin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/auth/signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
 
     if (!res.ok) {
       const error = await res.text();
-      throw new Error(error || "Sign in failed");
+      throw new Error(error || 'Sign in failed');
     }
 
     const session = await res.json();
@@ -82,20 +82,16 @@ class AuthClient {
   }
 
   // Sign up with email/password
-  async signUp(
-    email: string,
-    password: string,
-    fullName?: string
-  ): Promise<AuthSession> {
-    const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+  async signUp(email: string, password: string, fullName?: string): Promise<AuthSession> {
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, fullName }),
     });
 
     if (!res.ok) {
       const error = await res.text();
-      throw new Error(error || "Sign up failed");
+      throw new Error(error || 'Sign up failed');
     }
 
     const session = await res.json();
@@ -109,10 +105,10 @@ class AuthClient {
 
     if (token) {
       try {
-        await fetch("/api/auth/signout", {
-          method: "POST",
+        await fetch('/api/auth/signout', {
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
         });
@@ -128,11 +124,11 @@ class AuthClient {
   getAuthHeaders(): Record<string, string> {
     const token = localStorage.getItem(AuthClient.TOKEN_KEY);
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     };
 
     if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     return headers;
@@ -146,12 +142,12 @@ class AuthClient {
     };
 
     // Listen for storage events (for multi-tab sync)
-    window.addEventListener("storage", handler);
+    window.addEventListener('storage', handler);
     // Also listen for in-tab custom events fired by setSession/clearSession
     window.addEventListener(AuthClient.EVENT, handler as EventListener);
 
     return () => {
-      window.removeEventListener("storage", handler);
+      window.removeEventListener('storage', handler);
       window.removeEventListener(AuthClient.EVENT, handler as EventListener);
     };
   }

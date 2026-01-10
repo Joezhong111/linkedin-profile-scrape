@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+dist
+build
+
+# Generated files
+netlify
+drizzle
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Cache
+.cache
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

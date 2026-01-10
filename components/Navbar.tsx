@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -9,8 +9,8 @@ import {
   BriefcaseIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
-} from "@heroicons/react/24/outline";
-import ThemeToggle from "./ThemeToggle";
+} from '@heroicons/react/24/outline';
+import ThemeToggle from './ThemeToggle';
 
 type Props = {
   authed: boolean;
@@ -32,13 +32,13 @@ const Navbar: React.FC<Props> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { href: "#/dashboard", label: "Dashboard", icon: HomeIcon, route: "dashboard" },
-    { href: "#/profiles", label: "Profiles", icon: UserGroupIcon, route: "profiles" },
-    { href: "#/leads", label: "Leads", icon: BriefcaseIcon, route: "leads" },
+    { href: '#/dashboard', label: 'Dashboard', icon: HomeIcon, route: 'dashboard' },
+    { href: '#/profiles', label: 'Profiles', icon: UserGroupIcon, route: 'profiles' },
+    { href: '#/leads', label: 'Leads', icon: BriefcaseIcon, route: 'leads' },
   ];
 
   if (isAdmin) {
-    navItems.push({ href: "#/admin", label: "Admin", icon: Cog6ToothIcon, route: "admin" });
+    navItems.push({ href: '#/admin', label: 'Admin', icon: Cog6ToothIcon, route: 'admin' });
   }
 
   const handleNavClick = () => {
@@ -81,10 +81,11 @@ const Navbar: React.FC<Props> = ({
                   <a
                     key={item.route}
                     href={item.href}
-                    className={`px-3 py-1.5 rounded-lg transition-colors ${route === item.route
-                        ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-medium"
-                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                      }`}
+                    className={`px-3 py-1.5 rounded-lg transition-colors ${
+                      route === item.route
+                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-medium'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
                   >
                     {item.label}
                   </a>
@@ -174,10 +175,11 @@ const Navbar: React.FC<Props> = ({
                     key={item.route}
                     href={item.href}
                     onClick={handleNavClick}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${route === item.route
-                        ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-medium"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      }`}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      route === item.route
+                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-medium'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
                   >
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
