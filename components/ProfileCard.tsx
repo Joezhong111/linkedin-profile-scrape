@@ -42,6 +42,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile: p, handleCopy }) => 
         <div className="flex items-center gap-3">
           <img
             src={photo}
+            loading="lazy"
             alt={name}
             className="h-12 w-12 rounded-full object-cover bg-gray-200 dark:bg-slate-700"
           />
@@ -80,7 +81,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile: p, handleCopy }) => 
           href={link}
           target="_blank"
           rel="noreferrer"
-          className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline inline-flex items-center gap-1 transition-colors"
         >
           Open <ArrowTopRightOnSquareIcon className="h-4 w-4" />
         </a>

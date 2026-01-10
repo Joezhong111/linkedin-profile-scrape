@@ -18,6 +18,7 @@ import {
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import ProfileCard from '../components/ProfileCard';
+import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
 
 export default function Home() {
   const [scrapeMode, setScrapeMode] = useState<'profiles' | 'company'>('profiles');
@@ -53,7 +54,11 @@ export default function Home() {
   const removeLocation = (i: number) => setLocations(locations.filter((_, idx) => idx !== i));
   const toggleSet = (set: Set<string>, val: string) => {
     const next = new Set(set);
-    next.has(val) ? next.delete(val) : next.add(val);
+    if (next.has(val)) {
+      next.delete(val);
+    } else {
+      next.add(val);
+    }
     return next;
   };
   const [state, setState] = useState<ScraperState>({
@@ -142,7 +147,11 @@ export default function Home() {
   const toggleSelect = (idx: number) => {
     setSelectedIndexes((prev: Set<number>) => {
       const next = new Set(prev);
-      next.has(idx) ? next.delete(idx) : next.add(idx);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+      }
       return next;
     });
   };
@@ -441,7 +450,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={state.isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
               >
                 {state.isLoading ? (
                   <>
@@ -468,19 +477,13 @@ export default function Home() {
               </h3>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{savedCount}</div>
-                <div className="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
-                  Saved Profiles
-                </div>
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-4 rounded-lg text-white">
+                <div className="text-3xl font-bold">{savedCount}</div>
+                <div className="text-sm text-blue-100 font-medium">Saved Profiles</div>
               </div>
-              <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {savedLeadsCount}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
-                  Saved Leads
-                </div>
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 p-4 rounded-lg text-white">
+                <div className="text-3xl font-bold">{savedLeadsCount}</div>
+                <div className="text-sm text-emerald-100 font-medium">Saved Leads</div>
               </div>
             </div>
           </div>
@@ -495,12 +498,21 @@ export default function Home() {
           </div>
 
           {previewItems.length === 0 ? (
-            <div className="bg-white dark:bg-slate-800 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-12 text-center">
-              <MagnifyingGlassIcon className="h-12 w-12 text-gray-300 dark:text-slate-600 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-slate-400 font-medium">
-                Enter LinkedIn URLs and click Start Scraping.
-              </p>
-            </div>
+            state.isLoading ? (
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 space-y-3">
+                <CardSkeleton count={3} />
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-800 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-12 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/30 mb-4">
+                  <MagnifyingGlassIcon className="h-8 w-8 text-blue-400 dark:text-blue-500" />
+                </div>
+                <p className="text-gray-900 dark:text-white font-semibold mb-2">Ready to Scrape</p>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">
+                  Enter LinkedIn URLs or search a company to get started
+                </p>
+              </div>
+            )
           ) : (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
               <div className="p-4 flex items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-700">
@@ -552,24 +564,29 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {previewItems.map((item: any, idx: number) => {
-                      const profile = mapApifyToLinkedInProfile(item);
-                      return (
-                        <tr
-                          key={idx}
-                          className="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700"
-                        >
-                          <td className="p-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedIndexes.has(idx)}
-                              onChange={() => toggleSelect(idx)}
-                            />
-                          </td>
-                          <ProfileCard profile={profile} handleCopy={handleCopy} />
-                        </tr>
-                      );
-                    })}
+                    {state.isLoading ? (
+                      <TableRowSkeleton count={3} />
+                    ) : (
+                      previewItems.map((item: any, idx: number) => {
+                        const profile = mapApifyToLinkedInProfile(item);
+                        return (
+                          <tr
+                            key={idx}
+                            className="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                          >
+                            <td className="p-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedIndexes.has(idx)}
+                                onChange={() => toggleSelect(idx)}
+                                className="rounded border-gray-300 dark:border-slate-500 text-blue-600 bg-white dark:bg-slate-600 cursor-pointer"
+                              />
+                            </td>
+                            <ProfileCard profile={profile} handleCopy={handleCopy} />
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>

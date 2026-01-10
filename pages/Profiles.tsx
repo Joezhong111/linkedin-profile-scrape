@@ -2,8 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { LinkedInProfile } from '../types';
 
 import { fetchAllProfiles } from '../services/api';
-import { MagnifyingGlassIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import {
+  MagnifyingGlassIcon,
+  SparklesIcon,
+  BriefcaseIcon,
+  MapPinIcon,
+  EnvelopeIcon,
+  ArrowTopRightOnSquareIcon,
+  ClipboardDocumentIcon,
+  CloudArrowUpIcon,
+} from '@heroicons/react/24/outline';
 import ProfileRow from '../components/ProfileRow';
+import { TableRowSkeleton } from '../components/Skeleton';
 
 function toCsv(rows: LinkedInProfile[]) {
   const headers = [
@@ -233,7 +243,7 @@ export default function Profiles() {
               value={q}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQ(e.target.value)}
               placeholder="Search name / headline / location / company / about"
-              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none text-sm"
             />
           </div>
           <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
@@ -276,7 +286,7 @@ export default function Profiles() {
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setLocationFilter(e.target.value)
               }
-              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none text-sm"
             >
               <option value="">All</option>
               {locations.map((loc: string) => (
@@ -327,7 +337,7 @@ export default function Profiles() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setMinFollowers(Number(e.target.value) || 0)
               }
-              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none text-sm"
               placeholder="e.g. 100000"
             />
           </div>
@@ -340,7 +350,7 @@ export default function Profiles() {
               type="text"
               value={industryQ}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIndustryQ(e.target.value)}
-              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none text-sm"
               placeholder="Software / Non-profit / Energy"
             />
           </div>
@@ -353,7 +363,7 @@ export default function Profiles() {
               type="text"
               value={companyQ}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompanyQ(e.target.value)}
-              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none text-sm"
               placeholder="e.g. Google / Microsoft / OpenAI"
             />
           </div>
@@ -366,7 +376,7 @@ export default function Profiles() {
               type="date"
               value={dateFrom}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDateFrom(e.target.value)}
-              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none text-sm"
             />
           </div>
 
@@ -378,7 +388,7 @@ export default function Profiles() {
               type="date"
               value={dateTo}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDateTo(e.target.value)}
-              className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none text-sm"
             />
           </div>
 
@@ -394,15 +404,7 @@ export default function Profiles() {
       </div>
 
       {loading ? (
-        <div className="mt-6 text-gray-500">Loading...</div>
-      ) : error ? (
-        <div className="mt-6 text-red-600">{error}</div>
-      ) : filtered.length === 0 ? (
-        <div className="mt-6 bg-white dark:bg-slate-800 border border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-12 text-center text-gray-500 dark:text-slate-400">
-          No profiles match your filters.
-        </div>
-      ) : (
-        <div className="mt-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-x-auto">
+        <div className="hidden md:block mt-6 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 border-b border-gray-100 dark:border-slate-700">
               <tr>
@@ -417,12 +419,148 @@ export default function Profiles() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((p: LinkedInProfile) => (
-                <ProfileRow key={p.id || p.profile_url} profile={p} handleCopy={handleCopy} />
-              ))}
+              <TableRowSkeleton count={5} />
             </tbody>
           </table>
         </div>
+      ) : error ? (
+        <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl border border-red-200 dark:border-red-800 text-center">
+          {error}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="mt-6 bg-white dark:bg-slate-800 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl p-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/30 mb-4">
+            <MagnifyingGlassIcon className="h-8 w-8 text-blue-400 dark:text-blue-500" />
+          </div>
+          <p className="text-gray-900 dark:text-white font-semibold mb-2">No profiles found</p>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mb-4">
+            Try adjusting your filters or scrape new profiles
+          </p>
+          <a
+            href="#/"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            <CloudArrowUpIcon className="h-4 w-4" />
+            Scrape New Profiles
+          </a>
+        </div>
+      ) : (
+        <>
+          {/* Mobile: Card View */}
+          <div className="md:hidden mt-4 space-y-3">
+            {sorted.map((p: LinkedInProfile) => (
+              <div
+                key={p.id || p.profile_url}
+                className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800 transition-shadow cursor-pointer"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    {p.photo_url ? (
+                      <img
+                        src={p.photo_url}
+                        loading="lazy"
+                        alt={p.full_name}
+                        className="h-12 w-12 rounded-full object-cover border-2 border-gray-100 dark:border-slate-700"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-lg">
+                        {p.full_name?.[0] || '?'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                      {p.full_name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-slate-400 truncate">
+                      {p.headline || p.job_title}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-slate-500">
+                      <span className="flex items-center gap-1 truncate">
+                        <BriefcaseIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate">{p.company_name}</span>
+                      </span>
+                      {p.location && (
+                        <span className="flex items-center gap-1 truncate">
+                          <MapPinIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">{p.location.split(',')[0]}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact info */}
+                {(p.email || p.mobile_number) && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700 flex flex-wrap gap-2">
+                    {p.email && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopy(p.email);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                      >
+                        <EnvelopeIcon className="h-3 w-3" />
+                        <span className="truncate max-w-[120px]">{p.email}</span>
+                        <ClipboardDocumentIcon className="h-3 w-3 flex-shrink-0" />
+                      </button>
+                    )}
+                    {p.mobile_number && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopy(p.mobile_number);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                      >
+                        <ClipboardDocumentIcon className="h-3 w-3" />
+                        <span className="truncate max-w-[120px]">{p.mobile_number}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* LinkedIn link */}
+                {p.linkedin_public_url && (
+                  <a
+                    href={p.linkedin_public_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-3 inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                    View Profile
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: Table View */}
+          <div className="hidden md:block mt-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 border-b border-gray-100 dark:border-slate-700">
+                <tr>
+                  <th className="p-3 text-left w-10"></th>
+                  <th className="p-3 text-left">Name</th>
+                  <th className="p-3 text-left">Title</th>
+                  <th className="p-3 text-left">Company</th>
+                  <th className="p-3 text-left">Region</th>
+                  <th className="p-3 text-left">Email</th>
+                  <th className="p-3 text-left">Phone</th>
+                  <th className="p-3 text-left">LinkedIn</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((p: LinkedInProfile) => (
+                  <ProfileRow key={p.id || p.profile_url} profile={p} handleCopy={handleCopy} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </main>
   );

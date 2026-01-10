@@ -37,7 +37,7 @@ export default function ToastContainer() {
         return (
           <div
             key={toast.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg animate-in slide-in-from-right fade-in duration-300 ${styleMap[toast.type]}`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg animate-in slide-in-from-right-4 fade-in duration-300 ${styleMap[toast.type]}`}
           >
             <Icon className="w-5 h-5 shrink-0" />
             <span className="text-sm font-medium">{toast.message}</span>

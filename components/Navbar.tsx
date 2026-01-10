@@ -55,7 +55,7 @@ const Navbar: React.FC<Props> = ({
             {authed && (
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="sm:hidden p-2 -ml-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95 transition-transform"
+                className="sm:hidden p-2 -ml-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95 transition-all duration-200"
                 aria-label="Toggle menu"
               >
                 {mobileMenuOpen ? (
@@ -81,10 +81,10 @@ const Navbar: React.FC<Props> = ({
                   <a
                     key={item.route}
                     href={item.href}
-                    className={`px-3 py-1.5 rounded-lg transition-colors ${
+                    className={`px-3 py-1.5 rounded-lg transition-all duration-200 font-medium ${
                       route === item.route
-                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-medium'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/50'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
                     {item.label}
@@ -101,7 +101,7 @@ const Navbar: React.FC<Props> = ({
                 <ThemeToggle />
                 <button
                   onClick={onSignOut}
-                  className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95"
                 >
                   <ArrowRightOnRectangleIcon className="h-4 w-4" />
                   Logout
@@ -135,7 +135,7 @@ const Navbar: React.FC<Props> = ({
             ) : (
               <a
                 href="#/login"
-                className="px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95"
               >
                 Login
               </a>
@@ -175,9 +175,9 @@ const Navbar: React.FC<Props> = ({
                     key={item.route}
                     href={item.href}
                     onClick={handleNavClick}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
                       route === item.route
-                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-medium'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/50'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >

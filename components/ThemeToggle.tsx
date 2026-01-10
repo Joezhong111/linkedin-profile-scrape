@@ -18,7 +18,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400 transition-colors"
+      className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95"
       title={`Current: ${theme}`}
     >
       {theme === 'light' && <SunIcon className="w-5 h-5" />}

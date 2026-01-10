@@ -46,7 +46,7 @@ export default function RecommendationCards({ data }: Props) {
             </div>
 
             <div className="text-xs text-gray-600 dark:text-slate-400 italic leading-relaxed pl-2 border-l-2 border-purple-200 dark:border-purple-800">
-              "{rec.excerpt}"
+              &quot;{rec.excerpt}&quot;
             </div>
           </div>
         ))}
