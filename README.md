@@ -1,172 +1,339 @@
-# LinkedIn Insights Pro (Neon + Netlify + Custom Auth)
+# LinkedIn Insights Pro
 
-This app scrapes LinkedIn profiles with Apify, stores data in Neon PostgreSQL via Drizzle ORM, and uses custom JWT authentication (no Supabase). It runs static UI with Vite and all backend endpoints as Netlify Functions.
+A LinkedIn profile scraping and analytics application built with React, Vite, Netlify Functions, Neon PostgreSQL, and Drizzle ORM.
 
 ## Features
 
-- 🔎 Scraping via Apify Actor (People/Profiles)
-- 💾 Neon PostgreSQL + Drizzle ORM schema and migrations
-- 🔐 Custom JWT Auth (users, sessions) + RBAC (user_roles)
-- 📈 Per-user quotas for scraping (apify_quotas, apify_usage)
-- 📊 Profile visualization (Career Timeline, Network Influence)
-- ⚙️ Netlify Functions for all backend API endpoints
+- 🔎 **LinkedIn Scraping** - Scrape profiles and company employees via Apify Actors
+- 💾 **Neon PostgreSQL** - Managed database with Drizzle ORM for schema and migrations
+- 🔐 **Custom JWT Auth** - Secure authentication with user sessions and RBAC (user_roles)
+- 📊 **Profile Analytics** - Career timeline, network visualization, skills analysis
+- 👥 **Leads Management** - Track and manage potential leads from company scrapes
+- 🏷️ **Tags System** - Organize leads with custom tags and colors
+- 📈 **Usage Quotas** - Per-user monthly quotas with tracking
+- 🌙 **Dark Mode** - Full dark theme support with toggle
+- 📱 **Mobile Optimized** - Responsive design with touch-friendly UI
+- ⚡ **Code Splitting** - React.lazy() for optimized loading
+- 🛡️ **Error Handling** - ErrorBoundary for graceful error recovery
+- ✅ **Input Validation** - Zod schemas for API requests
+- 🧪 **Testing** - Vitest for unit testing
+- 🎨 **Code Quality** - ESLint and Prettier configured
+
+## Tech Stack
+
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, Heroicons
+- **Backend**: Netlify Functions (TypeScript)
+- **Database**: Neon PostgreSQL
+- **ORM**: Drizzle ORM
+- **Authentication**: Custom JWT (localStorage-based)
+- **Scraping**: Apify Actors
+- **AI Analysis**: Google Gemini (optional)
 
 ## Requirements
 
 - Node.js 20.19+
 - npm
-- Netlify account (for hosting) and Apify account (for scraping)
+- Neon account (database)
+- Apify account (scraping)
+- Netlify account (hosting)
 
-## Environment Variables (.env.local)
+## Quick Start
 
-```
-# Server-side (not exposed to browser)
-DATABASE_URL="postgresql://<user>:<password>@<neon-host>/<db>?sslmode=require"
-APIFY_TOKEN=your_apify_token
+### 1. Clone and Install
 
-# Auth
-JWT_SECRET=your-strong-random-secret-min-32-chars
-```
-
-## First-time setup
-
-1. Install deps
-
-```
+```bash
+git clone <your-repo-url>
+cd linkedin-profile-scrape
 npm install
 ```
 
-2. Generate and push DB schema to Neon
+### 2. Environment Variables
 
+Copy `.env.example` to `.env.local` and fill in your credentials:
+
+```bash
+cp .env.example .env.local
 ```
+
+Required variables:
+
+- `DATABASE_URL` - Neon PostgreSQL connection string
+- `APIFY_TOKEN` - Apify API token
+- `JWT_SECRET` - Secret for JWT signing (min 32 chars)
+
+Optional variables:
+
+- `VITE_GEMINI_API_KEY` - Google Gemini API key for AI analysis
+
+### 3. Database Setup
+
+Push schema to Neon:
+
+```bash
 npm run db:generate
 npx drizzle-kit push
 ```
 
-3. Create an admin user
+Or use migrations:
 
+```bash
+npm run db:generate
+npm run db:migrate
 ```
+
+### 4. Create Admin User
+
+```bash
 node scripts/create-admin.js admin@example.com your_password
 ```
 
-## Development (with Functions)
+### 5. Run Development Server
 
-Use Netlify Dev so that /api/\* routes are proxied to Functions:
-
-```
+```bash
 npm run dev:netlify
-# open http://localhost:8888
 ```
 
-Note: plain `npm run dev` (Vite on 5173) only serves frontend and will return 404 for /api/\*.
+Open http://localhost:8888
 
-## Build
+**Note**: Use `npm run dev:netlify` for full-stack development. `npm run dev` only serves frontend on port 5173 and won't proxy API calls.
+
+## Available Scripts
+
+| Command                 | Description                                   |
+| ----------------------- | --------------------------------------------- |
+| `npm run dev`           | Vite frontend only (port 5173)                |
+| `npm run dev:netlify`   | Full stack with Netlify Functions (port 8888) |
+| `npm run build`         | Production build                              |
+| `npm run preview`       | Preview production build                      |
+| `npm run db:generate`   | Generate Drizzle migrations                   |
+| `npm run db:migrate`    | Run database migrations                       |
+| `npm run db:push`       | Push schema to database (dev only)            |
+| `npm run db:studio`     | Open Drizzle Studio UI                        |
+| `npm run db:health`     | Check database connection                     |
+| `npm run test`          | Run tests with Vitest                         |
+| `npm run test:ui`       | Run tests with UI                             |
+| `npm run test:coverage` | Run tests with coverage report                |
+| `npm run lint`          | Run ESLint (fails on warnings)                |
+| `npm run lint:fix`      | Auto-fix ESLint issues                        |
+| `npm run format`        | Format code with Prettier                     |
+| `npm run format:check`  | Check code formatting                         |
+
+## API Endpoints
+
+### Authentication
+
+- `POST /api/auth/signin` - User login
+- `POST /api/auth/signup` - User registration
+- `POST /api/auth/signout` - User logout
+- `GET /api/auth/me` - Get current user
+
+### Profiles
+
+- `GET /api/profiles/list` - List user's profiles (with pagination)
+- `POST /api/profiles/save` - Save a scraped profile
+- `POST /api/profiles/delete` - Delete a profile
+- `POST /api/profiles/update-ai` - Update AI summary
+
+### Leads
+
+- `GET /api/leads/list` - List user's leads (with pagination and search)
+- `POST /api/leads/batch-delete` - Batch delete leads
+- `POST /api/leads/tag` - Tag a lead
+- `POST /api/leads/untag` - Untag a lead
+- `GET /api/leads/tags` - Get all tags for current user
+- `POST /api/leads/tags/create` - Create a new tag
+- `POST /api/leads/tags/delete` - Delete a tag
+
+### Admin
+
+- `GET /api/admin/me` - Get user role and permissions
+- `POST /api/admin/create-user` - Create a new user
+- `GET /api/admin/quotas` - Get all user quotas
+- `POST /api/admin/quotas` - Set user quota
+- `GET /api/admin/toggles` - Get app settings
+- `POST /api/admin/toggles` - Update app settings
+
+### Scraping
+
+- `POST /api/scrape/profile` - Scrape a single LinkedIn profile
+- `POST /api/scrape/company` - Scrape employees from a company
+
+### Health
+
+- `GET /api/health` - Check API and database health
+
+## Database Schema
+
+### Tables
+
+- `users` - User accounts
+- `sessions` - JWT session tokens
+- `user_roles` - User roles (admin/user)
+- `app_settings` - Application settings
+- `monthly_quotas` - User monthly limits
+- `monthly_usage` - Usage tracking
+- `linkedin_profiles` - Saved LinkedIn profiles
+- `linkedin_leads` - Company employee leads
+- `lead_positions` - Lead work experience
+- `tags` - Custom tags for leads
+- `lead_tags` - Junction table for lead-tag relationships
+- `scrape_jobs` - Apify scrape job tracking
+
+### Database Operations
+
+```bash
+# Push schema changes (development)
+npx drizzle-kit push
+
+# Generate migration files
+npx drizzle-kit generate
+
+# Run migrations
+npm run db:migrate
+
+# Open Drizzle Studio
+npm run db:studio
+```
+
+## Project Structure
 
 ```
-npm run build
+linkedin-profile-scrape/
+├── .github/              # GitHub workflows
+├── components/            # React components
+│   ├── dashboard/        # Dashboard sub-components
+│   ├── charts/           # Visualization components
+│   ├── ErrorBoundary.tsx  # Error catching
+│   ├── Navbar.tsx        # Navigation
+│   └── ...
+├── db/                   # Database layer
+│   ├── schema.ts         # Drizzle schema definitions
+│   ├── client.ts         # Database client
+│   └── relations.ts     # Table relationships
+├── drizzle/             # Drizzle migrations
+├── lib/                 # Utility libraries
+│   ├── auth.ts          # Frontend auth client
+│   ├── auth-server.ts   # Server auth helpers
+│   ├── validation.ts    # Zod schemas
+│   └── ...
+├── netlify/functions/   # Netlify Functions (API)
+│   ├── auth_*.ts        # Auth endpoints
+│   ├── admin_*.ts       # Admin endpoints
+│   ├── profiles_*.ts    # Profile endpoints
+│   ├── leads_*.ts       # Leads endpoints
+│   └── scrape.ts        # Scraping endpoints
+├── pages/              # Page components
+│   ├── Home.tsx         # Dashboard page
+│   ├── Profiles.tsx     # Profiles list
+│   ├── Leads.tsx        # Leads management
+│   ├── Admin.tsx        # Admin panel
+│   └── Login.tsx       # Login page
+├── scripts/            # Utility scripts
+│   ├── create-admin.js  # Create admin user
+│   ├── db-health.js     # Check DB connection
+│   └── ...
+├── services/           # API services
+│   ├── api.ts          # API client wrapper
+│   ├── apify.ts        # Apify integration
+│   ├── auth.ts         # Auth service
+│   ├── admin.ts        # Admin service
+│   └── gemini.ts       # AI analysis
+├── test/              # Test files
+├── App.tsx            # Root component
+├── vite.config.ts     # Vite configuration
+├── tsconfig.json      # TypeScript config
+├── drizzle.config.ts  # Drizzle config
+└── netlify.toml      # Netlify config
 ```
 
-Outputs static files in dist/ and compiles client bundle. Functions are executed by Netlify at runtime (TS sources in netlify/functions).
+## Development Guidelines
 
-## Deploy to Netlify
+See [AGENTS.md](./AGENTS.md) for detailed development guidelines including:
 
-- Build command: `npm run build`
-- Publish directory: `dist`
-- Functions directory: `netlify/functions`
-- Node version: `20.19.0` (set in netlify.toml)
-- Redirects: already configured in netlify.toml (SPA + API)
-- Site environment variables:
-  - DATABASE_URL
-  - APIFY_TOKEN
-  - JWT_SECRET
+- Code style and conventions
+- Component patterns
+- Database operations
+- Authentication patterns
+- Testing guidelines
+- Security best practices
 
-You can initialize or link your site:
-
-```
-# one-time
-netlify init
-# or link an existing site
-netlify link
-```
-
-Then deploy from CI (recommended) or locally:
-
-```
-netlify deploy --build      # preview
-netlify deploy --prod --build
-```
-
-## API Endpoints (Netlify Functions)
-
-- Auth: POST /api/auth/signin, /api/auth/signup, /api/auth/signout, GET /api/auth/me
-- Admin: GET /api/admin/me, GET/POST /api/admin/quotas, POST /api/admin/create-user, GET/POST /api/admin/toggles
-- Profiles: GET /api/profiles/list, POST /api/profiles/save, POST /api/profiles/delete, POST /api/profiles/update-ai
-- Misc: GET /api/health, POST /api/scrape
-
-## Common issues
-
-- Login stuck on /login
-  - Use Netlify Dev (http://localhost:8888). Vite 5173 won’t proxy Functions.
-  - Hard refresh (Shift+Reload). Ensure localStorage has `auth_token`.
-- "Quota disabled"
-  - Set user quota in Admin page, or call POST /api/admin/quotas with { user_id, daily_limit }.
-- "APIFY token missing"
-  - Set APIFY_TOKEN in .env.local (dev) and Netlify site env (prod). `/api/health` returns `{ apify: true }` when ok.
-- DB connection errors
-  - Check DATABASE_URL (Neon), ensure `?sslmode=require` and server reachable.
-
-## Project structure (key files)
-
-```
-lib/
-  auth.ts              # Frontend auth client (localStorage session)
-  auth-server.ts       # Server-side helpers (hash/verify, sessions, roles)
-db/
-  schema.ts            # All tables: users, sessions, user_roles, apify_*, linkedin_profiles
-  client.ts            # pg Pool + drizzle
-etlify/functions/
-  auth_*.ts            # Auth API
-  admin_*.ts           # Admin API (quotas/toggles)
-  profiles_*.ts        # Profiles API
-  scrape.ts            # Apify scrape endpoint
-services/
-  auth.ts              # Auth wrapper for UI
-  supabase.ts          # Profiles service (now talks to /api/*)
-pages/
-  Login.tsx, Dashboard.tsx, Profiles.tsx, Admin.tsx
-```
-
-## Security notes
-
-- Never commit .env.local
-- Use a strong JWT_SECRET in production (>= 32 chars)
-- Rotate secrets periodically
-
-## Legacy notes (Supabase)
-
-The project previously used Supabase for auth and DB. It now uses Neon + custom auth. Legacy references were removed from code; any remaining mentions in docs refer to the old setup.
+## Deployment
 
 ### Netlify
 
 1. Connect your repository on Netlify
-2. Build command: `npm run build`
-3. Publish directory: `dist`
-4. Add the same environment variables in Site settings → Build & deploy → Environment
+2. Configure build settings:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `dist`
+   - **Functions directory**: `netlify/functions`
+3. Add environment variables:
+   - `DATABASE_URL`
+   - `APIFY_TOKEN`
+   - `JWT_SECRET`
+   - (Optional) `VITE_GEMINI_API_KEY`
 
-The repo includes `netlify.toml` with SPA redirects and cache headers.
+The `netlify.toml` file includes:
+
+- SPA redirects
+- API routing
+- Cache headers
+
+Deploy from CLI:
+
+```bash
+netlify deploy --build      # Preview deployment
+netlify deploy --prod --build  # Production deployment
+```
+
+## Common Issues
+
+### Login stuck on /login
+
+- Use `npm run dev:netlify` (http://localhost:8888), not `npm run dev`
+- Hard refresh (Shift+Reload)
+- Clear localStorage: `localStorage.clear()`
+- Check `/api/health` endpoint
+
+### "Quota disabled"
+
+- Set user quota in Admin page
+- Or call `POST /api/admin/quotas` with `{ user_id, monthly_limit }`
+
+### "Apify token missing"
+
+- Set `APIFY_TOKEN` in `.env.local` (dev) and Netlify site env (prod)
+- Check `/api/health` returns `{ apify: true }`
+
+### Database connection errors
+
+- Verify `DATABASE_URL` format: `postgresql://user:password@host/db?sslmode=require`
+- Ensure Neon database is active
+- Run `npm run db:health` to test connection
+
+### Build errors
+
+- Run `npm install` to ensure dependencies are up to date
+- Delete `node_modules` and reinstall if needed
+- Check Node.js version (requires 20.19+)
 
 ## Environment Variables
 
-| Variable                    | Required | Description                                       |
-| --------------------------- | -------- | ------------------------------------------------- |
-| `APIFY_TOKEN`               | Yes      | Apify API token (used by Netlify Functions)       |
-| `DATABASE_URL`              | Yes      | Supabase connection string for Drizzle migrations |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes      | Supabase service role key for admin functions     |
-| `VITE_SUPABASE_URL`         | Yes      | Supabase project URL (exposed to frontend)        |
-| `VITE_SUPABASE_ANON_KEY`    | Yes      | Supabase anonymous key (exposed to frontend)      |
-| `VITE_GEMINI_API_KEY`       | No       | Google Gemini API key for AI analysis             |
+| Variable              | Required | Description                           |
+| --------------------- | -------- | ------------------------------------- |
+| `DATABASE_URL`        | Yes      | Neon PostgreSQL connection string     |
+| `APIFY_TOKEN`         | Yes      | Apify API token for scraping          |
+| `JWT_SECRET`          | Yes      | Secret for JWT signing (min 32 chars) |
+| `VITE_GEMINI_API_KEY` | No       | Google Gemini API key for AI analysis |
 
-## How to Get API Keys
+## Security Notes
+
+- **Never commit `.env.local`** - Contains sensitive credentials
+- Use a strong `JWT_SECRET` in production (>= 32 random characters)
+- Rotate secrets periodically
+- APIFY_TOKEN and JWT_SECRET are server-side only (not exposed to browser)
+- All API requests require valid JWT token
+
+## Getting API Keys
 
 ### Apify
 
@@ -175,65 +342,49 @@ The repo includes `netlify.toml` with SPA redirects and cache headers.
 3. Navigate to Account → Integrations
 4. Copy your API Token
 
-### Supabase
+### Neon
 
-1. Go to https://supabase.com
+1. Go to https://console.neon.tech
 2. Create a new project
-3. Go to Project Settings → API
-4. Copy `Project URL` and `anon public` key
+3. Go to Project Settings → Connection Details
+4. Copy the connection string
 
-### Google Gemini
+### Google Gemini (Optional)
 
 1. Go to https://ai.google.dev/
 2. Click "Get API Key"
 3. Create a new API key in Google Cloud Console
 
-## Project Structure
+## Code Quality
 
-```
-├── App.tsx              # Main application component
-├── index.tsx            # Entry point
-├── components/
-│   ├── dashboard/        # Talent Analytics Dashboard components
-│   │   ├── CareerTimeline.tsx
-│   │   ├── NetworkTreemap.tsx
-│   │   ├── ProfileHeader.tsx
-│   │   └── ...
-│   ├── ProfileCard.tsx
-│   └── ProfileRow.tsx
-├── services/
-│   ├── apify.ts        # LinkedIn scraping service
-│   ├── supabase.ts     # Database service
-│   └── gemini.ts       # AI analysis service
-├── types.ts            # TypeScript type definitions
-├── vite.config.ts      # Vite configuration
-└── .env.local          # Environment variables (create from .env.example)
+The project uses ESLint and Prettier for code quality:
+
+```bash
+# Lint (fails on warnings)
+npm run lint
+
+# Auto-fix linting issues
+npm run lint:fix
+
+# Format code
+npm run format
+
+# Check formatting
+npm run format:check
 ```
 
-## Security Notes
+## Testing
 
-- **Never commit `.env.local`** - It contains sensitive API keys
-- Use `.env.example` as a template for other developers
-- Keep your API keys confidential
-- Rotate keys regularly if compromised
+```bash
+# Run all tests
+npm run test
 
-## Troubleshooting
+# Run tests with UI
+npm run test:ui
 
-### "Environment variables are missing"
-
-Make sure all required variables in `.env.local` are filled in correctly.
-
-### "Supabase Connection Failed"
-
-- Verify your `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are correct
-- Check that the `linkedin_profiles` table exists in your Supabase database
-- Ensure RLS (Row Level Security) policies allow public access if needed
-
-### "Apify Scraping Failed"
-
-- Verify your `VITE_APIFY_TOKEN` is correct
-- Check that you have sufficient Apify credits
-- Ensure the LinkedIn URLs are valid and public
+# Run tests with coverage
+npm run test:coverage
+```
 
 ## License
 
