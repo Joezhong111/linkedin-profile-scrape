@@ -7,13 +7,24 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build outputs
 dist
 dist-ssr
+build
+.cache
+.parcel-cache
+
+# Local development
 *.local
-doc/ 
+examples/
+doc/
+
 # Environment variables
 .env*
+!.env.example
 
 # Editor directories and files
 .vscode/*
@@ -25,18 +36,13 @@ doc/
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
+*~
 
 # Local Netlify folder
 .netlify
-
-
-# Local examples and temp data
-examples/
-
-# Netlify local state (already ignoring .netlify dir)
-.netlify/
 netlify/state.json
-
 
 # Build/test caches and tool artifacts
 coverage/
@@ -44,3 +50,14 @@ coverage/
 *.tsbuildinfo
 .vercel/
 Thumbs.db
+*.tgz
+deno.lock
+
+# Testing
+/coverage
+.nyc_output
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
