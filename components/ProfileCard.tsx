@@ -81,7 +81,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile: p, handleCopy }) => 
           href={link}
           target="_blank"
           rel="noreferrer"
-          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline inline-flex items-center gap-1 transition-colors"
+          className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline inline-flex items-center gap-1 transition-colors"
         >
           Open <ArrowTopRightOnSquareIcon className="h-4 w-4" />
         </a>

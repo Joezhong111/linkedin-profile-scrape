@@ -10,6 +10,8 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
 import ThemeToggle from './ThemeToggle';
 
 type Props = {
@@ -30,6 +32,22 @@ const Navbar: React.FC<Props> = ({
   onSignOut,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerRef = React.useRef(null);
+
+  useGSAP(() => {
+    gsap.to(headerRef.current, {
+      y: 0,
+      opacity: 1,
+      duration: 0.8,
+      ease: "power3.out"
+    });
+
+    const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+
+    tl.from(".nav-logo", { y: -20, opacity: 0, duration: 0.5 }, "-=0.4");
+    tl.from(".nav-link", { y: -10, opacity: 0, stagger: 0.1, duration: 0.4 }, "-=0.3");
+    tl.from(".nav-action", { x: 20, opacity: 0, stagger: 0.05, duration: 0.4 }, "-=0.2");
+  }, { scope: headerRef });
 
   const navItems = [
     { href: '#/dashboard', label: 'Dashboard', icon: HomeIcon, route: 'dashboard' },
@@ -47,7 +65,7 @@ const Navbar: React.FC<Props> = ({
 
   return (
     <>
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 transition-colors">
+      <header ref={headerRef} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50 sticky top-0 z-30 transition-all duration-300 transform translate-y-[-100%] opacity-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between">
           {/* Left: Logo + Desktop Nav */}
           <div className="flex items-center gap-4">
@@ -55,7 +73,7 @@ const Navbar: React.FC<Props> = ({
             {authed && (
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="sm:hidden p-2 -ml-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95 transition-all duration-200"
+                className="nav-item sm:hidden p-2 -ml-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95 transition-all duration-200"
                 aria-label="Toggle menu"
               >
                 {mobileMenuOpen ? (
@@ -68,7 +86,7 @@ const Navbar: React.FC<Props> = ({
 
             <a
               href="#/"
-              className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight"
+              className="nav-logo text-lg sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight"
             >
               <span className="hidden sm:inline">LinkedIn Insights Pro</span>
               <span className="sm:hidden">LI Pro</span>
@@ -81,11 +99,10 @@ const Navbar: React.FC<Props> = ({
                   <a
                     key={item.route}
                     href={item.href}
-                    className={`px-3 py-1.5 rounded-lg transition-all duration-200 font-medium ${
-                      route === item.route
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/50'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
-                    }`}
+                    className={`nav-link px-3 py-1.5 rounded-lg transition-all duration-200 font-medium ${route === item.route
+                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 ring-1 ring-primary-500/50'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 hover:text-primary-600 dark:hover:text-primary-400'
+                      }`}
                   >
                     {item.label}
                   </a>
@@ -98,16 +115,18 @@ const Navbar: React.FC<Props> = ({
           <div className="flex items-center gap-2 sm:gap-4 text-sm font-medium">
             {authed ? (
               <>
-                <ThemeToggle />
+                <div className="nav-action">
+                  <ThemeToggle />
+                </div>
                 <button
                   onClick={onSignOut}
-                  className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95"
+                  className="nav-action hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95"
                 >
                   <ArrowRightOnRectangleIcon className="h-4 w-4" />
                   Logout
                 </button>
                 {/* Status indicators - desktop only */}
-                <div className="hidden lg:flex items-center gap-1.5">
+                <div className="nav-action hidden lg:flex items-center gap-1.5">
                   <span className="text-gray-500 dark:text-gray-400">Apify:</span>
                   {apifyReady ? (
                     <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
@@ -119,7 +138,7 @@ const Navbar: React.FC<Props> = ({
                     </span>
                   )}
                 </div>
-                <div className="hidden lg:flex items-center gap-1.5">
+                <div className="nav-action hidden lg:flex items-center gap-1.5">
                   <span className="text-gray-500 dark:text-gray-400">DB:</span>
                   {dbConnected ? (
                     <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
@@ -135,7 +154,7 @@ const Navbar: React.FC<Props> = ({
             ) : (
               <a
                 href="#/login"
-                className="px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95"
+                className="nav-action px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95"
               >
                 Login
               </a>
@@ -175,11 +194,10 @@ const Navbar: React.FC<Props> = ({
                     key={item.route}
                     href={item.href}
                     onClick={handleNavClick}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
-                      route === item.route
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/50'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${route === item.route
+                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-primary-600 dark:hover:text-primary-400'
+                      }`}
                   >
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>

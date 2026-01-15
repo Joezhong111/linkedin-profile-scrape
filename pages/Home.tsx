@@ -12,6 +12,8 @@ import {
   fetchAllLeads,
   isApiReady,
 } from '../services/api';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
 import {
   CloudArrowUpIcon,
   CircleStackIcon,
@@ -22,6 +24,7 @@ import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
 
 export default function Home() {
   const [scrapeMode, setScrapeMode] = useState<'profiles' | 'company'>('profiles');
+
 
   // Profile Scrape State
   const [urls, setUrls] = useState<string>('');
@@ -71,10 +74,24 @@ export default function Home() {
   const [savedCount, setSavedCount] = useState<number>(0);
   const [savedLeadsCount, setSavedLeadsCount] = useState<number>(0);
 
+  const previewTbodyRef = React.useRef<HTMLTableSectionElement>(null);
+
+  useGSAP(() => {
+    if (previewItems.length > 0) {
+      gsap.from(previewTbodyRef.current?.children || [], {
+        opacity: 0,
+        y: 20,
+        stagger: 0.05,
+        duration: 0.5,
+        ease: "power2.out"
+      });
+    }
+  }, { dependencies: [previewItems] });
+
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-    } catch {}
+    } catch { }
   };
 
   const loadCount = useCallback(async () => {
@@ -201,21 +218,19 @@ export default function Home() {
             {/* Tabs */}
             <div className="flex border-b border-gray-200 dark:border-slate-700 mb-4">
               <button
-                className={`py-2 px-4 text-sm font-medium ${
-                  scrapeMode === 'profiles'
-                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
-                }`}
+                className={`py-2 px-4 text-sm font-medium ${scrapeMode === 'profiles'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+                  }`}
                 onClick={() => setScrapeMode('profiles')}
               >
                 Profile URLs
               </button>
               <button
-                className={`py-2 px-4 text-sm font-medium ${
-                  scrapeMode === 'company'
-                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
-                }`}
+                className={`py-2 px-4 text-sm font-medium ${scrapeMode === 'company'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+                  }`}
                 onClick={() => setScrapeMode('company')}
               >
                 Company Search
@@ -563,7 +578,7 @@ export default function Home() {
                       <th className="p-3 text-left">LinkedIn</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody ref={previewTbodyRef}>
                     {state.isLoading ? (
                       <TableRowSkeleton count={3} />
                     ) : (

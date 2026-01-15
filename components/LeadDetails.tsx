@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useRef } from 'react';
 import { LinkedInProfile } from '../types';
 import {
   transformSkillsData,
@@ -18,10 +18,11 @@ import {
   AcademicCapIcon,
   LanguageIcon,
   LightBulbIcon,
-  ChatBubbleBottomCenterTextIcon,
   CodeBracketIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
 
 // Chart Components
 import SkillsChart from './charts/SkillsChart';
@@ -60,9 +61,26 @@ export default function LeadDetails({ lead, onClose }: Props) {
   const recommendationsData = transformRecommendationsData(rawData);
   const featuredData = transformFeaturedData(rawData);
 
+  const containerRef = useRef(null);
+  const modalRef = useRef(null);
+
+  useGSAP(() => {
+    // Backdrop fade in
+    gsap.from(containerRef.current, { opacity: 0, duration: 0.3 });
+
+    // Modal scale up and fade in
+    gsap.from(modalRef.current, {
+      y: 50,
+      opacity: 0,
+      scale: 0.95,
+      duration: 0.4,
+      ease: "back.out(1.7)"
+    });
+  }, { scope: containerRef });
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-2 md:p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl shadow-2xl w-[95%] md:w-full max-w-6xl max-h-[90vh] md:max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-200 dark:border-slate-700">
+    <div ref={containerRef} className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-2 md:p-4">
+      <div ref={modalRef} className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl shadow-2xl w-[95%] md:w-full max-w-6xl max-h-[90vh] md:max-h-[85vh] flex flex-col overflow-hidden border border-gray-200 dark:border-slate-700 opacity-100">
         {/* Header */}
         <div className="px-4 py-3 md:px-6 md:py-5 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between shrink-0 shadow-sm z-10">
           <div className="flex items-center gap-4">
@@ -73,7 +91,7 @@ export default function LeadDetails({ lead, onClose }: Props) {
                 className="w-14 h-14 rounded-full border-2 border-gray-100 dark:border-slate-700 shadow-sm object-cover"
               />
             ) : (
-              <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl">
+              <div className="w-14 h-14 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-xl">
                 {lead.full_name?.charAt(0)}
               </div>
             )}
@@ -113,11 +131,10 @@ export default function LeadDetails({ lead, onClose }: Props) {
               onClick={() => setActiveTab(tab.id)}
               className={`
                                 flex items-center gap-2 px-3 md:px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
-                                ${
-                                  activeTab === tab.id
-                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30'
-                                    : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800'
-                                }
+                                ${activeTab === tab.id
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30'
+                  : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800'
+                }
                             `}
             >
               <tab.icon className="w-4 h-4" />
@@ -172,7 +189,7 @@ export default function LeadDetails({ lead, onClose }: Props) {
                                 </div>
                               )}
                             </div>
-                            <p className="mt-2 text-xs font-semibold text-gray-800 dark:text-slate-200 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                            <p className="mt-2 text-xs font-semibold text-gray-800 dark:text-slate-200 line-clamp-1 group-hover:text-primary-600 dark:group-hover:text-primary-400">
                               {item.title}
                             </p>
                           </a>
@@ -205,14 +222,14 @@ export default function LeadDetails({ lead, onClose }: Props) {
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">
                   Detailed Experience
                 </h3>
-                <div className="space-y-6 border-l-2 border-blue-100 dark:border-blue-900/50 pl-4 ml-2">
+                <div className="space-y-6 border-l-2 border-primary-100 dark:border-primary-900/50 pl-4 ml-2">
                   {(rawData.experience || []).map((exp: any, i: number) => (
                     <div key={i} className="relative">
-                      <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-blue-500 ring-4 ring-white dark:ring-slate-800"></div>
+                      <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-primary-500 ring-4 ring-white dark:ring-slate-800"></div>
                       <h4 className="text-sm font-bold text-gray-900 dark:text-white">
                         {exp.title || exp.position}
                       </h4>
-                      <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                      <p className="text-xs font-semibold text-primary-600 dark:text-primary-400">
                         {exp.companyName}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
@@ -246,7 +263,7 @@ export default function LeadDetails({ lead, onClose }: Props) {
                   {(rawData.skills || []).map((skill: any, i: number) => (
                     <span
                       key={i}
-                      className="px-2.5 py-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 text-xs rounded-full border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-100 dark:hover:border-blue-800 transition-colors cursor-default"
+                      className="px-2.5 py-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 text-xs rounded-full border border-gray-200 dark:border-slate-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 hover:border-primary-100 dark:hover:border-primary-800 transition-colors cursor-default"
                     >
                       {skill.name}
                       {skill.endorsements && (
@@ -268,7 +285,7 @@ export default function LeadDetails({ lead, onClose }: Props) {
                 <div className="space-y-6">
                   <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
                     <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4 flex items-center gap-2">
-                      <AcademicCapIcon className="w-5 h-5 text-blue-500" />
+                      <AcademicCapIcon className="w-5 h-5 text-primary-500" />
                       Education ({(rawData.education || []).length})
                     </h3>
                     <div className="space-y-4">
@@ -284,7 +301,7 @@ export default function LeadDetails({ lead, onClose }: Props) {
                               className="w-10 h-10 object-contain rounded-md bg-white p-1"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold shrink-0">
+                            <div className="w-10 h-10 rounded-md bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold shrink-0">
                               {edu.schoolName?.charAt(0)}
                             </div>
                           )}

@@ -12,6 +12,8 @@ import {
   ClipboardDocumentIcon,
   CloudArrowUpIcon,
 } from '@heroicons/react/24/outline';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
 import ProfileRow from '../components/ProfileRow';
 import { TableRowSkeleton } from '../components/Skeleton';
 
@@ -71,6 +73,10 @@ export default function Profiles() {
   const [dateTo, setDateTo] = useState<string>('');
 
   const [sortBy, setSortBy] = useState<'newest' | 'followers' | 'default'>('default');
+  const tbodyRef = React.useRef<HTMLTableSectionElement>(null);
+  const cardContainerRef = React.useRef<HTMLDivElement>(null);
+
+
 
   const locations = useMemo(() => {
     const set = new Set<string>();
@@ -199,7 +205,7 @@ export default function Profiles() {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-    } catch {}
+    } catch { }
   };
 
   const sorted = useMemo(() => {
@@ -216,6 +222,28 @@ export default function Profiles() {
     }
     return base;
   }, [filtered, sortBy]);
+
+
+
+  useGSAP(() => {
+    if (!loading && filtered.length > 0) {
+      gsap.from(tbodyRef.current?.children || [], {
+        opacity: 0,
+        y: 20,
+        stagger: 0.05,
+        duration: 0.5,
+        ease: "power2.out"
+      });
+
+      gsap.from(cardContainerRef.current?.children || [], {
+        opacity: 0,
+        y: 20,
+        stagger: 0.05,
+        duration: 0.5,
+        ease: "power2.out"
+      });
+    }
+  }, { dependencies: [loading, filtered] });
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
@@ -447,7 +475,7 @@ export default function Profiles() {
       ) : (
         <>
           {/* Mobile: Card View */}
-          <div className="md:hidden mt-4 space-y-3">
+          <div ref={cardContainerRef} className="md:hidden mt-4 space-y-3">
             {sorted.map((p: LinkedInProfile) => (
               <div
                 key={p.id || p.profile_url}
@@ -553,7 +581,7 @@ export default function Profiles() {
                   <th className="p-3 text-left">LinkedIn</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody ref={tbodyRef}>
                 {sorted.map((p: LinkedInProfile) => (
                   <ProfileRow key={p.id || p.profile_url} profile={p} handleCopy={handleCopy} />
                 ))}

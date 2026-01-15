@@ -12,11 +12,12 @@ import { ThemeProvider } from './lib/ThemeContext';
 import { ToastProvider } from './lib/ToastContext';
 import ToastContainer from './components/ToastContainer';
 import ErrorBoundary from './components/ErrorBoundary';
+import PageTransition from './components/PageTransition';
 
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
     </div>
   );
 }
@@ -32,7 +33,7 @@ export default function App() {
   const signOut = async () => {
     try {
       await authClient.signOut();
-    } catch {}
+    } catch { }
     window.location.hash = '#/login';
   };
 
@@ -127,7 +128,7 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
-          <div className="min-h-screen pb-12 bg-gray-50 dark:bg-gray-900 transition-colors">
+          <div className="min-h-screen pb-12 bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 transition-colors">
             <Navbar
               authed={authed}
               isAdmin={isAdmin}
@@ -138,11 +139,13 @@ export default function App() {
             />
 
             <Suspense fallback={<PageLoader />}>
-              {route === 'login' && <Login />}
-              {route === 'profiles' && <Profiles />}
-              {route === 'leads' && <Leads />}
-              {route === 'admin' && (isAdmin ? <Admin /> : <Home />)}
-              {route === 'dashboard' && <Home />}
+              <PageTransition key={route}>
+                {route === 'login' && <Login />}
+                {route === 'profiles' && <Profiles />}
+                {route === 'leads' && <Leads />}
+                {route === 'admin' && (isAdmin ? <Admin /> : <Home />)}
+                {route === 'dashboard' && <Home />}
+              </PageTransition>
             </Suspense>
           </div>
           <ToastContainer />
