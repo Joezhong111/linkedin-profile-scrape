@@ -14,7 +14,7 @@ const ProfileRow: React.FC<ProfileRowProps> = ({ profile, handleCopy }) => {
 
   return (
     <>
-      <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+      <tr className="hover:bg-blue-50/50 dark:hover:bg-white/5 transition-colors border-b border-gray-100/50 dark:border-slate-700/50">
         <td className="p-3 text-center align-middle">
           <button
             onClick={(e: React.MouseEvent) => {
