@@ -3,6 +3,11 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[functions]
+  # Increase timeout for scraping functions (max 26 seconds for Pro plan, 10 seconds for free)
+  # Note: This only applies to production, not local dev
+  node_bundler = "esbuild"
+
 [build.environment]
   NODE_VERSION = "20.19.0"
 
@@ -26,6 +31,18 @@
 [[redirects]]
   from = "/api/scrape_company"
   to = "/.netlify/functions/scrape_company"
+  status = 200
+
+# API route for checking company history
+[[redirects]]
+  from = "/api/check_company_history"
+  to = "/.netlify/functions/check_company_history"
+  status = 200
+
+# API route for checking scrape status
+[[redirects]]
+  from = "/api/check_scrape_status"
+  to = "/.netlify/functions/check_scrape_status"
   status = 200
 
 # Health endpoint mapping for functions

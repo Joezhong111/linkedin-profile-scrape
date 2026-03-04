@@ -96,9 +96,44 @@ export const handler = async (event: any) => {
 
         let result;
         if (existing) {
+            // Smart merge: only update fields that have new non-null values
+            const updateData: any = { ownerId: user.id, profileUrl: body.profile_url };
+
+            // Helper function to check if a value should be updated
+            const shouldUpdate = (newValue: any, existingValue: any) => {
+                // Update if new value is not null/undefined and is different from existing
+                return newValue !== null && newValue !== undefined && newValue !== '' && newValue !== existingValue;
+            };
+
+            // Only update fields that have new non-empty values
+            if (shouldUpdate(body.raw_data, existing.rawData)) updateData.rawData = body.raw_data;
+            if (shouldUpdate(body.full_name, existing.fullName)) updateData.fullName = body.full_name;
+            if (shouldUpdate(body.headline, existing.headline)) updateData.headline = body.headline;
+            if (shouldUpdate(body.location, existing.location)) updateData.location = body.location;
+            if (shouldUpdate(body.about, existing.about)) updateData.about = body.about;
+            if (shouldUpdate(body.photo_url, existing.photoUrl)) updateData.photoUrl = body.photo_url;
+            if (shouldUpdate(body.linkedin_public_url, existing.linkedinPublicUrl)) updateData.linkedinPublicUrl = body.linkedin_public_url;
+            if (shouldUpdate(body.linkedin_id, existing.linkedinId)) updateData.linkedinId = body.linkedin_id;
+            if (shouldUpdate(body.public_identifier, existing.publicIdentifier)) updateData.publicIdentifier = body.public_identifier;
+            if (shouldUpdate(body.first_name, existing.firstName)) updateData.firstName = body.first_name;
+            if (shouldUpdate(body.last_name, existing.lastName)) updateData.lastName = body.last_name;
+            if (shouldUpdate(body.connections, existing.connections)) updateData.connections = body.connections;
+            if (body.followers && shouldUpdate(parseInt(String(body.followers)), existing.followers)) {
+                updateData.followers = parseInt(String(body.followers));
+            }
+            if (shouldUpdate(body.email, existing.email)) updateData.email = body.email;
+            if (shouldUpdate(body.mobile_number, existing.mobileNumber)) updateData.mobileNumber = body.mobile_number;
+            if (shouldUpdate(body.job_title, existing.jobTitle)) updateData.jobTitle = body.job_title;
+            if (shouldUpdate(body.company_name, existing.companyName)) updateData.companyName = body.company_name;
+            if (shouldUpdate(body.company_industry, existing.companyIndustry)) updateData.companyIndustry = body.company_industry;
+            if (shouldUpdate(body.company_linkedin, existing.companyLinkedin)) updateData.companyLinkedin = body.company_linkedin;
+            if (shouldUpdate(body.source_company_url, existing.sourceCompanyUrl)) updateData.sourceCompanyUrl = body.source_company_url;
+            if (shouldUpdate(body.current_job_duration, existing.currentJobDuration)) updateData.currentJobDuration = body.current_job_duration;
+            if (shouldUpdate(body.job_period, existing.jobPeriod)) updateData.jobPeriod = body.job_period;
+
             [result] = await db
                 .update(linkedinLeads)
-                .set(leadData)
+                .set(updateData)
                 .where(eq(linkedinLeads.id, existing.id))
                 .returning();
         } else {

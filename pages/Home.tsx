@@ -4,6 +4,10 @@ import {
   scrapeLinkedInProfiles,
   scrapeCompany,
   mapApifyToLinkedInProfile,
+  checkCompanyHistory,
+  checkScrapeStatus,
+  CompanyHistoryResponse,
+  ScrapeCompanyResult,
 } from '../services/apify';
 import {
   saveProfile,
@@ -74,6 +78,17 @@ export default function Home() {
   const [savedCount, setSavedCount] = useState<number>(0);
   const [savedLeadsCount, setSavedLeadsCount] = useState<number>(0);
 
+  // Warning Modal State
+  const [showWarningModal, setShowWarningModal] = useState<boolean>(false);
+  const [historyData, setHistoryData] = useState<CompanyHistoryResponse | null>(null);
+  const [pendingScrapeOptions, setPendingScrapeOptions] = useState<any>(null);
+
+  // Scrape Stats State
+  const [scrapeStats, setScrapeStats] = useState<ScrapeCompanyResult['stats'] | null>(null);
+
+  // Scraping status message
+  const [scrapingStatus, setScrapingStatus] = useState<string>('');
+
   const previewTbodyRef = React.useRef<HTMLTableSectionElement>(null);
 
   useGSAP(() => {
@@ -112,7 +127,48 @@ export default function Home() {
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let items: any[] = [];
+    // Reset stats
+    setScrapeStats(null);
+
+    // Company mode: check history first
+    if (scrapeMode === 'company') {
+      if (!companyUrl.trim().startsWith('http')) {
+        setState((prev: ScraperState) => ({
+          ...prev,
+          error: 'Please enter a valid Company LinkedIn URL',
+        }));
+        return;
+      }
+
+      try {
+        const history = await checkCompanyHistory(companyUrl.trim());
+        if (history.hasHistory) {
+          // Show warning modal
+          setHistoryData(history);
+          setPendingScrapeOptions({
+            companyUrl: companyUrl.trim(),
+            maxItems,
+            profileScraperMode,
+            jobTitles,
+            locations,
+            yearsAtCurrentCompanyIds: Array.from(yearsAtCurrentCompany),
+            yearsOfExperienceIds: Array.from(yearsOfExperience),
+          });
+          setShowWarningModal(true);
+          return;
+        }
+      } catch (err: any) {
+        console.error('Failed to check company history:', err);
+        // Continue with scraping even if history check fails
+      }
+    }
+
+    // Proceed with scraping
+    await performScrape();
+  };
+
+  const performScrape = async () => {
+    let result: any;
 
     // Reset state
     setState((prev: ScraperState) => ({
@@ -131,14 +187,14 @@ export default function Home() {
         if (urlList.length === 0) {
           throw new Error('Please enter at least one valid LinkedIn URL');
         }
-        items = await scrapeLinkedInProfiles(urlList);
+        result = await scrapeLinkedInProfiles(urlList);
+        const items = result || [];
+        setPreviewItems(items);
+        setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
         setUrls('');
       } else {
         // Company mode
-        if (!companyUrl.trim().startsWith('http')) {
-          throw new Error('Please enter a valid Company LinkedIn URL');
-        }
-        items = await scrapeCompany({
+        const options = pendingScrapeOptions || {
           companyUrl: companyUrl.trim(),
           maxItems,
           profileScraperMode,
@@ -146,11 +202,79 @@ export default function Home() {
           locations,
           yearsAtCurrentCompanyIds: Array.from(yearsAtCurrentCompany),
           yearsOfExperienceIds: Array.from(yearsOfExperience),
-        });
+        };
+
+        // Start the scrape (returns immediately with runId)
+        result = await scrapeCompany(options);
+
+        if (result.runId) {
+          // Poll for status
+          setScrapingStatus('抓取任务已启动，正在等待 Apify 处理...');
+
+          const pollInterval = 3000; // 3 seconds
+          const maxAttempts = 200; // 10 minutes max
+          let attempts = 0;
+
+          while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+            const statusResult = await checkScrapeStatus(result.runId, options);
+
+            // Update status message with progress
+            // Use maxItems as the target and show how many have been scraped so far
+            if (statusResult.stats) {
+              const stats = statusResult.stats as any;
+              // Try to get the number of items scraped so far from Apify stats
+              const itemsScraped = stats.itemsScraped || stats.requestsFinished || 0;
+              if (itemsScraped > 0) {
+                setScrapingStatus(
+                  `正在抓取中... (已抓取 ${itemsScraped}/${maxItems} 条，已等待 ${Math.floor((attempts + 1) * 3)} 秒)`
+                );
+              } else {
+                setScrapingStatus(`正在抓取中... (已等待 ${Math.floor((attempts + 1) * 3)} 秒)`);
+              }
+            } else {
+              setScrapingStatus(`正在抓取中... (已等待 ${Math.floor((attempts + 1) * 3)} 秒)`);
+            }
+
+            if (statusResult.status === 'SUCCEEDED') {
+              setScrapingStatus('抓取完成！正在处理数据...');
+
+              const items = statusResult.items || [];
+              setPreviewItems(items);
+              setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
+
+              // Save stats if available
+              if (statusResult.stats) {
+                setScrapeStats(statusResult.stats);
+              }
+
+              setScrapingStatus('');
+              break;
+            } else if (statusResult.status === 'FAILED' || statusResult.status === 'ABORTED' || statusResult.status === 'TIMED-OUT') {
+              setScrapingStatus('');
+              throw new Error(statusResult.error || 'Scraping failed');
+            }
+
+            attempts++;
+          }
+
+          if (attempts >= maxAttempts) {
+            setScrapingStatus('');
+            throw new Error('Scraping timed out. Please try again.');
+          }
+        } else {
+          // Old synchronous response (shouldn't happen with new code)
+          const items = result.items || [];
+          setPreviewItems(items);
+          setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
+
+          if (result.stats) {
+            setScrapeStats(result.stats);
+          }
+        }
       }
 
-      setPreviewItems(items || []);
-      setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
       setState((prev: ScraperState) => ({ ...prev, isLoading: false }));
     } catch (err: any) {
       setState((prev: ScraperState) => ({
@@ -158,7 +282,20 @@ export default function Home() {
         isLoading: false,
         error: err.message,
       }));
+    } finally {
+      setPendingScrapeOptions(null);
     }
+  };
+
+  const handleContinueScrape = () => {
+    setShowWarningModal(false);
+    performScrape();
+  };
+
+  const handleCancelScrape = () => {
+    setShowWarningModal(false);
+    setPendingScrapeOptions(null);
+    setHistoryData(null);
   };
 
   const toggleSelect = (idx: number) => {
@@ -207,6 +344,62 @@ export default function Home() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+      {/* Warning Modal */}
+      {showWarningModal && historyData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={handleCancelScrape}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-lg w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              ⚠️ 重复抓取警告
+            </h3>
+            <div className="space-y-3 text-sm text-gray-700 dark:text-slate-300">
+              <p>
+                你已经抓取过这个公司 <strong>{historyData.totalScrapes}</strong> 次。
+              </p>
+              {historyData.lastScrape && (
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
+                  <p className="font-semibold text-blue-900 dark:text-blue-200 mb-2">上次抓取信息：</p>
+                  <ul className="space-y-1 text-blue-800 dark:text-blue-300">
+                    <li>• 时间：{new Date(historyData.lastScrape.scrapedAt).toLocaleString('zh-CN')}</li>
+                    <li>• 请求数量：{historyData.lastScrape.maxItemsRequested}</li>
+                    <li>• 实际返回：{historyData.lastScrape.itemsReturned}</li>
+                    <li>• 保存到数据库：{historyData.lastScrape.itemsSaved}</li>
+                  </ul>
+                </div>
+              )}
+              <div className="bg-yellow-50 dark:bg-yellow-900/30 p-3 rounded-lg">
+                <p className="font-semibold text-yellow-900 dark:text-yellow-200 mb-2">⚠️ 重要提示：</p>
+                <ul className="space-y-1 text-yellow-800 dark:text-yellow-300 text-xs">
+                  <li>• LinkedIn 员工列表会动态变化（新员工加入、离职、排序变化）</li>
+                  <li>• 重复抓取可能获取到相同的 profiles</li>
+                  <li>• Apify 按实际返回数量收费，即使数据重复</li>
+                  <li>• 系统会自动去重，只保存新的 profiles 到数据库</li>
+                </ul>
+              </div>
+              <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg">
+                <p className="font-semibold text-green-900 dark:text-green-200 mb-1">💡 建议：</p>
+                <p className="text-green-800 dark:text-green-300 text-xs">
+                  建议直接获取你需要的最大数量，避免多次调用造成重复和费用浪费。
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCancelScrape}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleContinueScrape}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
+              >
+                继续抓取
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
@@ -476,6 +669,16 @@ export default function Home() {
                   'Start Scraping'
                 )}
               </button>
+
+              {/* Scraping Status Message */}
+              {scrapingStatus && (
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm rounded-lg border border-blue-100 dark:border-blue-800">
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
+                    <span>{scrapingStatus}</span>
+                  </div>
+                </div>
+              )}
             </form>
             {state.error && (
               <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded-lg border border-red-100 dark:border-red-800">
@@ -530,6 +733,20 @@ export default function Home() {
             )
           ) : (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+              {/* Stats Display */}
+              {scrapeStats && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-100 dark:border-blue-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-blue-900 dark:text-blue-200 font-semibold text-sm">📊 去重统计</span>
+                  </div>
+                  <div className="text-sm text-blue-800 dark:text-blue-300">
+                    获取了 <strong>{scrapeStats.totalReturned}</strong> 个 profiles，
+                    其中 <strong>{scrapeStats.alreadyExists}</strong> 个已存在
+                    (<strong>{scrapeStats.duplicateRate}%</strong>)，
+                    <strong>{scrapeStats.newProfiles}</strong> 个是新的
+                  </div>
+                </div>
+              )}
               <div className="p-4 flex items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-700">
                 <div className="text-sm text-gray-600 dark:text-slate-400">
                   {selectedIndexes.size} selected / {previewItems.length} total

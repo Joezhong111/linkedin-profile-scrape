@@ -393,3 +393,33 @@ export const leadPositions = pgTable(
 
 export type LeadPosition = typeof leadPositions.$inferSelect;
 export type NewLeadPosition = typeof leadPositions.$inferInsert;
+
+// ============================================
+// Company Scrape History
+// ============================================
+export const companyScrapeHistory = pgTable(
+  'company_scrape_history',
+  {
+    id: uuid('id')
+      .default(sql`gen_random_uuid()`)
+      .notNull()
+      .primaryKey(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    companyUrl: text('company_url').notNull(),
+    maxItemsRequested: integer('max_items_requested').notNull(),
+    itemsReturned: integer('items_returned').notNull(),
+    itemsSaved: integer('items_saved').notNull(),
+    scrapedAt: timestamp('scraped_at', { withTimezone: true, mode: 'string' })
+      .default(sql`timezone('utc'::text, now())`)
+      .notNull(),
+    filtersUsed: jsonb('filters_used'),
+  },
+  (t) => ({
+    idxOwnerCompany: index('idx_company_scrape_history_owner_company').on(t.ownerId, t.companyUrl),
+  })
+);
+
+export type CompanyScrapeHistory = typeof companyScrapeHistory.$inferSelect;
+export type NewCompanyScrapeHistory = typeof companyScrapeHistory.$inferInsert;

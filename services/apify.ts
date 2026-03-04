@@ -35,7 +35,52 @@ export interface ScrapeCompanyOptions {
   yearsOfExperienceIds?: string[];
 }
 
-export const scrapeCompany = async (options: ScrapeCompanyOptions): Promise<any[]> => {
+export interface CompanyHistoryResponse {
+  hasHistory: boolean;
+  lastScrape: {
+    scrapedAt: string;
+    maxItemsRequested: number;
+    itemsReturned: number;
+    itemsSaved: number;
+    filtersUsed: any;
+  } | null;
+  totalScrapes: number;
+}
+
+export interface ScrapeCompanyResult {
+  items: any[];
+  stats?: {
+    totalReturned: number;
+    alreadyExists: number;
+    newProfiles: number;
+    duplicateRate: number;
+  };
+  runId?: string;
+  status?: string;
+  message?: string;
+}
+
+export const checkCompanyHistory = async (companyUrl: string): Promise<CompanyHistoryResponse> => {
+  const headers = authClient.getAuthHeaders();
+
+  const res = await fetch(`/api/check_company_history?companyUrl=${encodeURIComponent(companyUrl)}`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!res.ok) {
+    let msg = 'Failed to check company history';
+    try {
+      const data = await res.json();
+      msg = (data && (data.error || data.message)) || msg;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  return await res.json();
+};
+
+export const scrapeCompany = async (options: ScrapeCompanyOptions): Promise<ScrapeCompanyResult> => {
   const headers = authClient.getAuthHeaders();
 
   const res = await fetch('/api/scrape_company', {
@@ -54,7 +99,40 @@ export const scrapeCompany = async (options: ScrapeCompanyOptions): Promise<any[
   }
 
   const data = await res.json();
-  return (data as any[]) || [];
+  return data;
+};
+
+export const checkScrapeStatus = async (
+  runId: string,
+  options: ScrapeCompanyOptions
+): Promise<ScrapeCompanyResult> => {
+  const headers = authClient.getAuthHeaders();
+
+  const params = new URLSearchParams({
+    runId,
+    companyUrl: options.companyUrl,
+    maxItems: options.maxItems.toString(),
+    jobTitles: JSON.stringify(options.jobTitles || []),
+    locations: JSON.stringify(options.locations || []),
+    yearsAtCurrentCompanyIds: JSON.stringify(options.yearsAtCurrentCompanyIds || []),
+    yearsOfExperienceIds: JSON.stringify(options.yearsOfExperienceIds || []),
+  });
+
+  const res = await fetch(`/api/check_scrape_status?${params}`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!res.ok) {
+    let msg = 'Failed to check scrape status';
+    try {
+      const data = await res.json();
+      msg = (data && (data.error || data.message)) || msg;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  return await res.json();
 };
 
 export function mapApifyToLinkedInProfile(item: any): LinkedInProfile {

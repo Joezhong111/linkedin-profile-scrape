@@ -1,8 +1,8 @@
 import { ApifyClient } from "apify-client";
 import { verifyToken, extractToken } from "../../lib/auth-server";
 import { db } from "../../db/client";
-import { monthlyQuotas, monthlyUsage } from "../../db/schema";
-import { eq, and } from "drizzle-orm";
+import { monthlyQuotas, monthlyUsage, linkedinLeads, companyScrapeHistory } from "../../db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { getCurrentMonthPeriod } from "../../lib/quota-server";
 
 // Netlify Function: /.netlify/functions/scrape_company
@@ -105,37 +105,18 @@ export const handler = async (event: any) => {
     if (yearsAtCurrentCompanyIds.length > 0) input.yearsAtCurrentCompanyIds = yearsAtCurrentCompanyIds;
     if (yearsOfExperienceIds.length > 0) input.yearsOfExperienceIds = yearsOfExperienceIds;
 
-    const run = await client.actor("Vb6LZkh4EqRlR0Ka9").call(input);
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    // Start the actor run WITHOUT waiting for it to complete
+    const run = await client.actor("Vb6LZkh4EqRlR0Ka9").start(input);
 
-    // Update usage
-    const consumed = items.length;
-
-    try {
-      await db
-        .insert(monthlyUsage)
-        .values({
-          userId,
-          periodStart: period.start,
-          periodEnd: period.end,
-          usedCount: used + consumed,
-          updatedAt: new Date().toISOString(),
-        })
-        .onConflictDoUpdate({
-          target: [monthlyUsage.userId, monthlyUsage.periodStart],
-          set: {
-            usedCount: used + consumed,
-            updatedAt: new Date().toISOString(),
-          },
-        });
-    } catch (writeErr: any) {
-      console.error("usage upsert error", writeErr?.message);
-    }
-
+    // Return immediately with the run ID
     return {
-      statusCode: 200,
+      statusCode: 202, // Accepted
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(items),
+      body: JSON.stringify({
+        runId: run.id,
+        status: 'RUNNING',
+        message: 'Scraping started. Use the runId to check status.',
+      }),
     };
   } catch (e: any) {
     return {
