@@ -17,7 +17,7 @@ export const scrapeLinkedInProfiles = async (urls: string[]): Promise<any[]> => 
     try {
       const data = await res.json();
       msg = (data && (data.error || data.message)) || msg;
-    } catch (_) {}
+    } catch (_) { }
     throw new Error(msg);
   }
 
@@ -58,6 +58,7 @@ export interface ScrapeCompanyResult {
   runId?: string;
   status?: string;
   message?: string;
+  error?: string;
 }
 
 export const checkCompanyHistory = async (companyUrl: string): Promise<CompanyHistoryResponse> => {
@@ -73,7 +74,7 @@ export const checkCompanyHistory = async (companyUrl: string): Promise<CompanyHi
     try {
       const data = await res.json();
       msg = (data && (data.error || data.message)) || msg;
-    } catch (_) {}
+    } catch (_) { }
     throw new Error(msg);
   }
 
@@ -94,7 +95,7 @@ export const scrapeCompany = async (options: ScrapeCompanyOptions): Promise<Scra
     try {
       const data = await res.json();
       msg = (data && (data.error || data.message)) || msg;
-    } catch (_) {}
+    } catch (_) { }
     throw new Error(msg);
   }
 
@@ -128,7 +129,7 @@ export const checkScrapeStatus = async (
     try {
       const data = await res.json();
       msg = (data && (data.error || data.message)) || msg;
-    } catch (_) {}
+    } catch (_) { }
     throw new Error(msg);
   }
 
