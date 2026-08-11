@@ -32,7 +32,7 @@ A LinkedIn profile scraping and analytics application built with React, Vite, Ne
 ## Requirements
 
 - Node.js 20.19+
-- npm
+- pnpm 9+
 - Neon account (database)
 - Apify account (scraping)
 - Netlify account (hosting)
@@ -44,7 +44,7 @@ A LinkedIn profile scraping and analytics application built with React, Vite, Ne
 ```bash
 git clone <your-repo-url>
 cd linkedin-profile-scrape
-npm install
+pnpm install
 ```
 
 ### 2. Environment Variables
@@ -70,15 +70,15 @@ Optional variables:
 Push schema to Neon:
 
 ```bash
-npm run db:generate
-npx drizzle-kit push
+pnpm db:generate
+pnpm exec drizzle-kit push
 ```
 
 Or use migrations:
 
 ```bash
-npm run db:generate
-npm run db:migrate
+pnpm db:generate
+pnpm db:migrate
 ```
 
 ### 4. Create Admin User
@@ -90,33 +90,33 @@ node scripts/create-admin.js admin@example.com your_password
 ### 5. Run Development Server
 
 ```bash
-npm run dev:netlify
+pnpm dev:netlify
 ```
 
 Open http://localhost:8888
 
-**Note**: Use `npm run dev:netlify` for full-stack development. `npm run dev` only serves frontend on port 5173 and won't proxy API calls.
+**Note**: Use `pnpm dev:netlify` for full-stack development. `pnpm dev` only serves frontend on port 5173 and won't proxy API calls.
 
 ## Available Scripts
 
 | Command                 | Description                                   |
 | ----------------------- | --------------------------------------------- |
-| `npm run dev`           | Vite frontend only (port 5173)                |
-| `npm run dev:netlify`   | Full stack with Netlify Functions (port 8888) |
-| `npm run build`         | Production build                              |
-| `npm run preview`       | Preview production build                      |
-| `npm run db:generate`   | Generate Drizzle migrations                   |
-| `npm run db:migrate`    | Run database migrations                       |
-| `npm run db:push`       | Push schema to database (dev only)            |
-| `npm run db:studio`     | Open Drizzle Studio UI                        |
-| `npm run db:health`     | Check database connection                     |
-| `npm run test`          | Run tests with Vitest                         |
-| `npm run test:ui`       | Run tests with UI                             |
-| `npm run test:coverage` | Run tests with coverage report                |
-| `npm run lint`          | Run ESLint (fails on warnings)                |
-| `npm run lint:fix`      | Auto-fix ESLint issues                        |
-| `npm run format`        | Format code with Prettier                     |
-| `npm run format:check`  | Check code formatting                         |
+| `pnpm dev`           | Vite frontend only (port 5173)                |
+| `pnpm dev:netlify`   | Full stack with Netlify Functions (port 8888) |
+| `pnpm build`         | Production build                              |
+| `pnpm preview`       | Preview production build                      |
+| `pnpm db:generate`   | Generate Drizzle migrations                   |
+| `pnpm db:migrate`    | Run database migrations                       |
+| `pnpm db:push`       | Push schema to database (dev only)            |
+| `pnpm db:studio`     | Open Drizzle Studio UI                        |
+| `pnpm db:health`     | Check database connection                     |
+| `pnpm test`          | Run tests with Vitest                         |
+| `pnpm test:ui`       | Run tests with UI                             |
+| `pnpm test:coverage` | Run tests with coverage report                |
+| `pnpm lint`          | Run ESLint (fails on warnings)                |
+| `pnpm lint:fix`      | Auto-fix ESLint issues                        |
+| `pnpm format`        | Format code with Prettier                     |
+| `pnpm format:check`  | Check code formatting                         |
 
 ## API Endpoints
 
@@ -183,16 +183,16 @@ Open http://localhost:8888
 
 ```bash
 # Push schema changes (development)
-npx drizzle-kit push
+pnpm exec drizzle-kit push
 
 # Generate migration files
-npx drizzle-kit generate
+pnpm exec drizzle-kit generate
 
 # Run migrations
-npm run db:migrate
+pnpm db:migrate
 
 # Open Drizzle Studio
-npm run db:studio
+pnpm db:studio
 ```
 
 ## Project Structure
@@ -263,7 +263,7 @@ See [AGENTS.md](./AGENTS.md) for detailed development guidelines including:
 
 1. Connect your repository on Netlify
 2. Configure build settings:
-   - **Build command**: `npm run build`
+   - **Build command**: `pnpm build`
    - **Publish directory**: `dist`
    - **Functions directory**: `netlify/functions`
 3. Add environment variables:
@@ -289,7 +289,7 @@ netlify deploy --prod --build  # Production deployment
 
 ### Login stuck on /login
 
-- Use `npm run dev:netlify` (http://localhost:8888), not `npm run dev`
+- Use `pnpm dev:netlify` (http://localhost:8888), not `pnpm dev`
 - Hard refresh (Shift+Reload)
 - Clear localStorage: `localStorage.clear()`
 - Check `/api/health` endpoint
@@ -308,11 +308,11 @@ netlify deploy --prod --build  # Production deployment
 
 - Verify `DATABASE_URL` format: `postgresql://user:password@host/db?sslmode=require`
 - Ensure Neon database is active
-- Run `npm run db:health` to test connection
+- Run `pnpm db:health` to test connection
 
 ### Build errors
 
-- Run `npm install` to ensure dependencies are up to date
+- Run `pnpm install` to ensure dependencies are up to date
 - Delete `node_modules` and reinstall if needed
 - Check Node.js version (requires 20.19+)
 
@@ -361,29 +361,29 @@ The project uses ESLint and Prettier for code quality:
 
 ```bash
 # Lint (fails on warnings)
-npm run lint
+pnpm lint
 
 # Auto-fix linting issues
-npm run lint:fix
+pnpm lint:fix
 
 # Format code
-npm run format
+pnpm format
 
 # Check formatting
-npm run format:check
+pnpm format:check
 ```
 
 ## Testing
 
 ```bash
 # Run all tests
-npm run test
+pnpm test
 
 # Run tests with UI
-npm run test:ui
+pnpm test:ui
 
 # Run tests with coverage
-npm run test:coverage
+pnpm test:coverage
 ```
 
 ## License

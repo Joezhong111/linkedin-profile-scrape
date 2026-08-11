@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
     "dev:netlify": "netlify dev",
@@ -62,6 +63,7 @@
     "vitest": "^4.0.16"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=20.19.0",
+    "pnpm": ">=9"
   }
 }

@@ -9,6 +9,8 @@ lerna-debug.log*
 
 # Dependencies
 node_modules
+package-lock.json
+yarn.lock
 
 # Build outputs
 dist
@@ -63,11 +65,12 @@ deno.lock
 *.pid.lock
 
 
-# AI
+# AI / local tooling
 .agent/
 .claude/
 .shared/
 .gsd/
+.bg-shell/
 openspec/
 .codex/
 .trae/

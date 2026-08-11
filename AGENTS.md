@@ -4,31 +4,31 @@
 
 ```bash
 # Development (recommended)
-npm run dev:netlify    # Full stack dev - localhost:8888
-npm run dev            # Vite frontend only - localhost:5173
+pnpm dev:netlify    # Full stack dev - localhost:8888
+pnpm dev            # Vite frontend only - localhost:5173
 
 # Build
-npm run build          # Build production bundle
-npm run preview        # Preview production build
+pnpm build          # Build production bundle
+pnpm preview        # Preview production build
 
 # Database
-npm run db:generate    # Generate Drizzle migrations
-npx drizzle-kit push   # Push schema to DB
-npm run db:migrate     # Run migrations
-npm run db:studio      # Open Drizzle Studio UI
-npm run db:health      # Check DB connection
+pnpm db:generate    # Generate Drizzle migrations
+pnpm exec drizzle-kit push   # Push schema to DB
+pnpm db:migrate     # Run migrations
+pnpm db:studio      # Open Drizzle Studio UI
+pnpm db:health      # Check DB connection
 node scripts/create-admin.js <email> <password>  # Create admin user
 
 # Testing
-npm run test              # Run tests with Vitest
-npm run test:ui           # Run tests with UI
-npm run test:coverage     # Run tests with coverage report
+pnpm test              # Run tests with Vitest
+pnpm test:ui           # Run tests with UI
+pnpm test:coverage     # Run tests with coverage report
 
 # Code Quality
-npm run lint              # Run ESLint (fails on warnings)
-npm run lint:fix          # Run ESLint and auto-fix issues
-npm run format            # Format code with Prettier
-npm run format:check      # Check code formatting
+pnpm lint              # Run ESLint (fails on warnings)
+pnpm lint:fix          # Run ESLint and auto-fix issues
+pnpm format            # Format code with Prettier
+pnpm format:check      # Check code formatting
 ```
 
 ## Project Architecture
@@ -270,7 +270,7 @@ export function useContext() {
 
 ## Common Gotchas
 
-- **Vite vs Netlify Dev**: Use `npm run dev:netlify` for full-stack dev. `npm run dev` only serves frontend (404 on `/api/*`)
+- **Vite vs Netlify Dev**: Use `pnpm dev:netlify` for full-stack dev. `pnpm dev` only serves frontend (404 on `/api/*`)
 - **TypeScript `any`**: Minimize use. Only for external API responses (Apify) where schema is dynamic
 - **Date handling**: Store as ISO strings, convert to Date when needed
 - **Pagination**: Always validate `page`/`pageSize` to prevent negative/excessive values
