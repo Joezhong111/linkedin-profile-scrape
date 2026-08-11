@@ -67,3 +67,7 @@ deno.lock
 .agent/
 .claude/
 .shared/
+.gsd/
+openspec/
+.codex/
+.trae/
