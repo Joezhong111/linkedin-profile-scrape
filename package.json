@@ -8,6 +8,7 @@
     "dev": "vite",
     "dev:netlify": "netlify dev",
     "build": "vite build",
+    "typecheck": "pnpm typecheck:worker",
     "preview": "vite preview",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -19,7 +20,9 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "typecheck:worker": "tsc -p tsconfig.worker.json --noEmit",
+    "typecheck:app": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@google/genai": "^1.33.0",
