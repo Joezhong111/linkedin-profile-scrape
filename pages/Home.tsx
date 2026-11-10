@@ -14,20 +14,23 @@ import {
   saveLead,
   fetchAllProfiles,
   fetchAllLeads,
-  isApiReady,
 } from '../services/api';
+import { getCredentialStatus, type CredentialStatus } from '../services/account';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import {
   CloudArrowUpIcon,
   CircleStackIcon,
   MagnifyingGlassIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import ProfileCard from '../components/ProfileCard';
 import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
 
 export default function Home() {
   const [scrapeMode, setScrapeMode] = useState<'profiles' | 'company'>('profiles');
+  const [credential, setCredential] = useState<CredentialStatus | null>(null);
+  const credentialReady = Boolean(credential?.configured);
 
 
   // Profile Scrape State
@@ -112,7 +115,6 @@ export default function Home() {
   };
 
   const loadCount = useCallback(async () => {
-    if (!isApiReady) return;
     try {
       const [profiles, leadsResponse] = await Promise.all([fetchAllProfiles(), fetchAllLeads()]);
       setSavedCount(profiles.length);
@@ -120,6 +122,20 @@ export default function Home() {
     } catch {
       // ignore
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCredentialStatus()
+      .then((status) => {
+        if (!cancelled) setCredential(status);
+      })
+      .catch(() => {
+        if (!cancelled) setCredential(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -131,6 +147,14 @@ export default function Home() {
 
     // Reset stats
     setScrapeStats(null);
+
+    if (!credentialReady) {
+      setState((prev: ScraperState) => ({
+        ...prev,
+        error: 'Configure a Scrape Credential in Settings before scraping.',
+      }));
+      return;
+    }
 
     // Company mode: check history first
     if (scrapeMode === 'company') {
@@ -171,6 +195,14 @@ export default function Home() {
 
   const performScrape = async () => {
     let result: any;
+
+    if (!credentialReady) {
+      setState((prev: ScraperState) => ({
+        ...prev,
+        error: 'Configure a Scrape Credential in Settings before scraping.',
+      }));
+      return;
+    }
 
     // Reset state
     setState((prev: ScraperState) => ({
@@ -318,10 +350,6 @@ export default function Home() {
   };
 
   const importSelected = async () => {
-    if (!isApiReady) {
-      alert('API is not configured.');
-      return;
-    }
     const toImport = previewItems
       .map((item: any, idx: number) => ({ item, idx }))
       .filter(({ idx }) => selectedIndexes.has(idx))
@@ -431,6 +459,18 @@ export default function Home() {
                 Company Search
               </button>
             </div>
+
+            {credential && !credentialReady && (
+              <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-sm rounded-lg border border-amber-100 dark:border-amber-800 flex items-start gap-2">
+                <ExclamationTriangleIcon className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>
+                  Scraping is disabled until you add a Scrape Credential.{' '}
+                  <a href="#/settings" className="font-semibold underline">
+                    Open Settings
+                  </a>
+                </span>
+              </div>
+            )}
 
             <form onSubmit={handleScrape} className="space-y-4">
               {scrapeMode === 'profiles' ? (
@@ -659,7 +699,7 @@ export default function Home() {
 
               <button
                 type="submit"
-                disabled={state.isLoading}
+                disabled={state.isLoading || !credentialReady}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
               >
                 {state.isLoading ? (
@@ -776,7 +816,7 @@ export default function Home() {
                   </button>
                   <button
                     onClick={importSelected}
-                    disabled={!isApiReady || selectedIndexes.size === 0}
+                    disabled={selectedIndexes.size === 0}
                     className="px-3 py-1.5 text-xs font-semibold rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                   >
                     Import Selected
@@ -824,11 +864,6 @@ export default function Home() {
                   </tbody>
                 </table>
               </div>
-              {!isApiReady && (
-                <div className="p-4 bg-amber-50 border-t border-amber-200 text-amber-800 text-sm">
-                  To import into database, please configure DATABASE_URL in your environment.
-                </div>
-              )}
             </div>
           )}
         </div>

@@ -1,7 +1,6 @@
 import { LinkedInProfile } from '../types';
 import { authClient } from '../lib/auth';
-
-export const isApiReady = true; // Always ready with new auth system
+import { readApiError } from './http';
 
 async function getCurrentUserId(): Promise<string> {
   const user = authClient.getUser();
@@ -73,8 +72,7 @@ export const saveProfile = async (profile: LinkedInProfile) => {
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || 'Failed to save profile');
+    throw new Error(await readApiError(res, 'Failed to save profile'));
   }
 
   return await res.json();
@@ -106,8 +104,7 @@ export const deleteProfile = async (id: string) => {
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || 'Failed to delete profile');
+    throw new Error(await readApiError(res, 'Failed to delete profile'));
   }
 };
 
@@ -150,9 +147,9 @@ export const saveLead = async (lead: LinkedInProfile, sourceCompanyUrl?: string)
   });
 
   if (!res.ok) {
-    const errorBody = await res.text();
+    const errorBody = await readApiError(res, `Failed to save lead (${res.status})`);
     console.error('Save lead failed:', res.status, errorBody);
-    throw new Error(`Failed to save lead (${res.status}): ${errorBody}`);
+    throw new Error(errorBody);
   }
 
   return await res.json();
@@ -206,9 +203,9 @@ export const fetchAllLeads = async (
   });
 
   if (!res.ok) {
-    const errorBody = await res.text();
+    const errorBody = await readApiError(res, `Failed to fetch leads (${res.status})`);
     console.error('Fetch leads failed:', res.status, errorBody);
-    throw new Error(`Failed to fetch leads (${res.status}): ${errorBody}`);
+    throw new Error(errorBody);
   }
 
   return (await res.json()) as LeadsPaginatedResponse;
@@ -222,8 +219,7 @@ export const deleteLead = async (id: string) => {
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || 'Failed to delete lead');
+    throw new Error(await readApiError(res, 'Failed to delete lead'));
   }
 };
 
@@ -235,8 +231,7 @@ export const updateProfileAI = async (id: string, summary: string) => {
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || 'Failed to update AI summary');
+    throw new Error(await readApiError(res, 'Failed to update AI summary'));
   }
 };
 
@@ -248,8 +243,7 @@ export const batchDeleteLeads = async (ids: string[]): Promise<{ deleted: number
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || 'Failed to batch delete leads');
+    throw new Error(await readApiError(res, 'Failed to batch delete leads'));
   }
 
   return await res.json();
