@@ -6,9 +6,14 @@ import {
   scrapeJobs,
   type ScrapeJob,
 } from '../db/schema';
-import { normalizeScrapeItem } from '../lib/normalize';
+import { normalizeProfileUrl, normalizeScrapeItem } from '../lib/normalize';
 import { chunk, type AppDb } from './db';
-import type { CompanyScrapeInput, ScrapeProvider } from './providers/types';
+import {
+  ProviderError,
+  type CompanyScrapeInput,
+  type ProviderRunState,
+  type ScrapeProvider,
+} from './providers/types';
 
 /**
  * Owner-scoped Scrape Job lifecycle: create, advance one provider poll, read
@@ -45,12 +50,21 @@ export interface CreateCompanyJobParams {
   ownerId: string;
   provider: 'apify' | 'treg';
   input: CompanyScrapeInput;
-  providerJobRef: string;
+  providerJobRef?: string | null;
+  /** treg search results; the provider has no external run reference. */
+  candidates?: unknown[];
 }
 
-/** Lower-cased, query-free, slash-free URL used only as a dedupe key. */
-function normalizeProfileUrl(url: string): string {
-  return url.trim().toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
+interface TregCompanySnapshot extends CompanyScrapeInput {
+  candidates?: unknown;
+  cursor?: unknown;
+}
+
+/** Provider messages are stored for the client, so secrets must not survive. */
+function redactSecrets(message: string): string {
+  return message
+    .replace(/([?&]token=)[^&\s]+/gi, '$1[redacted]')
+    .replace(/(Bearer\s+)[^\s]+/gi, '$1[redacted]');
 }
 
 export async function createCompanyJobRow(
@@ -58,14 +72,17 @@ export async function createCompanyJobRow(
   params: CreateCompanyJobParams
 ): Promise<ScrapeJob> {
   const now = new Date().toISOString();
+  const inputSnapshot = params.candidates
+    ? { ...params.input, candidates: params.candidates, cursor: 0 }
+    : params.input;
   const [row] = await db
     .insert(scrapeJobs)
     .values({
       ownerId: params.ownerId,
       provider: params.provider,
-      providerJobRef: params.providerJobRef,
+      providerJobRef: params.providerJobRef ?? null,
       jobType: 'company',
-      inputSnapshot: params.input,
+      inputSnapshot,
       status: 'running',
       progress: 0,
       resultCount: 0,
@@ -155,9 +172,155 @@ async function persistItems(db: AppDb, jobId: string, items: unknown[]): Promise
 }
 
 /**
+ * Appends completed candidates without deleting earlier rows. The primary key
+ * `(job_id, idx)` plus `ON CONFLICT DO NOTHING` makes a retried chunk safe.
+ */
+async function appendItems(
+  db: AppDb,
+  jobId: string,
+  startIdx: number,
+  items: unknown[]
+): Promise<void> {
+  if (items.length === 0) return;
+  const createdAt = new Date().toISOString();
+  const rows = items.map((data, offset) => ({
+    jobId,
+    idx: startIdx + offset,
+    data,
+    createdAt,
+  }));
+  for (const batch of chunk(rows, ITEM_INSERT_CHUNK)) {
+    await db.insert(scrapeJobItems).values(batch).onConflictDoNothing();
+  }
+}
+
+/** Company Scrape History records the run once, on success. */
+async function insertCompanyHistory(
+  db: AppDb,
+  job: ScrapeJob,
+  input: CompanyScrapeInput,
+  itemCount: number,
+  stats: ScrapeStats,
+  now: string
+): Promise<void> {
+  await db.insert(companyScrapeHistory).values({
+    ownerId: job.ownerId,
+    companyUrl: input.companyUrl,
+    maxItemsRequested: input.maxItems,
+    itemsReturned: itemCount,
+    itemsSaved: stats.newProfiles,
+    filtersUsed: {
+      jobTitles: input.jobTitles,
+      locations: input.locations,
+      yearsAtCurrentCompanyIds: input.yearsAtCurrentCompanyIds,
+      yearsOfExperienceIds: input.yearsOfExperienceIds,
+    },
+    scrapedAt: now,
+  });
+}
+
+/**
+ * treg advances a stored candidate list in chunks: items are appended and the
+ * cursor is written back to the job snapshot before the next poll.
+ */
+async function advanceTregCompanyJob(
+  db: AppDb,
+  job: ScrapeJob,
+  input: CompanyScrapeInput,
+  state: ProviderRunState,
+  now: string
+): Promise<ScrapeJob> {
+  const snapshot = job.inputSnapshot as TregCompanySnapshot;
+  const cursor =
+    typeof snapshot.cursor === 'number' &&
+    Number.isInteger(snapshot.cursor) &&
+    snapshot.cursor >= 0
+      ? snapshot.cursor
+      : 0;
+
+  if (state.status === 'failed') {
+    const errorMessage = redactSecrets(
+      state.error ?? 'The provider reported a failed scrape. Try again.'
+    );
+    await db
+      .update(scrapeJobs)
+      .set({
+        status: 'failed',
+        progress: state.progress,
+        resultCount: state.resultCount,
+        errorMessage,
+        completedAt: now,
+      })
+      .where(eq(scrapeJobs.id, job.id));
+    return {
+      ...job,
+      status: 'failed',
+      progress: state.progress,
+      resultCount: state.resultCount,
+      errorMessage,
+      completedAt: now,
+    };
+  }
+
+  await appendItems(db, job.id, cursor, state.items ?? []);
+  const nextCursor =
+    typeof state.cursor === 'number' &&
+    Number.isInteger(state.cursor) &&
+    state.cursor >= cursor
+      ? state.cursor
+      : cursor + (state.items?.length ?? 0);
+  const nextSnapshot = {
+    ...(job.inputSnapshot as Record<string, unknown>),
+    cursor: nextCursor,
+  };
+
+  if (state.status === 'running' || state.status === 'pending') {
+    const progress = Math.max(job.progress, state.progress);
+    const resultCount = Math.max(job.resultCount, state.resultCount);
+    await db
+      .update(scrapeJobs)
+      .set({ status: 'running', progress, resultCount, inputSnapshot: nextSnapshot })
+      .where(eq(scrapeJobs.id, job.id));
+    return {
+      ...job,
+      status: 'running',
+      progress,
+      resultCount,
+      inputSnapshot: nextSnapshot,
+    };
+  }
+
+  const items = await readJobItems(db, job.id);
+  const stats = await computeStats(db, job.ownerId, items);
+  await insertCompanyHistory(db, job, input, items.length, stats, now);
+  await db
+    .update(scrapeJobs)
+    .set({
+      status: 'succeeded',
+      progress: items.length,
+      resultCount: items.length,
+      errorMessage: null,
+      completedAt: now,
+      inputSnapshot: nextSnapshot,
+    })
+    .where(eq(scrapeJobs.id, job.id));
+
+  return {
+    ...job,
+    status: 'succeeded',
+    progress: items.length,
+    resultCount: items.length,
+    errorMessage: null,
+    completedAt: now,
+    inputSnapshot: nextSnapshot,
+  };
+}
+
+/**
  * Performs exactly one provider poll and applies its outcome to the job.
- * Throws provider errors (e.g. an invalid credential) without marking the job
- * failed so the caller can retry after the User updates the credential.
+ * Credential errors are re-thrown without marking the job failed so the caller
+ * can retry after the User updates the credential; a definitive treg provider
+ * rejection marks the job failed.
  */
 export async function advanceCompanyJob(
   db: AppDb,
@@ -167,8 +330,30 @@ export async function advanceCompanyJob(
 ): Promise<ScrapeJob> {
   // Written by createCompanyJobRow and only read back here.
   const input = job.inputSnapshot as CompanyScrapeInput;
-  const state = await provider.pollCompanyJob(job.providerJobRef, input, token);
+  let state: ProviderRunState;
+  try {
+    state = await provider.pollCompanyJob(
+      { providerJobRef: job.providerJobRef, inputSnapshot: job.inputSnapshot },
+      input,
+      token
+    );
+  } catch (err) {
+    if (job.provider === 'treg' && err instanceof ProviderError && err.kind === 'provider') {
+      const now = new Date().toISOString();
+      const errorMessage = redactSecrets(err.message);
+      await db
+        .update(scrapeJobs)
+        .set({ status: 'failed', errorMessage, completedAt: now })
+        .where(eq(scrapeJobs.id, job.id));
+      return { ...job, status: 'failed', errorMessage, completedAt: now };
+    }
+    throw err;
+  }
   const now = new Date().toISOString();
+
+  if (job.provider === 'treg') {
+    return advanceTregCompanyJob(db, job, input, state, now);
+  }
 
   if (state.status === 'running' || state.status === 'pending') {
     const progress = Math.max(job.progress, state.progress);
@@ -206,20 +391,7 @@ export async function advanceCompanyJob(
   const stats = await computeStats(db, job.ownerId, items);
 
   await persistItems(db, job.id, items);
-  await db.insert(companyScrapeHistory).values({
-    ownerId: job.ownerId,
-    companyUrl: input.companyUrl,
-    maxItemsRequested: input.maxItems,
-    itemsReturned: items.length,
-    itemsSaved: stats.newProfiles,
-    filtersUsed: {
-      jobTitles: input.jobTitles,
-      locations: input.locations,
-      yearsAtCurrentCompanyIds: input.yearsAtCurrentCompanyIds,
-      yearsOfExperienceIds: input.yearsOfExperienceIds,
-    },
-    scrapedAt: now,
-  });
+  await insertCompanyHistory(db, job, input, items.length, stats, now);
   await db
     .update(scrapeJobs)
     .set({

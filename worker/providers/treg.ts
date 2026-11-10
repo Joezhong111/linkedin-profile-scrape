@@ -1,6 +1,8 @@
+import { normalizeProfileUrl, normalizeScrapeItem } from '../../lib/normalize';
 import {
   ProviderError,
   type CompanyJobStart,
+  type CompanyJobState,
   type CompanyScrapeInput,
   type ProfileScrapeInput,
   type ProviderRunState,
@@ -22,7 +24,10 @@ const PROFILE_ENDPOINTS = {
   full: 'harvestapi.linkedin.user.profile',
   full_email: 'harvestapi.linkedin.user.profile.email',
 } as const;
+const SEARCH_ENDPOINT = 'harvestapi.linkedin.leads.search';
 const PROFILE_CONCURRENCY = 5;
+/** The lead search is paged 25 rows at a time; never read more than 10 pages. */
+const SEARCH_PAGE_CAP = 10;
 const DEFAULT_RETRY_AFTER_MS = 1000;
 const REQUEST_TIMEOUT_MS = 180_000;
 const PROVIDER_DETAIL_LIMIT = 300;
@@ -31,6 +36,14 @@ interface TregEnvelope {
   status?: unknown;
   error?: unknown;
   element?: unknown;
+  elements?: unknown;
+  pagination?: unknown;
+}
+
+/** The job snapshot fields this adapter adds to the CompanyScrapeInput. */
+interface TregCompanySnapshot extends CompanyScrapeInput {
+  candidates?: unknown;
+  cursor?: unknown;
 }
 
 function isTimeoutError(err: unknown): boolean {
@@ -61,7 +74,8 @@ function retryAfterMs(response: Response): number {
   return DEFAULT_RETRY_AFTER_MS;
 }
 
-function readEnvelopeElement(payload: unknown): unknown {
+/** A 200 response still fails when the envelope reports an error. */
+function assertEnvelopeSuccess(payload: unknown): TregEnvelope {
   const envelope = (payload ?? {}) as TregEnvelope;
   if (envelope.status !== 'success') {
     const detail =
@@ -76,23 +90,48 @@ function readEnvelopeElement(payload: unknown): unknown {
       `treg returned an error: ${providerDetail(String(envelope.error))}`
     );
   }
+  return envelope;
+}
+
+function readEnvelopeElement(payload: unknown): unknown {
+  const envelope = assertEnvelopeSuccess(payload);
   if (typeof envelope.element !== 'object' || envelope.element === null) {
     throw new ProviderError('provider', 'treg did not return a profile element.');
   }
   return envelope.element;
 }
 
+function readEnvelopeElements(payload: unknown): {
+  elements: unknown[];
+  totalPages: number;
+} {
+  const envelope = assertEnvelopeSuccess(payload);
+  if (!Array.isArray(envelope.elements)) {
+    throw new ProviderError('provider', 'treg did not return lead search results.');
+  }
+
+  const pagination = (envelope.pagination ?? {}) as { totalPages?: unknown };
+  const totalPages =
+    typeof pagination.totalPages === 'number' &&
+    Number.isFinite(pagination.totalPages) &&
+    pagination.totalPages > 0
+      ? Math.floor(pagination.totalPages)
+      : 1;
+
+  return { elements: envelope.elements, totalPages };
+}
+
 /**
- * One logical profile call: one idempotency key, at most one 429 retry that
+ * One logical treg call: one idempotency key, at most one 429 retry that
  * reuses that key. Every other failure is mapped immediately.
  */
-async function callProfileEndpoint(
+async function callEndpoint(
   endpoint: string,
-  profileUrl: string,
+  params: Record<string, string>,
   token: string
 ): Promise<unknown> {
   const idempotencyKey = crypto.randomUUID();
-  const url = `${TREG_BASE}/${endpoint}?${new URLSearchParams({ url: profileUrl }).toString()}`;
+  const url = `${TREG_BASE}/${endpoint}?${new URLSearchParams(params).toString()}`;
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'X-Treg-Token': token,
@@ -155,13 +194,19 @@ async function callProfileEndpoint(
     );
   }
 
-  let payload: unknown;
   try {
-    payload = JSON.parse(text);
+    return JSON.parse(text);
   } catch {
     throw new ProviderError('provider', 'treg returned an unreadable response.');
   }
+}
 
+async function callProfileEndpoint(
+  endpoint: string,
+  profileUrl: string,
+  token: string
+): Promise<unknown> {
+  const payload = await callEndpoint(endpoint, { url: profileUrl }, token);
   return readEnvelopeElement(payload);
 }
 
@@ -220,25 +265,113 @@ async function scrapeProfiles(
   );
 }
 
-function notImplementedCompany(): never {
-  throw new ProviderError(
-    'input',
-    'Company scraping is not implemented for the treg provider yet.'
+function searchParams(input: CompanyScrapeInput, page: number): Record<string, string> {
+  const params: Record<string, string> = {
+    currentCompanies: input.companyUrl,
+    page: String(page),
+  };
+  if (input.locations.length > 0) params.locations = input.locations.join(',');
+  if (input.jobTitles.length > 0) params.currentJobTitles = input.jobTitles.join(',');
+  if (input.yearsAtCurrentCompanyIds.length > 0) {
+    params.yearsAtCurrentCompanyIds = input.yearsAtCurrentCompanyIds.join(',');
+  }
+  if (input.yearsOfExperienceIds.length > 0) {
+    params.yearsOfExperienceIds = input.yearsOfExperienceIds.join(',');
+  }
+  return params;
+}
+
+/**
+ * Pages the lead search at 25 rows until the page cap, the provider's last
+ * page, or `maxItems` unique profile URLs are collected. Dedupe happens before
+ * truncation and `maxItems` is never sent to the provider.
+ */
+async function createCompanyJob(
+  input: CompanyScrapeInput,
+  token: string
+): Promise<CompanyJobStart> {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= Math.min(SEARCH_PAGE_CAP, totalPages) && candidates.length < input.maxItems) {
+    const payload = await callEndpoint(SEARCH_ENDPOINT, searchParams(input, page), token);
+    const { elements, totalPages: providerPages } = readEnvelopeElements(payload);
+    if (page === 1) totalPages = providerPages;
+
+    for (const element of elements) {
+      const profileUrl = normalizeScrapeItem(element).profile_url.trim();
+      const key = normalizeProfileUrl(profileUrl);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      candidates.push(profileUrl);
+      if (candidates.length >= input.maxItems) break;
+    }
+
+    if (elements.length === 0) break;
+    page += 1;
+  }
+
+  return { candidates };
+}
+
+/**
+ * Enriches at most five candidates per call. The next cursor is stored in the
+ * job snapshot so repeated polls never re-persist an index.
+ */
+async function pollCompanyJob(
+  job: CompanyJobState,
+  input: CompanyScrapeInput,
+  token: string
+): Promise<ProviderRunState> {
+  const snapshot = (job.inputSnapshot ?? input) as TregCompanySnapshot;
+  const candidates = Array.isArray(snapshot.candidates)
+    ? snapshot.candidates.filter(
+        (url): url is string => typeof url === 'string' && url.trim().length > 0
+      )
+    : [];
+  const cursor =
+    typeof snapshot.cursor === 'number' &&
+    Number.isInteger(snapshot.cursor) &&
+    snapshot.cursor >= 0
+      ? Math.min(snapshot.cursor, candidates.length)
+      : 0;
+
+  if (cursor >= candidates.length) {
+    return {
+      status: 'succeeded',
+      progress: cursor,
+      resultCount: cursor,
+      items: [],
+      cursor,
+    };
+  }
+
+  const endpoint = PROFILE_ENDPOINTS[input.tier];
+  if (!endpoint) {
+    throw new ProviderError('input', 'Profile tier must be "full" or "full_email".');
+  }
+
+  const batch = candidates.slice(cursor, cursor + PROFILE_CONCURRENCY);
+  const items = await mapLimit(batch, PROFILE_CONCURRENCY, (url) =>
+    callProfileEndpoint(endpoint, url, token)
   );
+  const nextCursor = cursor + items.length;
+
+  return {
+    status: nextCursor >= candidates.length ? 'succeeded' : 'running',
+    progress: nextCursor,
+    resultCount: nextCursor,
+    items,
+    cursor: nextCursor,
+  };
 }
 
 export const tregProvider: ScrapeProvider = {
   scrapeProfiles,
-  createCompanyJob(_input: CompanyScrapeInput, _token: string): Promise<CompanyJobStart> {
-    return notImplementedCompany();
-  },
-  pollCompanyJob(
-    _job: unknown,
-    _input: CompanyScrapeInput,
-    _token: string
-  ): Promise<ProviderRunState> {
-    return notImplementedCompany();
-  },
+  createCompanyJob,
+  pollCompanyJob,
 };
 
 export default tregProvider;
