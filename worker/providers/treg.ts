@@ -34,8 +34,8 @@ interface TregEnvelope {
 }
 
 function isTimeoutError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  return err.name === 'TimeoutError' || err.name === 'AbortError';
+  const name = (err as { name?: unknown } | null)?.name;
+  return name === 'TimeoutError' || name === 'AbortError';
 }
 
 function sleep(ms: number): Promise<void> {

@@ -180,6 +180,20 @@ describe('treg profile adapter', () => {
     });
   });
 
+  it('maps a request timeout to a 502 timeout error', async () => {
+    stubFetch(() => {
+      const err = new Error('timed out');
+      err.name = 'TimeoutError';
+      throw err;
+    });
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(502);
+    expect((await readJson<{ error: string }>(response)).error).toContain('respond in time');
+  });
+
   it('honors Retry-After and retries a 429 once with the same idempotency key', async () => {
     const calls: ProviderCall[] = [];
     let attempt = 0;
