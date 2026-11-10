@@ -2,6 +2,10 @@
 
 A LinkedIn profile scraping and analytics application built with React, Vite, Netlify Functions, Neon PostgreSQL, and Drizzle ORM.
 
+> **Cloudflare deployment:** the Worker + D1 deployment path, environments,
+> secrets, and measured limits are documented in
+> [docs/deployment.md](docs/deployment.md).
+
 ## Features
 
 - 🔎 **LinkedIn Scraping** - Scrape profiles and company employees via Apify Actors
