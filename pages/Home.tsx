@@ -8,6 +8,7 @@ import {
   checkScrapeStatus,
   CompanyHistoryResponse,
   ScrapeCompanyResult,
+  ScrapeTier,
 } from '../services/apify';
 import {
   saveProfile,
@@ -45,6 +46,7 @@ export default function Home() {
 
   // Profile Scrape State
   const [urls, setUrls] = useState<string>('');
+  const [profileTier, setProfileTier] = useState<ScrapeTier>('full');
   const profileUrlCount = parseProfileUrls(urls).length;
 
   // Company Scrape State
@@ -234,7 +236,10 @@ export default function Home() {
             `You can scrape at most ${MAX_PROFILE_URLS} Profile URLs at a time.`
           );
         }
-        result = await scrapeLinkedInProfiles(urlList, 'full');
+        result = await scrapeLinkedInProfiles(
+          urlList,
+          credential?.provider === 'treg' ? profileTier : 'full'
+        );
         const items = result || [];
         setPreviewItems(items);
         setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
@@ -533,6 +538,36 @@ export default function Home() {
                       </span>
                     )}
                   </div>
+
+                  {credential?.provider === 'treg' && (
+                    <div className="mt-3 space-y-2">
+                      <label
+                        htmlFor="profile-tier"
+                        className="block text-sm font-medium text-gray-700 dark:text-slate-300"
+                      >
+                        Profile tier
+                      </label>
+                      <select
+                        id="profile-tier"
+                        value={profileTier}
+                        onChange={(e) => setProfileTier(e.target.value as ScrapeTier)}
+                        disabled={state.isLoading}
+                        className="w-full p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      >
+                        <option value="full">Full</option>
+                        <option value="full_email">Full+email</option>
+                      </select>
+                      <div className="rounded-lg border border-amber-100 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+                        <ul className="list-disc space-y-1 pl-4">
+                          {profileTier === 'full_email' && (
+                            <li>Full+email may take around two minutes per batch.</li>
+                          )}
+                          <li>treg never returns a phone number.</li>
+                          <li>treg email is optional and often missing.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -755,7 +790,9 @@ export default function Home() {
                 {state.isLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                    {scrapeMode === 'profiles' ? 'Scraping via Apify...' : 'Searching Company...'}
+                    {scrapeMode === 'profiles'
+                      ? `Scraping via ${credential?.provider === 'treg' ? 'treg' : 'Apify'}...`
+                      : 'Searching Company...'}
                   </>
                 ) : (
                   'Start Scraping'
