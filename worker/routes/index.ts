@@ -1,4 +1,5 @@
 import { json, type Route } from '../http';
+import { adminRoutes } from './admin';
 import { authRoutes } from './auth';
 import { leadsRoutes } from './leads';
 
@@ -14,4 +15,5 @@ export const ROUTES: Route[] = [
   },
   ...authRoutes,
   ...leadsRoutes,
+  ...adminRoutes,
 ];
