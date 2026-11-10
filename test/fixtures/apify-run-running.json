@@ -1,0 +1,15 @@
+{
+  "data": {
+    "id": "run_abc123",
+    "status": "RUNNING",
+    "defaultDatasetId": "dataset_abc123",
+    "stats": {
+      "inputBodyLen": 100,
+      "restartCount": 0,
+      "resurrectCount": 0,
+      "memMaxBytes": 0,
+      "itemsScraped": 0,
+      "requestsFinished": 0
+    }
+  }
+}

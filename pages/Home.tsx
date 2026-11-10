@@ -27,6 +27,16 @@ import {
 import ProfileCard from '../components/ProfileCard';
 import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
 
+const MAX_PROFILE_URLS = 10;
+
+/** Splits the textarea into scrapeable URLs, mirroring the server-side filter. */
+function parseProfileUrls(value: string): string[] {
+  return value
+    .split('\n')
+    .map((url) => url.trim())
+    .filter((url) => url.startsWith('http'));
+}
+
 export default function Home() {
   const [scrapeMode, setScrapeMode] = useState<'profiles' | 'company'>('profiles');
   const [credential, setCredential] = useState<CredentialStatus | null>(null);
@@ -35,6 +45,7 @@ export default function Home() {
 
   // Profile Scrape State
   const [urls, setUrls] = useState<string>('');
+  const profileUrlCount = parseProfileUrls(urls).length;
 
   // Company Scrape State
   const [companyUrl, setCompanyUrl] = useState<string>('');
@@ -213,15 +224,17 @@ export default function Home() {
 
     try {
       if (scrapeMode === 'profiles') {
-        const urlList = urls
-          .split('\n')
-          .map((u: string) => u.trim())
-          .filter((u: string) => u.startsWith('http'));
+        const urlList = parseProfileUrls(urls);
 
         if (urlList.length === 0) {
           throw new Error('Please enter at least one valid LinkedIn URL');
         }
-        result = await scrapeLinkedInProfiles(urlList);
+        if (urlList.length > MAX_PROFILE_URLS) {
+          throw new Error(
+            `You can scrape at most ${MAX_PROFILE_URLS} Profile URLs at a time.`
+          );
+        }
+        result = await scrapeLinkedInProfiles(urlList, 'full');
         const items = result || [];
         setPreviewItems(items);
         setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
@@ -460,6 +473,20 @@ export default function Home() {
               </button>
             </div>
 
+            {credential?.provider && (
+              <div className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 px-3 py-2 text-sm text-gray-700 dark:text-slate-300">
+                <span>
+                  Active Provider:{' '}
+                  <strong className="font-semibold capitalize text-gray-900 dark:text-white">
+                    {credential.provider}
+                  </strong>
+                </span>
+                <span className="text-xs text-gray-500 dark:text-slate-400">
+                  read-only — change it in Settings
+                </span>
+              </div>
+            )}
+
             {credential && !credentialReady && (
               <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-sm rounded-lg border border-amber-100 dark:border-amber-800 flex items-start gap-2">
                 <ExclamationTriangleIcon className="h-4 w-4 mt-0.5 shrink-0" />
@@ -476,7 +503,7 @@ export default function Home() {
               {scrapeMode === 'profiles' ? (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Profile URLs (One per line)
+                    Profile URLs (One per line, max {MAX_PROFILE_URLS})
                   </label>
                   <textarea
                     disabled={state.isLoading}
@@ -487,6 +514,25 @@ export default function Home() {
                       setUrls(e.target.value)
                     }
                   />
+                  <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span
+                      className={
+                        profileUrlCount > MAX_PROFILE_URLS
+                          ? 'font-semibold text-red-600 dark:text-red-400'
+                          : 'text-gray-500 dark:text-slate-400'
+                      }
+                    >
+                      {profileUrlCount}/{MAX_PROFILE_URLS} URLs
+                      {profileUrlCount > MAX_PROFILE_URLS
+                        ? ' — remove URLs to continue'
+                        : ''}
+                    </span>
+                    {credential?.provider === 'apify' && (
+                      <span className="text-gray-500 dark:text-slate-400">
+                        Fixed Full — attempts email and phone
+                      </span>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -540,7 +586,6 @@ export default function Home() {
                           Full + email search ($12 per 1k)
                         </option>
                         <option value="Full ($8 per 1k)">Full ($8 per 1k)</option>
-                        <option value="Short ($4 per 1k)">Short ($4 per 1k)</option>
                       </select>
                     </div>
                   </div>
@@ -699,7 +744,12 @@ export default function Home() {
 
               <button
                 type="submit"
-                disabled={state.isLoading || !credentialReady}
+                disabled={
+                  state.isLoading ||
+                  !credentialReady ||
+                  (scrapeMode === 'profiles' &&
+                    (profileUrlCount === 0 || profileUrlCount > MAX_PROFILE_URLS))
+                }
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
               >
                 {state.isLoading ? (

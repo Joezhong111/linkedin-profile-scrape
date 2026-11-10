@@ -1,0 +1,11 @@
+{
+  "data": {
+    "id": "run_abc123",
+    "status": "SUCCEEDED",
+    "defaultDatasetId": "dataset_abc123",
+    "stats": {
+      "itemsScraped": 2,
+      "requestsFinished": 2
+    }
+  }
+}

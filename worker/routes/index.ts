@@ -4,6 +4,7 @@ import { authRoutes } from './auth';
 import { credentialsRoutes } from './credentials';
 import { leadsRoutes } from './leads';
 import { profilesRoutes } from './profiles';
+import { scrapeRoutes } from './scrape';
 
 /**
  * Every route module contributes its `Route[]` here. Later tickets add one
@@ -19,5 +20,6 @@ export const ROUTES: Route[] = [
   ...credentialsRoutes,
   ...leadsRoutes,
   ...profilesRoutes,
+  ...scrapeRoutes,
   ...adminRoutes,
 ];
