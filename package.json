@@ -13,6 +13,7 @@
     "db:migrate": "wrangler d1 migrations apply DB --remote",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:smoke": "vitest run test/schema.test.ts",
+    "bench:limits": "vitest run test/limits.test.ts --reporter=verbose --silent=false",
     "create-admin": "node scripts/create-admin-d1.mjs",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
