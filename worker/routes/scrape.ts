@@ -101,7 +101,8 @@ export const scrapeRoutes: Route[] = [
         return error(400, 'tier must be "full" or "full_email".');
       }
 
-      const tier: ScrapeTier = isTier(body.tier) ? body.tier : 'full';
+      const tier: ScrapeTier =
+        credential.provider === 'apify' || !isTier(body.tier) ? 'full' : body.tier;
 
       try {
         const provider = providerFor(user);
