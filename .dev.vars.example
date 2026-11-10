@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local development. Never commit .dev.vars.
+# Base64-encoded 32-byte key used to encrypt user-supplied scrape credentials.
+CREDENTIAL_ENCRYPTION_KEY=
