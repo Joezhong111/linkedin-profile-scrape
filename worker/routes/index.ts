@@ -1,5 +1,6 @@
 import { json, type Route } from '../http';
 import { authRoutes } from './auth';
+import { profilesRoutes } from './profiles';
 
 /**
  * Every route module contributes its `Route[]` here. Later tickets add one
@@ -12,4 +13,5 @@ export const ROUTES: Route[] = [
     handler: () => json({ status: 'ok', providers: ['apify', 'treg'] }),
   },
   ...authRoutes,
+  ...profilesRoutes,
 ];
