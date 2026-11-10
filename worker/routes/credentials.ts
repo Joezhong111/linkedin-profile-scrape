@@ -20,7 +20,7 @@ export const credentialsRoutes: Route[] = [
     handler: async (ctx) => {
       const user = await requireUser(ctx);
       if (user instanceof Response) return user;
-      return json(await getCredentialStatus(createDb(ctx.env.DB), user));
+      return json(await getCredentialStatus(user));
     },
   },
   {

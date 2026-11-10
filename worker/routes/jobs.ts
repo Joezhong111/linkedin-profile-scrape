@@ -2,10 +2,9 @@ import { and, desc, eq } from 'drizzle-orm';
 import { companyScrapeHistory } from '../../db/schema';
 import { getProviderToken } from '../credentials';
 import { createDb } from '../db';
-import { error, json, requireUser, type Route } from '../http';
+import { error, json, providerFailure, requireUser, type Route } from '../http';
 import { advanceCompanyJob, findOwnedJob, jobStatusPayload } from '../jobs';
-import { providerFor } from '../providers';
-import { ProviderError } from '../providers/types';
+import { providerById } from '../providers';
 
 /**
  * Scrape Job polling and Company Scrape History.
@@ -13,13 +12,11 @@ import { ProviderError } from '../providers/types';
  * Jobs are always loaded by id AND owner: another User's job id is a 404 and
  * never reveals items. A running job advances at most one provider poll per
  * request; a terminal job is served from the stored row and items.
+ *
+ * A job is advanced with the provider stored on the job, never the User's
+ * current Active Provider: switching providers mid-job would otherwise send an
+ * Apify run reference to treg and fail or invent a zero-item success.
  */
-
-function redactSecrets(message: string): string {
-  return message
-    .replace(/([?&]token=)[^&\s]+/gi, '$1[redacted]')
-    .replace(/(Bearer\s+)[^\s]+/gi, '$1[redacted]');
-}
 
 export const jobsRoutes: Route[] = [
   {
@@ -37,19 +34,21 @@ export const jobsRoutes: Route[] = [
       if (!job) return error(404, 'Scrape Job not found.');
 
       if (job.status === 'running' || job.status === 'pending') {
-        const credential = await getProviderToken(ctx.env, db, user);
+        const credential = await getProviderToken(ctx.env, user);
         if (credential instanceof Response) return credential;
 
+        if (credential.provider !== job.provider) {
+          return error(
+            400,
+            `This Scrape Job was started with ${job.provider}. Switch your Active Provider back to ${job.provider} and save a credential to resume it.`,
+            'provider_changed'
+          );
+        }
+
         try {
-          job = await advanceCompanyJob(db, job, providerFor(user), credential.token);
+          job = await advanceCompanyJob(db, job, providerById(job.provider), credential.token);
         } catch (err) {
-          if (err instanceof ProviderError) {
-            const message = redactSecrets(err.message);
-            if (err.kind === 'credential') return error(400, message, 'credential_invalid');
-            if (err.kind === 'input') return error(400, message);
-            return error(502, message);
-          }
-          return error(502, 'Could not check the Scrape Job. Try again later.');
+          return providerFailure(err, 'Could not check the Scrape Job. Try again later.');
         }
       }
 

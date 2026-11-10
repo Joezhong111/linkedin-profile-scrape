@@ -1,5 +1,7 @@
 // Authentication utilities for opaque Session Token auth
 
+import { readApiError } from '@/services/http';
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -73,8 +75,7 @@ class AuthClient {
     });
 
     if (!res.ok) {
-      const error = await res.text();
-      throw new Error(error || 'Sign in failed');
+      throw new Error(await readApiError(res, 'Sign in failed'));
     }
 
     const session = await res.json();
@@ -91,8 +92,7 @@ class AuthClient {
     });
 
     if (!res.ok) {
-      const error = await res.text();
-      throw new Error(error || 'Sign up failed');
+      throw new Error(await readApiError(res, 'Sign up failed'));
     }
 
     const session = await res.json();

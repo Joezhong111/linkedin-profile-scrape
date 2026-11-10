@@ -1,5 +1,5 @@
-import { authClient } from '../lib/auth';
-import { readApiError } from './http';
+import { authClient } from '@/lib/auth';
+import { readApiError } from '@/services/http';
 
 export type ProviderId = 'apify' | 'treg';
 

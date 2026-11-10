@@ -93,6 +93,8 @@ export function mapLeadRow(r: typeof linkedinLeads.$inferSelect) {
     followers: r.followers,
     email: r.email,
     mobile_number: r.mobileNumber,
+    is_premium: r.isPremium,
+    is_verified: r.isVerified,
     job_title: r.jobTitle,
     company_name: r.companyName,
     company_industry: r.companyIndustry,

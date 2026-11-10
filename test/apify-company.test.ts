@@ -237,6 +237,36 @@ describe('GET /api/check_scrape_status', () => {
     expect(harness.calls.filter((call) => call.url === RUN_URL)).toHaveLength(0);
   });
 
+  it('refuses to advance a job with a different provider and leaves it running', async () => {
+    const harness = await signUpWithApify([jsonResponse(companyStarted)]);
+    const created = await createAndStart(harness);
+
+    const switched = await putCredential(harness.session, 'treg', 'treg_user_token_0123456789');
+    expect(switched.status).toBe(200);
+
+    const response = await pollStatus(harness.session.token, created.jobId);
+
+    expect(response.status).toBe(400);
+    expect(await readJson<{ error: string; code: string }>(response)).toEqual({
+      error:
+        'This Scrape Job was started with apify. Switch your Active Provider back to apify and save a credential to resume it.',
+      code: 'provider_changed',
+    });
+
+    const jobRow = await env.DB.prepare('SELECT status FROM scrape_jobs WHERE id = ?')
+      .bind(created.jobId)
+      .first<{ status: string }>();
+    expect(jobRow?.status).toBe('running');
+    expect(harness.calls.filter((call) => call.url === RUN_URL)).toHaveLength(0);
+
+    const historyCount = await env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM company_scrape_history WHERE owner_id = ?'
+    )
+      .bind(harness.session.id)
+      .first<{ count: number }>();
+    expect(historyCount?.count).toBe(0);
+  });
+
   it('advances one Apify check per request and persists deduped, truncated items once', async () => {
     const harness = await signUpWithApify([
       jsonResponse(companyStarted),

@@ -167,6 +167,9 @@ export const linkedinLeads = sqliteTable(
     email: text('email'),
     mobileNumber: text('mobile_number'),
 
+    isPremium: integer('is_premium', { mode: 'boolean' }),
+    isVerified: integer('is_verified', { mode: 'boolean' }),
+
     jobTitle: text('job_title'),
     companyName: text('company_name'),
     companyIndustry: text('company_industry'),

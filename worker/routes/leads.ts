@@ -52,6 +52,18 @@ const REAL_FIELDS: ReadonlyArray<readonly [string, string]> = [
   ['current_job_duration_years', 'currentJobDurationYears'],
 ];
 
+const BOOLEAN_FIELDS: ReadonlyArray<readonly [string, string]> = [
+  ['is_premium', 'isPremium'],
+  ['is_verified', 'isVerified'],
+];
+
+function toBoolean(value: unknown): boolean | null {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return null;
+}
+
 function parseBoundedInt(value: string | null, fallback: number, min: number, max: number): number {
   const parsed = Number.parseInt(value ?? '', 10);
   if (!Number.isFinite(parsed)) return fallback;
@@ -97,6 +109,12 @@ function leadWriteValues(
     if (!keep(raw)) continue;
     const parsed = typeof raw === 'number' ? raw : Number.parseFloat(String(raw));
     values[column] = Number.isFinite(parsed) ? parsed : null;
+  }
+
+  for (const [wire, column] of BOOLEAN_FIELDS) {
+    const raw = body[wire];
+    if (!keep(raw)) continue;
+    values[column] = toBoolean(raw);
   }
 
   if (keep(body.raw_data)) values.rawData = body.raw_data;

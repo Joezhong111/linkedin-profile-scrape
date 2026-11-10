@@ -1,6 +1,6 @@
-import { LinkedInProfile } from '../types';
-import { authClient } from '../lib/auth';
-import { readApiError } from './http';
+import { LinkedInProfile } from '@/types';
+import { authClient } from '@/lib/auth';
+import { readApiError } from '@/services/http';
 
 async function getCurrentUserId(): Promise<string> {
   const user = authClient.getUser();
@@ -77,6 +77,8 @@ export const saveLead = async (lead: LinkedInProfile, sourceCompanyUrl?: string)
     photo_url: lead.photo_url || rd.photoUrl,
     email: lead.email || rd.email,
     mobile_number: lead.mobile_number || rd.mobileNumber,
+    is_premium: lead.is_premium ?? rd.is_premium ?? rd.isPremium ?? rd.premium,
+    is_verified: lead.is_verified ?? rd.is_verified ?? rd.isVerified ?? rd.verified,
     job_title: lead.job_title || rd.jobTitle,
     company_name: lead.company_name || rd.companyName,
     company_industry: lead.company_industry || rd.companyIndustry,

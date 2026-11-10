@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createExecutionContext, env, waitOnExecutionContext } from 'cloudflare:test';
 import worker from '../worker/index';
 import { hashPassword } from '../worker/auth';
-import { apifyProvider } from '../worker/providers/apify';
+import {
+  APIFY_PROFILE_MAX_WAIT_MS,
+  APIFY_PROFILE_POLL_INTERVAL_MS,
+  apifyProvider,
+} from '../worker/providers/apify';
 import profileItem from './fixtures/apify-profile-item.json';
 import profileDataset from './fixtures/apify-dataset-profile.json';
 import companyDatasetFixture from './fixtures/apify-company-dataset.json';
@@ -391,6 +395,15 @@ describe('Workers Free limits', () => {
       'GET /api/check_scrape_status (Apify success poll, 100 items)',
       succeeded
     );
+  });
+
+  it('keeps the Apify profile poll worst case inside the Free subrequest budget', () => {
+    expect(APIFY_PROFILE_POLL_INTERVAL_MS).toBe(5_000);
+    expect(APIFY_PROFILE_MAX_WAIT_MS).toBe(120_000);
+    const worstCase =
+      Math.ceil(APIFY_PROFILE_MAX_WAIT_MS / APIFY_PROFILE_POLL_INTERVAL_MS) + 2;
+    expect(worstCase).toBe(26);
+    expect(worstCase).toBeLessThanOrEqual(FREE_SUBREQUESTS);
   });
 
   it('measures Apify profile scrape subrequests (start + poll + dataset)', async () => {

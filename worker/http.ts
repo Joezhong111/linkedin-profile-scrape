@@ -1,6 +1,7 @@
 import type { User } from '../db/schema';
 import { getUserRole, verifyToken } from './auth';
 import { createDb } from './db';
+import { ProviderError } from './providers/types';
 
 /**
  * Minimal HTTP helpers shared by every Worker route.
@@ -60,6 +61,24 @@ export async function parseJsonBody(request: Request): Promise<Record<string, un
   } catch {
     return {};
   }
+}
+
+/** Provider messages must never leak a token in a query string or header. */
+export function redactSecrets(message: string): string {
+  return message
+    .replace(/([?&]token=)[^&\s]+/gi, '$1[redacted]')
+    .replace(/(Bearer\s+)[^\s]+/gi, '$1[redacted]');
+}
+
+/** Maps a provider failure onto the user-safe 400/502 response shape. */
+export function providerFailure(err: unknown, fallback: string): Response {
+  if (err instanceof ProviderError) {
+    const message = redactSecrets(err.message);
+    if (err.kind === 'credential') return error(400, message, 'credential_invalid');
+    if (err.kind === 'input') return error(400, message);
+    return error(502, message);
+  }
+  return error(502, fallback);
 }
 
 /** Reads a Bearer token from the Authorization header, or `null`. */

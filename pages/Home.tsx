@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { LinkedInProfile, ScraperState } from '../types';
+import { LinkedInProfile, ScraperState } from '@/types';
 import {
   scrapeLinkedInProfiles,
   scrapeCompany,
@@ -10,15 +10,23 @@ import {
   ScrapeCompanyOptions,
   ScrapeCompanyResult,
   ScrapeTier,
-} from '../services/apify';
+} from '@/services/apify';
 import {
   saveProfile,
   saveLead,
   fetchAllProfiles,
   fetchAllLeads,
-} from '../services/api';
-import { authClient } from '../lib/auth';
-import { getCredentialStatus, type CredentialStatus } from '../services/account';
+} from '@/services/api';
+import { authClient } from '@/lib/auth';
+import { getCredentialStatus, type CredentialStatus } from '@/services/account';
+import {
+  COMPANY_URL_PATTERN,
+  DEFAULT_MAX_ITEMS,
+  FILTER_LIMITS,
+  MAX_ITEMS,
+  MAX_PROFILE_URLS,
+  isProfileUrl,
+} from '@/lib/scrape-config';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import {
@@ -27,15 +35,9 @@ import {
   MagnifyingGlassIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
-import ProfileCard from '../components/ProfileCard';
-import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
+import ProfileCard from '@/components/ProfileCard';
+import { TableRowSkeleton, CardSkeleton } from '@/components/Skeleton';
 
-const MAX_PROFILE_URLS = 10;
-const DEFAULT_MAX_ITEMS = 25;
-const MAX_ITEMS = 100;
-/** treg accepts 70 filter values per list; Apify accepts 50. */
-const FILTER_LIMITS = { apify: 50, treg: 70 } as const;
-const COMPANY_URL_PATTERN = /^https?:\/\/(?:[a-z0-9-]+\.)*linkedin\.com\/company\/[^\s]+$/i;
 const COMPANY_POLL_INTERVAL_MS = 3000;
 const COMPANY_POLL_MAX_ATTEMPTS = 200;
 
@@ -95,7 +97,7 @@ function parseProfileUrls(value: string): string[] {
   return value
     .split('\n')
     .map((url) => url.trim())
-    .filter((url) => url.startsWith('http'));
+    .filter(isProfileUrl);
 }
 
 export default function Home() {
