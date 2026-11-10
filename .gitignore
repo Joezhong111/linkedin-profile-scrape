@@ -71,6 +71,5 @@ deno.lock
 .shared/
 .gsd/
 .bg-shell/
-openspec/
 .codex/
 .trae/

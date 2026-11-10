@@ -277,3 +277,17 @@ export function useContext() {
 - **Zod validation errors**: Use `.safeParse()` and check `.success` before accessing `.data`
 - **React lazy imports**: Must be wrapped in `<Suspense>` with a fallback component
 - **Error Boundary**: Catches only runtime errors during rendering, not event handlers or async code
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as markdown files under `.scratch/<feature>/` in this repo (local-markdown tracker). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical triage roles, default strings recorded as each issue's `Status:` value. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
