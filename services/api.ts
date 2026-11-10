@@ -2,8 +2,6 @@ import { LinkedInProfile } from '../types';
 import { authClient } from '../lib/auth';
 import { readApiError } from './http';
 
-export const isApiReady = true; // Always ready with new auth system
-
 async function getCurrentUserId(): Promise<string> {
   const user = authClient.getUser();
   if (!user?.id) throw new Error('Not authenticated');

@@ -8,6 +8,7 @@ import {
   UserGroupIcon,
   BriefcaseIcon,
   Cog6ToothIcon,
+  KeyIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import { useGSAP } from '@gsap/react';
@@ -18,17 +19,22 @@ type Props = {
   authed: boolean;
   isAdmin?: boolean;
   route: string;
-  apifyReady: boolean;
-  dbConnected: boolean;
+  provider: 'apify' | 'treg' | null;
+  credentialReady: boolean;
   onSignOut: () => void;
+};
+
+const PROVIDER_LABELS: Record<'apify' | 'treg', string> = {
+  apify: 'Apify',
+  treg: 'treg',
 };
 
 const Navbar: React.FC<Props> = ({
   authed,
   isAdmin,
   route,
-  apifyReady,
-  dbConnected,
+  provider,
+  credentialReady,
   onSignOut,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,6 +59,7 @@ const Navbar: React.FC<Props> = ({
     { href: '#/dashboard', label: 'Dashboard', icon: HomeIcon, route: 'dashboard' },
     { href: '#/profiles', label: 'Profiles', icon: UserGroupIcon, route: 'profiles' },
     { href: '#/leads', label: 'Leads', icon: BriefcaseIcon, route: 'leads' },
+    { href: '#/settings', label: 'Settings', icon: KeyIcon, route: 'settings' },
   ];
 
   if (isAdmin) {
@@ -125,28 +132,18 @@ const Navbar: React.FC<Props> = ({
                   <ArrowRightOnRectangleIcon className="h-4 w-4" />
                   Logout
                 </button>
-                {/* Status indicators - desktop only */}
+                {/* Credential status - desktop only */}
                 <div className="nav-action hidden lg:flex items-center gap-1.5">
-                  <span className="text-gray-500 dark:text-gray-400">Apify:</span>
-                  {apifyReady ? (
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {provider ? PROVIDER_LABELS[provider] : 'Provider'}:
+                  </span>
+                  {credentialReady ? (
                     <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
-                      <CheckCircleIcon className="h-4 w-4" /> Ready
+                      <CheckCircleIcon className="h-4 w-4" /> Configured
                     </span>
                   ) : (
-                    <span className="text-red-500 flex items-center gap-1">
+                    <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                       <ExclamationTriangleIcon className="h-4 w-4" /> Missing
-                    </span>
-                  )}
-                </div>
-                <div className="nav-action hidden lg:flex items-center gap-1.5">
-                  <span className="text-gray-500 dark:text-gray-400">DB:</span>
-                  {dbConnected ? (
-                    <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
-                      <CheckCircleIcon className="h-4 w-4" /> OK
-                    </span>
-                  ) : (
-                    <span className="text-red-500 flex items-center gap-1">
-                      <ExclamationTriangleIcon className="h-4 w-4" /> Err
                     </span>
                   )}
                 </div>
@@ -212,28 +209,22 @@ const Navbar: React.FC<Props> = ({
             {/* Status Section */}
             <div className="p-4 space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Apify 状态</span>
-                {apifyReady ? (
+                <span className="text-gray-500 dark:text-gray-400">Scrape Credential</span>
+                {credentialReady ? (
                   <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
-                    <CheckCircleIcon className="h-4 w-4" /> 已就绪
+                    <CheckCircleIcon className="h-4 w-4" /> 已配置
                   </span>
                 ) : (
-                  <span className="text-red-500 flex items-center gap-1">
+                  <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                     <ExclamationTriangleIcon className="h-4 w-4" /> 未配置
                   </span>
                 )}
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">数据库</span>
-                {dbConnected ? (
-                  <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
-                    <CheckCircleIcon className="h-4 w-4" /> 已连接
-                  </span>
-                ) : (
-                  <span className="text-red-500 flex items-center gap-1">
-                    <ExclamationTriangleIcon className="h-4 w-4" /> 断开
-                  </span>
-                )}
+                <span className="text-gray-500 dark:text-gray-400">服务商</span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  {provider ? PROVIDER_LABELS[provider] : '未选择'}
+                </span>
               </div>
             </div>
 

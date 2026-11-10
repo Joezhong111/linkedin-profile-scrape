@@ -4,10 +4,15 @@ const Profiles = React.lazy(() => import('./pages/Profiles'));
 const Leads = React.lazy(() => import('./pages/Leads'));
 const Login = React.lazy(() => import('./pages/Login'));
 const Admin = React.lazy(() => import('./pages/Admin'));
-import { isApiReady } from './services/api';
+const Settings = React.lazy(() => import('./pages/Settings'));
 import { authClient } from './lib/auth';
 import Navbar from './components/Navbar';
 import { getMe } from './services/admin';
+import {
+  CREDENTIALS_CHANGED_EVENT,
+  getCredentialStatus,
+  type ProviderId,
+} from './services/account';
 import { ThemeProvider } from './lib/ThemeContext';
 import { ToastProvider } from './lib/ToastContext';
 import ToastContainer from './components/ToastContainer';
@@ -24,7 +29,8 @@ function PageLoader() {
 
 export default function App() {
   const [hash, setHash] = useState<string>(window.location.hash || '#/');
-  const [apifyReady, setApifyReady] = useState<boolean>(Boolean(import.meta.env.VITE_APIFY_TOKEN));
+  const [credentialProvider, setCredentialProvider] = useState<ProviderId | null>(null);
+  const [credentialReady, setCredentialReady] = useState<boolean>(false);
   const [authed, setAuthed] = useState<boolean>(false);
   const [authChecked, setAuthChecked] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -39,21 +45,36 @@ export default function App() {
     window.location.hash = '#/login';
   };
 
-  // Probe server-side readiness (works in Vite dev via middleware and in Netlify via function)
+  // Credential status drives the provider indicator and scrape gating. Refresh
+  // whenever Settings saves or clears a credential.
   useEffect(() => {
-    const check = async () => {
+    let cancelled = false;
+    if (!authed) {
+      setCredentialProvider(null);
+      setCredentialReady(false);
+      return;
+    }
+
+    const refresh = async () => {
       try {
-        const res = await fetch('/api/health');
-        if (res.ok) {
-          const data = await res.json();
-          if (typeof data?.apify === 'boolean') setApifyReady(data.apify);
-        }
+        const status = await getCredentialStatus();
+        if (cancelled) return;
+        setCredentialProvider(status.provider);
+        setCredentialReady(status.configured);
       } catch {
-        // ignore: fall back to VITE_ value
+        if (cancelled) return;
+        setCredentialProvider(null);
+        setCredentialReady(false);
       }
     };
-    check();
-  }, []);
+
+    refresh();
+    window.addEventListener(CREDENTIALS_CHANGED_EVENT, refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(CREDENTIALS_CHANGED_EVENT, refresh);
+    };
+  }, [authed]);
 
   useEffect(() => {
     const onHash = () => setHash(window.location.hash || '#/');
@@ -105,6 +126,7 @@ export default function App() {
     if (h.startsWith('#/leads')) return 'leads';
     if (h.startsWith('#/login')) return 'login';
     if (h.startsWith('#/admin')) return 'admin';
+    if (h.startsWith('#/settings')) return 'settings';
     // default and explicit dashboard both go to dashboard
     if (h.startsWith('#/dashboard') || h === '#/') return 'dashboard';
     return 'dashboard';
@@ -135,8 +157,8 @@ export default function App() {
               authed={authed}
               isAdmin={isAdmin}
               route={route}
-              apifyReady={apifyReady}
-              dbConnected={isApiReady}
+              provider={credentialProvider}
+              credentialReady={credentialReady}
               onSignOut={signOut}
             />
 
@@ -146,6 +168,7 @@ export default function App() {
                 {route === 'profiles' && <Profiles />}
                 {route === 'leads' && <Leads />}
                 {route === 'admin' && (isAdmin ? <Admin /> : <Home />)}
+                {route === 'settings' && <Settings />}
                 {route === 'dashboard' && <Home />}
               </PageTransition>
             </Suspense>
