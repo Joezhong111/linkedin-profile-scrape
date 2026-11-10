@@ -2,15 +2,21 @@ import { LinkedInProfile } from '../types';
 import { authClient } from '../lib/auth';
 import { normalizeScrapeItem } from '../lib/normalize';
 
-// Frontend: call serverless function instead of bundling apify-client in the browser
-export const scrapeLinkedInProfiles = async (urls: string[]): Promise<any[]> => {
-  // Attach Authorization header so Functions can identify current user for quotas
+/** Scrape tiers accepted by `/api/scrape` and `/api/scrape_company`. */
+export type ScrapeTier = 'full' | 'full_email';
+
+// Frontend: call the Worker instead of bundling apify-client in the browser.
+export const scrapeLinkedInProfiles = async (
+  urls: string[],
+  tier: ScrapeTier = 'full'
+): Promise<any[]> => {
+  // Attach Authorization header so the Worker can resolve the User's credential.
   const headers = authClient.getAuthHeaders();
 
   const res = await fetch('/api/scrape', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ urls }),
+    body: JSON.stringify({ urls, tier }),
   });
 
   if (!res.ok) {
@@ -32,6 +38,7 @@ export interface ScrapeCompanyOptions {
   companyUrl: string;
   maxItems: number;
   profileScraperMode: string;
+  tier?: ScrapeTier;
   jobTitles?: string[];
   locations?: string[];
   yearsAtCurrentCompanyIds?: string[];
@@ -59,7 +66,9 @@ export interface ScrapeCompanyResult {
     duplicateRate: number;
   };
   runId?: string;
+  jobId?: string;
   status?: string;
+  tier?: ScrapeTier;
   message?: string;
   error?: string;
 }
