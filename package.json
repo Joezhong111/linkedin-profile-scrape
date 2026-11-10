@@ -36,6 +36,9 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.68.0",
+    "@cloudflare/vitest-pool-workers": "^0.23.0",
+    "@cloudflare/workers-types": "^5.20261110.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
@@ -46,6 +49,8 @@
     "@typescript-eslint/eslint-plugin": "^8.52.0",
     "@typescript-eslint/parser": "^8.52.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/runner": "^4.1.12",
+    "@vitest/snapshot": "^4.1.12",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.8",
     "eslint": "^9.39.2",
@@ -60,7 +65,8 @@
     "prettier": "^3.7.4",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "vitest": "^4.0.16"
+    "vitest": "^4.1.12",
+    "wrangler": "^4.160.0"
   },
   "engines": {
     "node": ">=20.19.0",
