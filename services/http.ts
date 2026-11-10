@@ -1,14 +1,33 @@
 /**
- * Reads a failed API response as a human-readable message. Prefers the JSON
- * `{ error }` contract and falls back to the raw body.
+ * Reads an API error body for the SPA.
+ *
+ * Prefers a JSON `{ error }` payload and falls back to the raw response text.
  */
-export async function readApiError(res: Response): Promise<string> {
-  const body = await res.text();
+export async function readApiError(res: Response, fallback?: string): Promise<string> {
+  const defaultMessage = fallback ?? `Request failed (${res.status})`;
+  let body = '';
   try {
-    const parsed = JSON.parse(body) as { error?: unknown };
-    if (parsed && typeof parsed.error === 'string' && parsed.error) return parsed.error;
+    body = await res.text();
   } catch {
-    // Not a JSON body; use the text as-is.
+    return defaultMessage;
   }
-  return body || `Request failed (${res.status})`;
+
+  if (body) {
+    try {
+      const parsed: unknown = JSON.parse(body);
+      if (parsed !== null && typeof parsed === 'object' && 'error' in parsed) {
+        const value = parsed.error;
+        if (typeof value === 'string') {
+          const message = value.trim();
+          if (message) return message;
+        }
+      }
+    } catch {
+      // Not JSON; use the text body below.
+    }
+    const trimmed = body.trim();
+    if (trimmed) return trimmed;
+  }
+
+  return defaultMessage;
 }
