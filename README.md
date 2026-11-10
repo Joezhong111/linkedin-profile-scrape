@@ -66,13 +66,37 @@ This applies `drizzle-d1/` to the local D1 database used by `pnpm dev`.
 
 ### 3. Admin seed
 
+There is **no built-in default account or password**: D1 starts with an empty
+`users` table, and nothing is seeded automatically. Create the first Admin
+yourself:
+
 ```bash
 pnpm create-admin admin@example.com 'a-strong-password'
 ```
 
+For local development only, this repo's smoke flow uses:
+
+| Field    | Local example value    |
+| -------- | ---------------------- |
+| Email    | `admin@example.com`    |
+| Password | `local-admin-password` |
+
+That account exists in your local D1 only after you run the command below with
+those values. Never use it in preview or production, and never commit a real
+password.
+
+```bash
+# Local example (matches the smoke flow; safe for localhost only)
+pnpm create-admin admin@example.com 'local-admin-password'
+
+# Your own local Admin
+pnpm create-admin you@example.com 'a-strong-password'
+```
+
 Add `--remote` to seed a remote database and `--env preview|production` to
 choose the environment binding. Remote commands are human-gated (see
-[docs/deployment.md](docs/deployment.md)).
+[docs/deployment.md](docs/deployment.md)). Re-running the seed for an existing
+email resets that User's password and keeps their role.
 
 ### 4. Run
 
@@ -85,10 +109,10 @@ the Worker in workerd, so `/api/*` works with the same code path as production.
 
 ## Environment and secrets
 
-| Name                      | Where                          | Required | Purpose                                                        |
-| ------------------------- | ------------------------------ | -------- | -------------------------------------------------------------- |
+| Name                        | Where                           | Required | Purpose                                                          |
+| --------------------------- | ------------------------------- | -------- | ---------------------------------------------------------------- |
 | `CREDENTIAL_ENCRYPTION_KEY` | `.dev.vars` / `wrangler secret` | Yes      | Base64 32-byte AES-GCM key that encrypts user Scrape Credentials |
-| `VITE_GEMINI_API_KEY`     | `.env.local` (build-time)       | No       | Gemini key for the optional client-side AI summary              |
+| `VITE_GEMINI_API_KEY`       | `.env.local` (build-time)       | No       | Gemini key for the optional client-side AI summary               |
 
 Provider tokens are **not** Worker secrets. Each user configures an Apify or
 treg credential in Settings; the Worker encrypts it before storing it in D1
