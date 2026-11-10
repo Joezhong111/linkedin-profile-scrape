@@ -33,6 +33,7 @@ import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
 const MAX_PROFILE_URLS = 10;
 const DEFAULT_MAX_ITEMS = 25;
 const MAX_ITEMS = 100;
+const MAX_FILTER_VALUES = 50;
 const COMPANY_URL_PATTERN = /^https?:\/\/(?:[a-z0-9-]+\.)*linkedin\.com\/company\/[^\s]+$/i;
 const COMPANY_POLL_INTERVAL_MS = 3000;
 const COMPANY_POLL_MAX_ATTEMPTS = 200;
@@ -119,17 +120,29 @@ export default function Home() {
 
   // Input helpers
   const addJobTitle = () => {
-    if (jobTitleInput.trim()) {
-      setJobTitles([...jobTitles, jobTitleInput.trim()]);
-      setJobTitleInput('');
+    if (!jobTitleInput.trim()) return;
+    if (jobTitles.length >= MAX_FILTER_VALUES) {
+      setState((prev: ScraperState) => ({
+        ...prev,
+        error: `At most ${MAX_FILTER_VALUES} job titles can be used per company scrape.`,
+      }));
+      return;
     }
+    setJobTitles([...jobTitles, jobTitleInput.trim()]);
+    setJobTitleInput('');
   };
   const removeJobTitle = (i: number) => setJobTitles(jobTitles.filter((_, idx) => idx !== i));
   const addLocation = () => {
-    if (locationInput.trim()) {
-      setLocations([...locations, locationInput.trim()]);
-      setLocationInput('');
+    if (!locationInput.trim()) return;
+    if (locations.length >= MAX_FILTER_VALUES) {
+      setState((prev: ScraperState) => ({
+        ...prev,
+        error: `At most ${MAX_FILTER_VALUES} locations can be used per company scrape.`,
+      }));
+      return;
     }
+    setLocations([...locations, locationInput.trim()]);
+    setLocationInput('');
   };
   const removeLocation = (i: number) => setLocations(locations.filter((_, idx) => idx !== i));
   const toggleSet = (set: Set<string>, val: string) => {
