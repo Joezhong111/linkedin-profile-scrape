@@ -1,3 +1,8 @@
-# Copy to .dev.vars for local development. Never commit .dev.vars.
-# Base64-encoded 32-byte key used to encrypt user-supplied scrape credentials.
+# Copy to `.dev.vars` for local development. `.dev.vars` is gitignored and the
+# Cloudflare Vite plugin / `wrangler dev` read it. Never commit real values.
+#
+# REQUIRED: base64-encoded 32-byte AES-GCM key used to encrypt user-supplied
+# Scrape Credentials at rest. Generate one with:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+# In production set it with: wrangler secret put CREDENTIAL_ENCRYPTION_KEY
 CREDENTIAL_ENCRYPTION_KEY=
