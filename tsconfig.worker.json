@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "ES2024.Promise"],
     "types": ["@cloudflare/workers-types"],
     "jsx": "react-jsx",
     "strict": true,
