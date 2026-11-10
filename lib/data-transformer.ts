@@ -27,10 +27,9 @@ export const transformSkillsData = (rawData: any) => {
       let usageCount = 0;
       if (Array.isArray(skill.positions)) {
         // Check if positions is an array of strings like "16 experiences across..."
-        const firstPosition = skill.positions[0];
-        if (typeof firstPosition === 'string') {
-          const match = firstPosition.match(/(\d+)\s+experiences?/);
-          if (match?.[1]) usageCount = parseInt(match[1], 10);
+        if (skill.positions.length > 0 && typeof skill.positions[0] === 'string') {
+          const match = skill.positions[0].match(/(\d+)\s+experiences?/);
+          if (match) usageCount = parseInt(match[1]);
         } else {
           usageCount = skill.positions.length;
         }
@@ -51,7 +50,7 @@ export const transformSkillsData = (rawData: any) => {
 export const transformSkillsByCategory = (rawData: any) => {
   if (!rawData || !rawData.skills) return { tech: [], business: [], marketing: [], other: [] };
 
-  const categories: Record<'tech' | 'business' | 'marketing' | 'other', { name: string; value: number }[]> = {
+  const categories: { [key: string]: any[] } = {
     tech: [],
     business: [],
     marketing: [],

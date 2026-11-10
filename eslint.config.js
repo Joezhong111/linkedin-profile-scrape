@@ -1,3 +1,4 @@
+import js from '@eslint/js';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
@@ -27,7 +28,6 @@ const shared = {
         varsIgnorePattern: '^_',
       },
     ],
-    '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-floating-promises': 'off',
@@ -54,6 +54,7 @@ export default [
       'scripts',
     ],
   },
+  js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
     ignores: ['worker/**', 'test/**'],
@@ -67,6 +68,7 @@ export default [
         tsconfigRootDir: import.meta.dirname,
       },
       globals: {
+        React: 'readonly',
         window: 'readonly',
         document: 'readonly',
         navigator: 'readonly',
@@ -78,6 +80,11 @@ export default [
       },
     },
     ...shared,
+    rules: {
+      ...shared.rules,
+      // The frontend consumes dynamic provider payloads (`raw_data`).
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
   },
   {
     // Worker code uses its own TypeScript project (no DOM, Workers globals).
@@ -96,5 +103,10 @@ export default [
       },
     },
     ...shared,
+    rules: {
+      ...shared.rules,
+      // New backend code stays strictly typed.
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
   },
 ];
