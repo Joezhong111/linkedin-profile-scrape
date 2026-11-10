@@ -1,4 +1,4 @@
-// Authentication utilities for JWT-based auth
+// Authentication utilities for opaque Session Token auth
 
 export interface AuthUser {
   id: string;
@@ -28,8 +28,6 @@ class AuthClient {
 
       const user = JSON.parse(userStr) as AuthUser;
 
-      // Check if token is expired (basic check)
-      // In production, you'd want to validate the JWT
       return { user, token, expiresAt: '' };
     } catch {
       return null;
