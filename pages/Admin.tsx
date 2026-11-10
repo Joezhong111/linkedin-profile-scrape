@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import { getMe, getToggles, setToggles, adminCreateUser } from '../services/admin';
+import {
+  getMe,
+  getToggles,
+  setToggles,
+  adminCreateUser,
+  type AdminRole,
+} from '../services/admin';
 import UserManager from '../components/UserManager';
 
 export default function Admin() {
@@ -7,17 +13,16 @@ export default function Admin() {
   const [error, setError] = useState<string | null>(null);
   const [me, setMe] = useState<{ user_id?: string; role?: string; isAdmin?: boolean } | null>(null);
 
-  // toggles
+  // system settings
   const [registrationOpen, setRegistrationOpen] = useState(true);
-  const [googleOpen, setGoogleOpen] = useState(true);
   const [savingToggles, setSavingToggles] = useState(false);
 
   // create user
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [invite, setInvite] = useState(false);
-  const [initLimit, setInitLimit] = useState<string>('');
+  const [role, setRole] = useState<AdminRole>('user');
   const [creating, setCreating] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -26,10 +31,9 @@ export default function Admin() {
         const [meRes, toggles] = await Promise.all([getMe(), getToggles()]);
         setMe(meRes);
         setRegistrationOpen(Boolean(toggles?.registration_open));
-        setGoogleOpen(Boolean(toggles?.google_oauth_open));
         setError(null);
-      } catch (e: any) {
-        setError(e?.message || 'Load failed');
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Load failed');
       } finally {
         setLoading(false);
       }
@@ -39,9 +43,9 @@ export default function Admin() {
   const saveToggles = async () => {
     try {
       setSavingToggles(true);
-      await setToggles({ registration_open: registrationOpen, google_oauth_open: googleOpen });
-    } catch (e: any) {
-      alert(e?.message || 'Save failed');
+      await setToggles({ registration_open: registrationOpen });
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setSavingToggles(false);
     }
@@ -54,24 +58,18 @@ export default function Admin() {
         alert('Email 必填');
         return;
       }
-      if (!invite && !password) {
-        alert('未使用邀请时需设置初始密码');
+      if (!password) {
+        alert('初始密码必填');
         return;
       }
-      const monthly_limit = initLimit ? Number(initLimit) : undefined;
-      const res = await adminCreateUser({
-        email,
-        password: invite ? undefined : password,
-        invite,
-        monthly_limit,
-      });
-      alert('创建成功: ' + JSON.stringify(res));
+      const res = await adminCreateUser({ email, password, role });
+      alert('创建成功: ' + res.email);
       setEmail('');
       setPassword('');
-      setInvite(false);
-      setInitLimit('');
-    } catch (e: any) {
-      alert(e?.message || 'Create failed');
+      setRole('user');
+      setRefreshKey((key) => key + 1);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Create failed');
     } finally {
       setCreating(false);
     }
@@ -108,15 +106,6 @@ export default function Admin() {
             />
             <span>Registration Open</span>
           </label>
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
-            <input
-              type="checkbox"
-              checked={googleOpen}
-              onChange={(e) => setGoogleOpen(e.target.checked)}
-              className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
-            />
-            <span>Google OAuth Open</span>
-          </label>
           <button
             onClick={saveToggles}
             disabled={savingToggles}
@@ -141,24 +130,16 @@ export default function Admin() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            disabled={invite}
-          />
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
-            <input
-              type="checkbox"
-              checked={invite}
-              onChange={(e) => setInvite(e.target.checked)}
-              className="rounded border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-blue-600"
-            />
-            send invite
-          </label>
-          <input
-            placeholder="monthly limit (optional)"
-            value={initLimit}
-            onChange={(e) => setInitLimit(e.target.value)}
             className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as AdminRole)}
+            className="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
         </div>
         <div className="mt-3">
           <button
@@ -171,7 +152,7 @@ export default function Admin() {
         </div>
       </section>
 
-      <UserManager />
+      <UserManager refreshKey={refreshKey} />
     </main>
   );
 }
