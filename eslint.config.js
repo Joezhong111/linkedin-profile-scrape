@@ -43,10 +43,7 @@ export default [
     ignores: [
       'dist',
       'node_modules',
-      '.netlify',
       '.wrangler',
-      'netlify',
-      'drizzle',
       'drizzle-d1',
       'worker-configuration.d.ts',
       '*.config.js',

@@ -48,10 +48,6 @@ doc/
 *.swo
 *~
 
-# Local Netlify folder
-.netlify
-netlify/state.json
-
 # Build/test caches and tool artifacts
 coverage/
 .eslintcache

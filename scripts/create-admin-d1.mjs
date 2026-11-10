@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Seed an Admin User + role directly into D1. No quota row is created.
+// Seed an Admin User + role directly into D1.
 //
 //   node scripts/create-admin-d1.mjs <email> <password> [--remote] [--env <name>]
 //

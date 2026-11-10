@@ -4,8 +4,7 @@ dist
 build
 
 # Generated files
-netlify
-drizzle
+drizzle-d1
 
 # Environment files
 .env
