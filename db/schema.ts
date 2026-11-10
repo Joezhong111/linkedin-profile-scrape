@@ -1,63 +1,53 @@
-import {
-  pgTable,
-  uuid,
-  timestamp,
-  text,
-  jsonb,
-  integer,
-  bigint,
-  boolean,
-  numeric,
-  primaryKey,
-  uniqueIndex,
-  index,
-} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import {
+  check,
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
+
+const uuid = (name: string) =>
+  text(name).$defaultFn(() => crypto.randomUUID());
+
+const now = (name: string) =>
+  text(name).$defaultFn(() => new Date().toISOString());
 
 // ============================================
 // Authentication & User Management
 // ============================================
 
-// Users table - replaces Supabase Auth
-export const users = pgTable('users', {
-  id: uuid('id')
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
+export const users = sqliteTable('users', {
+  id: uuid('id').primaryKey(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   fullName: text('full_name'),
-  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-    .default(sql`timezone('utc'::text, now())`)
-    .notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
-    .default(sql`timezone('utc'::text, now())`)
-    .notNull(),
-  emailVerified: boolean('email_verified').notNull().default(false),
-  lastLoginAt: timestamp('last_login_at', {
-    withTimezone: true,
-    mode: 'string',
-  }),
+  createdAt: now('created_at').notNull(),
+  updatedAt: now('updated_at').notNull(),
+  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+  lastLoginAt: text('last_login_at'),
+  // One active provider and one encrypted Scrape Credential per User.
+  activeProvider: text('active_provider', { enum: ['apify', 'treg'] }),
+  scrapeCredentialCiphertext: text('scrape_credential_ciphertext'),
+  scrapeCredentialIv: text('scrape_credential_iv'),
+  scrapeCredentialValidatedAt: text('scrape_credential_validated_at'),
 });
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
-// Sessions table for JWT token management
-export const sessions = pgTable('sessions', {
-  id: uuid('id')
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
-  userId: uuid('user_id')
+// Sessions table for opaque session tokens.
+export const sessions = sqliteTable('sessions', {
+  id: uuid('id').primaryKey(),
+  userId: text('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   token: text('token').notNull().unique(),
-  expiresAt: timestamp('expires_at', {
-    withTimezone: true,
-    mode: 'string',
-  }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-    .default(sql`timezone('utc'::text, now())`)
-    .notNull(),
+  expiresAt: text('expires_at').notNull(),
+  createdAt: now('created_at').notNull(),
 });
 
 export type Session = typeof sessions.$inferSelect;
@@ -66,18 +56,13 @@ export type NewSession = typeof sessions.$inferInsert;
 // ============================================
 // LinkedIn Profiles
 // ============================================
-export const linkedinProfiles = pgTable(
+export const linkedinProfiles = sqliteTable(
   'linkedin_profiles',
   {
-    id: uuid('id')
-      .default(sql`gen_random_uuid()`)
-      .notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-      .default(sql`timezone('utc'::text, now())`)
-      .notNull(),
+    id: uuid('id').primaryKey(),
+    createdAt: now('created_at').notNull(),
 
-    // Owner - references users table
-    ownerId: uuid('owner_id')
+    ownerId: text('owner_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
 
@@ -88,7 +73,7 @@ export const linkedinProfiles = pgTable(
     about: text('about'),
     photoUrl: text('photo_url'),
 
-    rawData: jsonb('raw_data'),
+    rawData: text('raw_data', { mode: 'json' }),
     aiSummary: text('ai_summary'),
 
     linkedinPublicUrl: text('linkedin_public_url'),
@@ -98,8 +83,7 @@ export const linkedinProfiles = pgTable(
     lastName: text('last_name'),
 
     connections: integer('connections'),
-    // followers is BIGINT in DB. If you expect values < 2^53-1, using mode: 'number' is convenient.
-    followers: bigint('followers', { mode: 'number' }),
+    followers: integer('followers', { mode: 'number' }),
 
     email: text('email'),
     mobileNumber: text('mobile_number'),
@@ -112,14 +96,14 @@ export const linkedinProfiles = pgTable(
     profilePicHighQuality: text('profile_pic_high_quality'),
     backgroundPic: text('background_pic'),
 
-    isPremium: boolean('is_premium'),
-    isVerified: boolean('is_verified'),
-    isJobSeeker: boolean('is_job_seeker'),
-    isRetired: boolean('is_retired'),
-    isCreator: boolean('is_creator'),
-    isInfluencer: boolean('is_influencer'),
-    isCurrentlyEmployed: boolean('is_currently_employed'),
-    openConnection: boolean('open_connection'),
+    isPremium: integer('is_premium', { mode: 'boolean' }),
+    isVerified: integer('is_verified', { mode: 'boolean' }),
+    isJobSeeker: integer('is_job_seeker', { mode: 'boolean' }),
+    isRetired: integer('is_retired', { mode: 'boolean' }),
+    isCreator: integer('is_creator', { mode: 'boolean' }),
+    isInfluencer: integer('is_influencer', { mode: 'boolean' }),
+    isCurrentlyEmployed: integer('is_currently_employed', { mode: 'boolean' }),
+    openConnection: integer('open_connection', { mode: 'boolean' }),
 
     urn: text('urn'),
 
@@ -130,7 +114,7 @@ export const linkedinProfiles = pgTable(
     jobTitle: text('job_title'),
     jobStartedOn: text('job_started_on'),
     jobLocation: text('job_location'),
-    jobStillWorking: boolean('job_still_working'),
+    jobStillWorking: integer('job_still_working', { mode: 'boolean' }),
 
     companyName: text('company_name'),
     companyIndustry: text('company_industry'),
@@ -140,31 +124,24 @@ export const linkedinProfiles = pgTable(
     companySize: text('company_size'),
 
     currentJobDuration: text('current_job_duration'),
-    currentJobDurationYears: numeric('current_job_duration_years', {
-      mode: 'number',
-    }),
+    currentJobDurationYears: real('current_job_duration_years'),
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.id], name: 'linkedin_profiles_pkey' }),
-    uxOwnerUrl: uniqueIndex('ux_linkedin_profiles_owner_url').on(t.ownerId, t.profileUrl),
-  })
+  (t) => [uniqueIndex('ux_linkedin_profiles_owner_url').on(t.ownerId, t.profileUrl)]
 );
+
+export type LinkedInProfile = typeof linkedinProfiles.$inferSelect;
+export type NewLinkedInProfile = typeof linkedinProfiles.$inferInsert;
 
 // ============================================
 // LinkedIn Leads (from Company Scrape)
 // ============================================
-export const linkedinLeads = pgTable(
+export const linkedinLeads = sqliteTable(
   'linkedin_leads',
   {
-    id: uuid('id')
-      .default(sql`gen_random_uuid()`)
-      .notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-      .default(sql`timezone('utc'::text, now())`)
-      .notNull(),
+    id: uuid('id').primaryKey(),
+    createdAt: now('created_at').notNull(),
 
-    // Owner - references users table
-    ownerId: uuid('owner_id')
+    ownerId: text('owner_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
 
@@ -175,7 +152,7 @@ export const linkedinLeads = pgTable(
     about: text('about'),
     photoUrl: text('photo_url'),
 
-    rawData: jsonb('raw_data'),
+    rawData: text('raw_data', { mode: 'json' }),
     aiSummary: text('ai_summary'),
 
     linkedinPublicUrl: text('linkedin_public_url'),
@@ -185,7 +162,7 @@ export const linkedinLeads = pgTable(
     lastName: text('last_name'),
 
     connections: integer('connections'),
-    followers: bigint('followers', { mode: 'number' }),
+    followers: integer('followers', { mode: 'number' }),
 
     email: text('email'),
     mobileNumber: text('mobile_number'),
@@ -195,230 +172,115 @@ export const linkedinLeads = pgTable(
     companyIndustry: text('company_industry'),
     companyLinkedin: text('company_linkedin'),
 
-    // Specifically track which company URL this lead came from
     sourceCompanyUrl: text('source_company_url'),
     currentJobDuration: text('current_job_duration'),
+    currentJobDurationYears: real('current_job_duration_years'),
     jobPeriod: text('job_period'),
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.id], name: 'linkedin_leads_pkey' }),
-    uxOwnerUrl: uniqueIndex('ux_linkedin_leads_owner_url').on(t.ownerId, t.profileUrl),
-  })
+  (t) => [uniqueIndex('ux_linkedin_leads_owner_url').on(t.ownerId, t.profileUrl)]
 );
 
 export type LinkedInLead = typeof linkedinLeads.$inferSelect;
 export type NewLinkedInLead = typeof linkedinLeads.$inferInsert;
 
-export type LinkedInProfile = typeof linkedinProfiles.$inferSelect;
-export type NewLinkedInProfile = typeof linkedinProfiles.$inferInsert;
-
 // ============================================
-// RBAC & Quotas Schema
+// RBAC & Settings
 // ============================================
 
-export const userRoles = pgTable('user_roles', {
-  userId: uuid('user_id')
+export const userRoles = sqliteTable('user_roles', {
+  userId: text('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
   role: text('role', { enum: ['admin', 'user'] })
     .notNull()
     .default('user'),
-  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-    .default(sql`timezone('utc'::text, now())`)
-    .notNull(),
+  createdAt: now('created_at').notNull(),
 });
 
 export type UserRole = typeof userRoles.$inferSelect;
 export type NewUserRole = typeof userRoles.$inferInsert;
 
-export const appSettings = pgTable('app_settings', {
-  id: uuid('id')
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
-  registrationOpen: boolean('registration_open').notNull().default(true),
-  googleOauthOpen: boolean('google_oauth_open').notNull().default(true),
-  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
-    .default(sql`timezone('utc'::text, now())`)
-    .notNull(),
-});
-
-export const monthlyQuotas = pgTable('monthly_quotas', {
-  userId: uuid('user_id')
-    .primaryKey()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  monthlyLimit: integer('monthly_limit').notNull().default(0),
-  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
-    .default(sql`timezone('utc'::text, now())`)
-    .notNull(),
-});
-
-export type MonthlyQuota = typeof monthlyQuotas.$inferSelect;
-export type NewMonthlyQuota = typeof monthlyQuotas.$inferInsert;
-
-export const monthlyUsage = pgTable(
-  'monthly_usage',
+export const appSettings = sqliteTable(
+  'app_settings',
   {
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    periodStart: timestamp('period_start', { withTimezone: true, mode: 'string' }).notNull(),
-    periodEnd: timestamp('period_end', { withTimezone: true, mode: 'string' }).notNull(),
-    usedCount: integer('used_count').notNull().default(0),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
-      .default(sql`timezone('utc'::text, now())`)
-      .notNull(),
+    id: text('id').primaryKey().default('global'),
+    registrationOpen: integer('registration_open', { mode: 'boolean' }).notNull().default(true),
+    googleOauthOpen: integer('google_oauth_open', { mode: 'boolean' }).notNull().default(true),
+    updatedAt: now('updated_at').notNull(),
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.userId, t.periodStart] }),
-  })
+  (t) => [check('app_settings_singleton', sql`${t.id} = 'global'`)]
 );
 
-export type MonthlyUsage = typeof monthlyUsage.$inferSelect;
-export type NewMonthlyUsage = typeof monthlyUsage.$inferInsert;
+export type AppSettings = typeof appSettings.$inferSelect;
+export type NewAppSettings = typeof appSettings.$inferInsert;
 
 // ============================================
-// Tags System (for Leads)
+// Scrape Jobs
 // ============================================
-
-export const tags = pgTable('tags', {
-  id: uuid('id')
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
-  ownerId: uuid('owner_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  color: text('color').notNull().default('#3b82f6'), // Default blue
-  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-    .default(sql`timezone('utc'::text, now())`)
-    .notNull(),
-});
-
-export type Tag = typeof tags.$inferSelect;
-export type NewTag = typeof tags.$inferInsert;
-
-// Junction table for many-to-many relationship between leads and tags
-export const leadTags = pgTable(
-  'lead_tags',
-  {
-    leadId: uuid('lead_id')
-      .notNull()
-      .references(() => linkedinLeads.id, { onDelete: 'cascade' }),
-    tagId: uuid('tag_id')
-      .notNull()
-      .references(() => tags.id, { onDelete: 'cascade' }),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-      .default(sql`timezone('utc'::text, now())`)
-      .notNull(),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.leadId, t.tagId] }),
-  })
-);
-
-export type LeadTag = typeof leadTags.$inferSelect;
-export type NewLeadTag = typeof leadTags.$inferInsert;
-
-// ============================================
-// Scrape Jobs (Apify Task Tracking)
-// ============================================
-export const scrapeJobs = pgTable(
+export const scrapeJobs = sqliteTable(
   'scrape_jobs',
   {
-    id: uuid('id')
-      .default(sql`gen_random_uuid()`)
-      .notNull(),
-    ownerId: uuid('owner_id')
+    id: uuid('id').primaryKey(),
+    ownerId: text('owner_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    apifyRunId: text('apify_run_id'),
+    provider: text('provider', { enum: ['apify', 'treg'] }).notNull(),
+    providerJobRef: text('provider_job_ref'),
     jobType: text('job_type').notNull(),
-    inputData: jsonb('input_data').notNull(),
-    status: text('status').notNull().default('pending'),
-    progress: integer('progress').default(0),
-    resultCount: integer('result_count').default(0),
+    inputSnapshot: text('input_snapshot', { mode: 'json' }).notNull(),
+    status: text('status', { enum: ['pending', 'running', 'succeeded', 'failed'] })
+      .notNull()
+      .default('pending'),
+    progress: integer('progress').notNull().default(0),
+    resultCount: integer('result_count').notNull().default(0),
     errorMessage: text('error_message'),
-    retryCount: integer('retry_count').default(0),
-    maxRetries: integer('max_retries').default(3),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-      .default(sql`timezone('utc'::text, now())`)
-      .notNull(),
-    startedAt: timestamp('started_at', {
-      withTimezone: true,
-      mode: 'string',
-    }),
-    completedAt: timestamp('completed_at', {
-      withTimezone: true,
-      mode: 'string',
-    }),
+    createdAt: now('created_at').notNull(),
+    startedAt: text('started_at'),
+    completedAt: text('completed_at'),
   },
-  (t) => ({
-    idxApifyRunId: index('idx_scrape_jobs_apify_run_id').on(t.apifyRunId),
-    idxOwnerId: index('idx_scrape_jobs_owner_id').on(t.ownerId),
-    idxStatus: index('idx_scrape_jobs_status').on(t.status),
-  })
+  (t) => [
+    index('idx_scrape_jobs_owner_id').on(t.ownerId),
+    index('idx_scrape_jobs_status').on(t.status),
+  ]
 );
 
 export type ScrapeJob = typeof scrapeJobs.$inferSelect;
 export type NewScrapeJob = typeof scrapeJobs.$inferInsert;
 
-// ============================================
-// Lead Positions (Work Experience)
-// ============================================
-export const leadPositions = pgTable(
-  'lead_positions',
+export const scrapeJobItems = sqliteTable(
+  'scrape_job_items',
   {
-    id: uuid('id')
-      .default(sql`gen_random_uuid()`)
-      .notNull(),
-    leadId: uuid('lead_id')
+    jobId: text('job_id')
       .notNull()
-      .references(() => linkedinLeads.id, { onDelete: 'cascade' }),
-    title: text('title').notNull(),
-    companyName: text('company_name'),
-    companyUrl: text('company_url'),
-    companyIndustry: text('company_industry'),
-    startDate: text('start_date'),
-    endDate: text('end_date'),
-    isCurrent: boolean('is_current').default(false),
-    description: text('description'),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-      .default(sql`timezone('utc'::text, now())`)
-      .notNull(),
+      .references(() => scrapeJobs.id, { onDelete: 'cascade' }),
+    idx: integer('idx').notNull(),
+    data: text('data', { mode: 'json' }).notNull(),
+    createdAt: now('created_at').notNull(),
   },
-  (t) => ({
-    idxLeadId: index('idx_lead_positions_lead_id').on(t.leadId),
-  })
+  (t) => [primaryKey({ columns: [t.jobId, t.idx] })]
 );
 
-export type LeadPosition = typeof leadPositions.$inferSelect;
-export type NewLeadPosition = typeof leadPositions.$inferInsert;
+export type ScrapeJobItem = typeof scrapeJobItems.$inferSelect;
+export type NewScrapeJobItem = typeof scrapeJobItems.$inferInsert;
 
 // ============================================
 // Company Scrape History
 // ============================================
-export const companyScrapeHistory = pgTable(
+export const companyScrapeHistory = sqliteTable(
   'company_scrape_history',
   {
-    id: uuid('id')
-      .default(sql`gen_random_uuid()`)
-      .notNull()
-      .primaryKey(),
-    ownerId: uuid('owner_id')
+    id: uuid('id').primaryKey(),
+    ownerId: text('owner_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     companyUrl: text('company_url').notNull(),
     maxItemsRequested: integer('max_items_requested').notNull(),
     itemsReturned: integer('items_returned').notNull(),
     itemsSaved: integer('items_saved').notNull(),
-    scrapedAt: timestamp('scraped_at', { withTimezone: true, mode: 'string' })
-      .default(sql`timezone('utc'::text, now())`)
-      .notNull(),
-    filtersUsed: jsonb('filters_used'),
+    scrapedAt: now('scraped_at').notNull(),
+    filtersUsed: text('filters_used', { mode: 'json' }),
   },
-  (t) => ({
-    idxOwnerCompany: index('idx_company_scrape_history_owner_company').on(t.ownerId, t.companyUrl),
-  })
+  (t) => [index('idx_company_scrape_history_owner_company').on(t.ownerId, t.companyUrl)]
 );
 
 export type CompanyScrapeHistory = typeof companyScrapeHistory.$inferSelect;

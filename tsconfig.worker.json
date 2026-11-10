@@ -27,6 +27,6 @@
     "lib/**/*.ts",
     "worker-configuration.d.ts"
   ],
-  // Frontend-only (DOM) and Netlify-only (Node crypto, node-postgres) libs.
-  "exclude": ["lib/auth.ts", "lib/auth-server.ts", "lib/data-transformer.ts"]
+  // Frontend-only (DOM) libs.
+  "exclude": ["lib/auth.ts", "lib/data-transformer.ts"]
 }

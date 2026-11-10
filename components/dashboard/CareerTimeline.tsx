@@ -1,6 +1,3 @@
-import React from 'react';
-import { Briefcase } from 'lucide-react';
-
 interface CareerTimelineProps {
   experiences: any[];
 }

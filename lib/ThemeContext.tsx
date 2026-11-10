@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -42,6 +42,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       return () => mediaQuery.removeEventListener('change', handler);
     } else {
       applyTheme(theme === 'dark');
+      return undefined;
     }
   }, [theme]);
 
@@ -57,6 +58,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- provider and its hook are intentionally co-located
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {

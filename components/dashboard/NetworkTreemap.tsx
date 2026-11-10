@@ -60,8 +60,9 @@ const NetworkTreemap: React.FC<NetworkTreemapProps> = ({ data }) => {
             className="text-white dark:text-slate-800"
             fill="#8884d8"
             onClick={(data) => {
-              if (data && data.url) {
-                window.open(data.url, '_blank');
+              const url = (data as { url?: unknown } | undefined)?.url;
+              if (typeof url === 'string') {
+                window.open(url, '_blank');
               }
             }}
           >

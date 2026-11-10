@@ -1,11 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { LinkedInProfile } from '../types';
-import {
-  fetchAllLeads,
-  deleteLead,
-  batchDeleteLeads,
-  LeadsPaginatedResponse,
-} from '../services/api';
+import { fetchAllLeads, deleteLead, batchDeleteLeads } from '../services/api';
 import {
   MagnifyingGlassIcon,
   TrashIcon,
@@ -17,8 +12,6 @@ import {
   BriefcaseIcon,
   FunnelIcon,
   XMarkIcon,
-  EllipsisVerticalIcon,
-  QuestionMarkCircleIcon,
   CommandLineIcon,
 } from '@heroicons/react/24/outline';
 import LeadDetails from '../components/LeadDetails';
@@ -86,13 +79,13 @@ function LeadCard({
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
+    startX.current = e.touches[0]?.clientX ?? 0;
     setIsSwiping(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isSwiping) return;
-    const diff = startX.current - e.touches[0].clientX;
+    const diff = startX.current - (e.touches[0]?.clientX ?? 0);
     // Only allow left swipe, max 100px
     setSwipeX(Math.min(Math.max(diff, 0), 100));
   };
@@ -340,7 +333,7 @@ export default function Leads() {
     setSelectedIds(newSet);
   };
 
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
     if (!window.confirm(`删除 ${selectedIds.size} 条选中的记录?`)) return;
 
@@ -352,7 +345,7 @@ export default function Leads() {
     } catch (e: any) {
       alert('批量删除失败: ' + e.message);
     }
-  };
+  }, [selectedIds, all]);
 
   const exportSelected = () => {
     const selectedLeads = all.filter((p) => selectedIds.has(p.id!));
@@ -392,7 +385,9 @@ export default function Leads() {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-    } catch {}
+    } catch {
+      // Clipboard access can be denied; copying is best-effort.
+    }
   };
 
   // Keyboard Shortcuts Handler
@@ -447,7 +442,7 @@ export default function Leads() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [all, selectedIds, selectedLead, showFilters, showShortcuts]);
+  }, [all, selectedIds, selectedLead, showFilters, showShortcuts, handleBatchDelete]);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 sm:mt-6 pb-24 sm:pb-20">

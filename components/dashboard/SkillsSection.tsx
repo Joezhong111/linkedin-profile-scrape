@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface SkillsSectionProps {
-  skills: string[];
+  skills: Array<{ title?: string }>;
 }
 
 const SkillsSection: React.FC<SkillsSectionProps> = ({ skills }) => {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline';
 
 interface Props {

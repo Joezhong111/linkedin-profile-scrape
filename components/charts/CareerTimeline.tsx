@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   ComposedChart,
   Bar,
@@ -72,7 +71,8 @@ export default function CareerTimeline({ data }: Props) {
               allowEscapeViewBox={{ x: true, y: true }}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
-                  const d = payload[0].payload;
+                  const d = payload[0]?.payload;
+                  if (!d) return null;
                   return (
                     <div className="bg-white dark:bg-slate-800 p-3 border border-gray-100 dark:border-slate-700 shadow-lg rounded-lg text-xs">
                       <p className="font-bold text-gray-800 dark:text-white">{d.role}</p>
