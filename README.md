@@ -1,49 +1,32 @@
 # LinkedIn Insights Pro
 
-A LinkedIn profile scraping and analytics application built with React, Vite, Netlify Functions, Neon PostgreSQL, and Drizzle ORM.
+A LinkedIn people-data app: signed-in users scrape profiles and company
+employees with their own provider credential, review the results, and save the
+people they need.
 
-> **Cloudflare deployment:** the Worker + D1 deployment path, environments,
-> secrets, and measured limits are documented in
-> [docs/deployment.md](docs/deployment.md).
+The whole application runs as one Cloudflare Worker. The Worker serves the
+React SPA through a static-assets binding, handles every `/api/*` route, and
+stores data in a D1 (SQLite) database. There is no separate application server.
 
-## Features
+## Stack
 
-- 🔎 **LinkedIn Scraping** - Scrape profiles and company employees via Apify Actors
-- 💾 **Neon PostgreSQL** - Managed database with Drizzle ORM for schema and migrations
-- 🔐 **Custom JWT Auth** - Secure authentication with user sessions and RBAC (user_roles)
-- 📊 **Profile Analytics** - Career timeline, network visualization, skills analysis
-- 👥 **Leads Management** - Track and manage potential leads from company scrapes
-- 🏷️ **Tags System** - Organize leads with custom tags and colors
-- 📈 **Usage Quotas** - Per-user monthly quotas with tracking
-- 🌙 **Dark Mode** - Full dark theme support with toggle
-- 📱 **Mobile Optimized** - Responsive design with touch-friendly UI
-- ⚡ **Code Splitting** - React.lazy() for optimized loading
-- 🛡️ **Error Handling** - ErrorBoundary for graceful error recovery
-- ✅ **Input Validation** - Zod schemas for API requests
-- 🧪 **Testing** - Vitest for unit testing
-- 🎨 **Code Quality** - ESLint and Prettier configured
-
-## Tech Stack
-
-- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, Heroicons
-- **Backend**: Netlify Functions (TypeScript)
-- **Database**: Neon PostgreSQL
-- **ORM**: Drizzle ORM
-- **Authentication**: Custom JWT (localStorage-based)
-- **Scraping**: Apify Actors
-- **AI Analysis**: Google Gemini (optional)
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, Heroicons, Recharts
+- **Runtime**: one Cloudflare Worker with a static-assets binding
+- **Database**: Cloudflare D1 (SQLite) through Drizzle ORM (`sqlite-core`)
+- **Auth**: opaque session tokens stored in D1; PBKDF2-SHA512 password hashes
+- **Scraping**: Apify and treg, called over HTTPS from the Worker
+- **Credentials**: bring-your-own-key, encrypted at rest with AES-GCM
+- **AI summary**: Google Gemini, optional, called from the browser
 
 ## Requirements
 
 - Node.js 20.19+
 - pnpm 9+
-- Neon account (database)
-- Apify account (scraping)
-- Netlify account (hosting)
+- A Cloudflare account with Workers and D1 available (for deploys)
+- An Apify or treg account for each user who scrapes; Apify requires a paid
+  plan to run its actors through the API
 
-## Quick Start
-
-### 1. Clone and Install
+## Quick start
 
 ```bash
 git clone <your-repo-url>
@@ -51,344 +34,258 @@ cd linkedin-profile-scrape
 pnpm install
 ```
 
-### 2. Environment Variables
+### 1. Local secrets
 
-Copy `.env.example` to `.env.local` and fill in your credentials:
+Copy the Worker secret example and generate an encryption key:
+
+```bash
+cp .dev.vars.example .dev.vars
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+# paste the value after CREDENTIAL_ENCRYPTION_KEY= in .dev.vars
+```
+
+`.dev.vars` is gitignored. Never reuse the local key in preview or production.
+
+The optional browser-side Gemini key goes in `.env.local`:
 
 ```bash
 cp .env.example .env.local
+# set VITE_GEMINI_API_KEY
 ```
 
-Required variables:
+`.env.local` holds only `VITE_GEMINI_API_KEY`. Scrape credentials are not
+environment variables; each user saves their own in Settings.
 
-- `DATABASE_URL` - Neon PostgreSQL connection string
-- `APIFY_TOKEN` - Apify API token
-- `JWT_SECRET` - Secret for JWT signing (min 32 chars)
-
-Optional variables:
-
-- `VITE_GEMINI_API_KEY` - Google Gemini API key for AI analysis
-
-### 3. Database Setup
-
-Push schema to Neon:
+### 2. Local database
 
 ```bash
+pnpm db:migrate:local
+```
+
+This applies `drizzle-d1/` to the local D1 database used by `pnpm dev`.
+
+### 3. Admin seed
+
+```bash
+pnpm create-admin admin@example.com 'a-strong-password'
+```
+
+Add `--remote` to seed a remote database and `--env preview|production` to
+choose the environment binding. Remote commands are human-gated (see
+[docs/deployment.md](docs/deployment.md)).
+
+### 4. Run
+
+```bash
+pnpm dev
+```
+
+Open http://localhost:5173. Vite serves the SPA and the Cloudflare plugin runs
+the Worker in workerd, so `/api/*` works with the same code path as production.
+
+## Environment and secrets
+
+| Name                      | Where                          | Required | Purpose                                                        |
+| ------------------------- | ------------------------------ | -------- | -------------------------------------------------------------- |
+| `CREDENTIAL_ENCRYPTION_KEY` | `.dev.vars` / `wrangler secret` | Yes      | Base64 32-byte AES-GCM key that encrypts user Scrape Credentials |
+| `VITE_GEMINI_API_KEY`     | `.env.local` (build-time)       | No       | Gemini key for the optional client-side AI summary              |
+
+Provider tokens are **not** Worker secrets. Each user configures an Apify or
+treg credential in Settings; the Worker encrypts it before storing it in D1
+and never returns it to the browser. Production has no shared Apify or treg
+token.
+
+`.env.example` and `.dev.vars.example` are the source of truth for the two
+variables above. Do not add provider tokens to either file.
+
+## Commands
+
+| Command                  | Description                                                  |
+| ------------------------ | ------------------------------------------------------------ |
+| `pnpm dev`               | SPA + Worker in workerd (port 5173)                          |
+| `pnpm build`             | Production build with the top-level Wrangler config          |
+| `pnpm typecheck`         | Type-check the app and the Worker                            |
+| `pnpm lint`              | ESLint with zero warnings allowed                            |
+| `pnpm lint:fix`          | ESLint with automatic fixes                                  |
+| `pnpm format`            | Format with Prettier                                         |
+| `pnpm test`              | Vitest (workerd runtime); use `pnpm test --run` for one pass |
+| `pnpm db:generate`       | Generate a new D1 migration from `db/schema.ts`              |
+| `pnpm db:migrate:local`  | Apply migrations to local D1                                 |
+| `pnpm db:migrate`        | Apply migrations to the remote top-level D1 database         |
+| `pnpm db:health`         | Run `SELECT 1` against the remote D1 database                |
+| `pnpm db:smoke`          | Schema assertions against local D1                           |
+| `pnpm create-admin`      | Seed an Admin User and role in D1                            |
+| `pnpm bench:limits`      | Measure Workers Free D1/subrequest/CPU headroom              |
+| `pnpm deploy`            | Build and deploy with the top-level Wrangler config          |
+| `pnpm deploy:preview`    | Build with the preview D1 binding and deploy                 |
+| `pnpm deploy:production` | Build with the production D1 binding and deploy              |
+
+`pnpm deploy` targets the top-level configuration, whose database id is a
+placeholder; use `deploy:preview` or `deploy:production` for real deployments.
+All three commands remove a copied `.dev.vars` from the build output before
+Wrangler uploads it.
+
+## D1 migrations
+
+Schema lives in `db/schema.ts` (Drizzle `sqlite-core`). Generated SQL and
+snapshots live in `drizzle-d1/`; the Worker config points D1 at that directory.
+
+```bash
+# Change db/schema.ts, then generate SQL
 pnpm db:generate
-pnpm exec drizzle-kit push
+
+# Apply to local D1 (top-level config)
+pnpm db:migrate:local
+
+# Apply to a deployed environment (human-gated)
+pnpm exec wrangler d1 migrations apply DB --remote --env preview --config wrangler.jsonc
+pnpm exec wrangler d1 migrations apply DB --remote --env production --config wrangler.jsonc
 ```
 
-Or use migrations:
+Use one migration ledger: all environment databases apply the same
+`drizzle-d1/` files in order. Never edit an applied migration; generate a new
+one instead.
+
+## Deploy
+
+Preview and production are separate Workers with separate D1 databases.
+`wrangler.jsonc` keeps the top-level config for local tests and `pnpm dev`, and
+declares `env.preview` / `env.production` with their own D1 bindings.
 
 ```bash
-pnpm db:generate
-pnpm db:migrate
+# Verify the bundle without uploading
+pnpm build
+pnpm exec wrangler deploy --dry-run
+
+CLOUDFLARE_ENV=preview pnpm build
+pnpm exec wrangler deploy --dry-run --env preview
+
+CLOUDFLARE_ENV=production pnpm build
+pnpm exec wrangler deploy --dry-run --env production
 ```
 
-### 4. Create Admin User
+The full sequence — creating D1 databases, replacing placeholder ids, setting
+`CREDENTIAL_ENCRYPTION_KEY`, applying remote migrations, seeding admins,
+deploying, pointing the domain, and running the smoke checklist — is in
+[docs/deployment.md](docs/deployment.md). Those steps require Cloudflare
+credentials and are deliberately manual.
 
-```bash
-node scripts/create-admin.js admin@example.com your_password
-```
+## Rollback
 
-### 5. Run Development Server
+- **Worker**: redeploy the last known-good commit, or roll back a Worker
+  version with `pnpm exec wrangler rollback --env production --config wrangler.jsonc`.
+- **Code reference**: the `pre-cloudflare` tag marks the last commit before the
+  Worker/D1 migration. It is a code-archaeology marker, not a supported
+  second deployment target.
+- **Data**: there is no data rollback. Records written to D1 after cutover stay
+  in D1; the old database rows are not imported or exported by this project.
 
-```bash
-pnpm dev:netlify
-```
+## Project layout
 
-Open http://localhost:8888
-
-**Note**: Use `pnpm dev:netlify` for full-stack development. `pnpm dev` only serves frontend on port 5173 and won't proxy API calls.
-
-## Available Scripts
-
-| Command                 | Description                                   |
-| ----------------------- | --------------------------------------------- |
-| `pnpm dev`           | Vite frontend only (port 5173)                |
-| `pnpm dev:netlify`   | Full stack with Netlify Functions (port 8888) |
-| `pnpm build`         | Production build                              |
-| `pnpm preview`       | Preview production build                      |
-| `pnpm db:generate`   | Generate Drizzle migrations                   |
-| `pnpm db:migrate`    | Run database migrations                       |
-| `pnpm db:push`       | Push schema to database (dev only)            |
-| `pnpm db:studio`     | Open Drizzle Studio UI                        |
-| `pnpm db:health`     | Check database connection                     |
-| `pnpm test`          | Run tests with Vitest                         |
-| `pnpm test:ui`       | Run tests with UI                             |
-| `pnpm test:coverage` | Run tests with coverage report                |
-| `pnpm lint`          | Run ESLint (fails on warnings)                |
-| `pnpm lint:fix`      | Auto-fix ESLint issues                        |
-| `pnpm format`        | Format code with Prettier                     |
-| `pnpm format:check`  | Check code formatting                         |
-
-## API Endpoints
-
-### Authentication
-
-- `POST /api/auth/signin` - User login
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/signout` - User logout
-- `GET /api/auth/me` - Get current user
-
-### Profiles
-
-- `GET /api/profiles/list` - List user's profiles (with pagination)
-- `POST /api/profiles/save` - Save a scraped profile
-- `POST /api/profiles/delete` - Delete a profile
-- `POST /api/profiles/update-ai` - Update AI summary
-
-### Leads
-
-- `GET /api/leads/list` - List user's leads (with pagination and search)
-- `POST /api/leads/batch-delete` - Batch delete leads
-- `POST /api/leads/tag` - Tag a lead
-- `POST /api/leads/untag` - Untag a lead
-- `GET /api/leads/tags` - Get all tags for current user
-- `POST /api/leads/tags/create` - Create a new tag
-- `POST /api/leads/tags/delete` - Delete a tag
-
-### Admin
-
-- `GET /api/admin/me` - Get user role and permissions
-- `POST /api/admin/create-user` - Create a new user
-- `GET /api/admin/quotas` - Get all user quotas
-- `POST /api/admin/quotas` - Set user quota
-- `GET /api/admin/toggles` - Get app settings
-- `POST /api/admin/toggles` - Update app settings
-
-### Scraping
-
-- `POST /api/scrape/profile` - Scrape a single LinkedIn profile
-- `POST /api/scrape/company` - Scrape employees from a company
-
-### Health
-
-- `GET /api/health` - Check API and database health
-
-## Database Schema
-
-### Tables
-
-- `users` - User accounts
-- `sessions` - JWT session tokens
-- `user_roles` - User roles (admin/user)
-- `app_settings` - Application settings
-- `monthly_quotas` - User monthly limits
-- `monthly_usage` - Usage tracking
-- `linkedin_profiles` - Saved LinkedIn profiles
-- `linkedin_leads` - Company employee leads
-- `lead_positions` - Lead work experience
-- `tags` - Custom tags for leads
-- `lead_tags` - Junction table for lead-tag relationships
-- `scrape_jobs` - Apify scrape job tracking
-
-### Database Operations
-
-```bash
-# Push schema changes (development)
-pnpm exec drizzle-kit push
-
-# Generate migration files
-pnpm exec drizzle-kit generate
-
-# Run migrations
-pnpm db:migrate
-
-# Open Drizzle Studio
-pnpm db:studio
-```
-
-## Project Structure
-
-```
+```text
 linkedin-profile-scrape/
-├── .github/              # GitHub workflows
-├── components/            # React components
-│   ├── dashboard/        # Dashboard sub-components
-│   ├── charts/           # Visualization components
-│   ├── ErrorBoundary.tsx  # Error catching
-│   ├── Navbar.tsx        # Navigation
-│   └── ...
-├── db/                   # Database layer
-│   ├── schema.ts         # Drizzle schema definitions
-│   ├── client.ts         # Database client
-│   └── relations.ts     # Table relationships
-├── drizzle/             # Drizzle migrations
-├── lib/                 # Utility libraries
-│   ├── auth.ts          # Frontend auth client
-│   ├── auth-server.ts   # Server auth helpers
-│   ├── validation.ts    # Zod schemas
-│   └── ...
-├── netlify/functions/   # Netlify Functions (API)
-│   ├── auth_*.ts        # Auth endpoints
-│   ├── admin_*.ts       # Admin endpoints
-│   ├── profiles_*.ts    # Profile endpoints
-│   ├── leads_*.ts       # Leads endpoints
-│   └── scrape.ts        # Scraping endpoints
-├── pages/              # Page components
-│   ├── Home.tsx         # Dashboard page
-│   ├── Profiles.tsx     # Profiles list
-│   ├── Leads.tsx        # Leads management
-│   ├── Admin.tsx        # Admin panel
-│   └── Login.tsx       # Login page
-├── scripts/            # Utility scripts
-│   ├── create-admin.js  # Create admin user
-│   ├── db-health.js     # Check DB connection
-│   └── ...
-├── services/           # API services
-│   ├── api.ts          # API client wrapper
-│   ├── apify.ts        # Apify integration
-│   ├── auth.ts         # Auth service
-│   ├── admin.ts        # Admin service
-│   └── gemini.ts       # AI analysis
-├── test/              # Test files
-├── App.tsx            # Root component
-├── vite.config.ts     # Vite configuration
-├── tsconfig.json      # TypeScript config
-├── drizzle.config.ts  # Drizzle config
-└── netlify.toml      # Netlify config
+├── worker/                 # Cloudflare Worker
+│   ├── index.ts            # fetch/scheduled entry; routes /api/* and assets
+│   ├── router.ts           # route table and path matching
+│   ├── routes/             # auth, profiles, leads, scrape, jobs, admin, credentials
+│   ├── providers/          # Apify and treg REST adapters
+│   ├── auth.ts             # session tokens and password hashing
+│   ├── credentials.ts      # AES-GCM credential encryption
+│   ├── jobs.ts             # Scrape Job polling and 7-day cleanup
+│   └── db.ts               # Drizzle client over the D1 binding
+├── db/schema.ts            # D1 schema (Drizzle sqlite-core)
+├── drizzle-d1/             # Generated migrations and snapshots
+├── components/             # React components (dashboard, charts, shared UI)
+├── pages/                  # Home, Profiles, Leads, Settings, Admin, Login
+├── services/               # Browser API clients and Gemini integration
+├── lib/                    # Auth client, validation, formatting helpers
+├── scripts/                # create-admin-d1.mjs
+├── test/                   # Vitest suites running inside workerd
+├── docs/                   # deployment guide and ADRs
+├── App.tsx                 # Root component and hash routing
+├── wrangler.jsonc          # Worker, assets, D1, cron, environments
+└── vite.config.ts          # Vite + Cloudflare plugin
 ```
 
-## Development Guidelines
+## API overview
 
-See [AGENTS.md](./AGENTS.md) for detailed development guidelines including:
+All routes are served by the Worker; there is no separate API host or proxy.
 
-- Code style and conventions
-- Component patterns
-- Database operations
-- Authentication patterns
-- Testing guidelines
-- Security best practices
+- **Auth**: `POST /api/auth/signup`, `POST /api/auth/signin`,
+  `POST /api/auth/signout`, `GET /api/auth/me`
+- **Account**: `GET|PUT|DELETE /api/account/credentials`
+- **Profiles**: `GET /api/profiles/list`, `POST /api/profiles/save`,
+  `POST /api/profiles/delete`, `POST /api/profiles/update-ai`
+- **Leads**: `GET /api/leads/list`, `POST /api/leads/save`,
+  `POST /api/leads/delete`, `POST /api/leads/batch-delete`
+- **Scraping**: `POST /api/scrape` (profiles), `POST /api/scrape_company`
+  (company Scrape Job), `GET /api/check_scrape_status`,
+  `GET /api/check_company_history`
+- **Admin**: `GET /api/admin/me`, `GET|POST /api/admin/toggles`,
+  `GET /api/admin/users`, `POST /api/admin/create-user`,
+  `PATCH|DELETE /api/admin/users`
+- **Health**: `GET /api/health`
 
-## Deployment
+Responses and field names are unchanged from the pre-migration API where
+possible so the SPA and saved URLs keep working.
 
-### Netlify
+## Data model
 
-1. Connect your repository on Netlify
-2. Configure build settings:
-   - **Build command**: `pnpm build`
-   - **Publish directory**: `dist`
-   - **Functions directory**: `netlify/functions`
-3. Add environment variables:
-   - `DATABASE_URL`
-   - `APIFY_TOKEN`
-   - `JWT_SECRET`
-   - (Optional) `VITE_GEMINI_API_KEY`
+- `users` — accounts, password hash, active provider, encrypted credential
+- `sessions` — opaque session tokens with expiry
+- `user_roles` — `admin` / `user`
+- `app_settings` — registration and OAuth toggles
+- `linkedin_profiles` — Saved Profiles owned by a User
+- `linkedin_leads` — Saved Leads owned by a User
+- `scrape_jobs` — company Scrape Jobs (provider, status, owner)
+- `scrape_job_items` — per-job results, deleted after 7 days
+- `company_scrape_history` — lightweight company scrape history
 
-The `netlify.toml` file includes:
+Every saved record is owner-scoped. A job or row belonging to another user is
+rejected; there is no cross-account read path.
 
-- SPA redirects
-- API routing
-- Cache headers
+## Troubleshooting
 
-Deploy from CLI:
+### Login redirects back to `/login`
 
-```bash
-netlify deploy --build      # Preview deployment
-netlify deploy --prod --build  # Production deployment
-```
+- Clear the session token in the browser (`localStorage.clear()`) and sign in
+  again.
+- Check `GET /api/health`; it reports the Worker and provider list.
+- Confirm `pnpm dev` is running the Cloudflare plugin, not a bare static server.
 
-## Common Issues
+### `CREDENTIAL_ENCRYPTION_KEY` errors
 
-### Login stuck on /login
+- Local: `.dev.vars` must exist with a base64 32-byte key.
+- Deployed: set it with `wrangler secret put CREDENTIAL_ENCRYPTION_KEY`.
+- Changing the key makes existing Scrape Credentials undecryptable; users must
+  re-enter them.
 
-- Use `pnpm dev:netlify` (http://localhost:8888), not `pnpm dev`
-- Hard refresh (Shift+Reload)
-- Clear localStorage: `localStorage.clear()`
-- Check `/api/health` endpoint
+### Scraping is disabled
 
-### "Quota disabled"
+- Open Settings and save a valid Apify or treg credential, then select the
+  provider.
+- Apify requires a paid plan for API actor runs.
+- treg email scrapes are slow and may not find an email; the UI warns first.
 
-- Set user quota in Admin page
-- Or call `POST /api/admin/quotas` with `{ user_id, monthly_limit }`
+### D1 errors locally
 
-### "Apify token missing"
-
-- Set `APIFY_TOKEN` in `.env.local` (dev) and Netlify site env (prod)
-- Check `/api/health` returns `{ apify: true }`
-
-### Database connection errors
-
-- Verify `DATABASE_URL` format: `postgresql://user:password@host/db?sslmode=require`
-- Ensure Neon database is active
-- Run `pnpm db:health` to test connection
+- Run `pnpm db:migrate:local`.
+- If local state is corrupt, stop `pnpm dev`, delete `.wrangler/state`, and
+  reapply migrations.
 
 ### Build errors
 
-- Run `pnpm install` to ensure dependencies are up to date
-- Delete `node_modules` and reinstall if needed
-- Check Node.js version (requires 20.19+)
+- Run `pnpm install`; Node.js must be 20.19 or newer.
+- `pnpm exec wrangler deploy --dry-run` must succeed before a real deploy.
 
-## Environment Variables
+## Security
 
-| Variable              | Required | Description                           |
-| --------------------- | -------- | ------------------------------------- |
-| `DATABASE_URL`        | Yes      | Neon PostgreSQL connection string     |
-| `APIFY_TOKEN`         | Yes      | Apify API token for scraping          |
-| `JWT_SECRET`          | Yes      | Secret for JWT signing (min 32 chars) |
-| `VITE_GEMINI_API_KEY` | No       | Google Gemini API key for AI analysis |
-
-## Security Notes
-
-- **Never commit `.env.local`** - Contains sensitive credentials
-- Use a strong `JWT_SECRET` in production (>= 32 random characters)
-- Rotate secrets periodically
-- APIFY_TOKEN and JWT_SECRET are server-side only (not exposed to browser)
-- All API requests require valid JWT token
-
-## Getting API Keys
-
-### Apify
-
-1. Go to https://apify.com
-2. Sign up and log in
-3. Navigate to Account → Integrations
-4. Copy your API Token
-
-### Neon
-
-1. Go to https://console.neon.tech
-2. Create a new project
-3. Go to Project Settings → Connection Details
-4. Copy the connection string
-
-### Google Gemini (Optional)
-
-1. Go to https://ai.google.dev/
-2. Click "Get API Key"
-3. Create a new API key in Google Cloud Console
-
-## Code Quality
-
-The project uses ESLint and Prettier for code quality:
-
-```bash
-# Lint (fails on warnings)
-pnpm lint
-
-# Auto-fix linting issues
-pnpm lint:fix
-
-# Format code
-pnpm format
-
-# Check formatting
-pnpm format:check
-```
-
-## Testing
-
-```bash
-# Run all tests
-pnpm test
-
-# Run tests with UI
-pnpm test:ui
-
-# Run tests with coverage
-pnpm test:coverage
-```
+- Never commit `.dev.vars`, `.env.local`, or real credentials.
+- Scrape Credentials are encrypted with AES-GCM and never returned to the
+  browser or written to logs.
+- Session tokens are opaque, stored server-side, and expire after 30 days.
+- All SQL goes through Drizzle with bound parameters.
+- Admin routes check the role on every request.
 
 ## License
 

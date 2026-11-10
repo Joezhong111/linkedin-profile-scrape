@@ -15,7 +15,7 @@ import {
  *
  * Uses the canonical REST API with the User's own Bearer token: start an actor
  * run, poll the run until a terminal state, then read the default dataset as a
- * bare JSON array. There is no server token and no `apify-client` dependency.
+ * bare JSON array. There is no server token and no client SDK dependency.
  */
 
 const APIFY_BASE = 'https://api.apify.com/v2';

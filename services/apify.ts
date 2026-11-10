@@ -5,7 +5,7 @@ import { normalizeScrapeItem } from '../lib/normalize';
 /** Scrape tiers accepted by `/api/scrape` and `/api/scrape_company`. */
 export type ScrapeTier = 'full' | 'full_email';
 
-// Frontend: call the Worker instead of bundling apify-client in the browser.
+// Frontend: call the Worker instead of bundling a provider SDK in the browser.
 export const scrapeLinkedInProfiles = async (
   urls: string[],
   tier: ScrapeTier = 'full'
