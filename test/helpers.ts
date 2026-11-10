@@ -78,3 +78,25 @@ export async function makeAdmin(session: TestSession): Promise<void> {
     .bind(session.id)
     .run();
 }
+
+/** PUT /api/account/credentials with the session's bearer token. */
+export async function putCredential(
+  session: TestSession,
+  provider: 'apify' | 'treg',
+  token: string
+): Promise<Response> {
+  return workerFetch(
+    '/api/account/credentials',
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, token }),
+    },
+    session.token
+  );
+}
+
+/** GET /api/account/credentials for the session's User. */
+export async function getCredentialStatus(session: TestSession): Promise<Response> {
+  return workerFetch('/api/account/credentials', undefined, session.token);
+}
