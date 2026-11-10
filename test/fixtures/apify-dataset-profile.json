@@ -1,0 +1,86 @@
+[
+  {
+    "profileUrl": "https://www.linkedin.com/in/remi-ounadjela",
+    "fullName": "Remi Ounadjela",
+    "firstName": "Remi",
+    "lastName": "Ounadjela",
+    "headline": "Senior Data Science Manager at TikTok",
+    "about": "Data science leader building trust & safety systems.",
+    "location": "San Francisco Bay Area",
+    "profilePic": "https://media.licdn.com/dms/image/profile-pic.jpg",
+    "profilePicHighQuality": "https://media.licdn.com/dms/image/profile-pic-hq.jpg",
+    "backgroundPic": "https://media.licdn.com/dms/image/background.jpg",
+    "isPremium": false,
+    "isVerified": true,
+    "isJobSeeker": false,
+    "isRetired": false,
+    "isCreator": false,
+    "isInfluencer": false,
+    "isCurrentlyEmployed": true,
+    "openConnection": false,
+    "urn": "urn:li:fsd_profile:ACoAAA-kh3MBoBXafap6sJXgNKb6YBPwj12M-Bw",
+    "linkedinId": "ACoAAA-kh3MBoBXafap6sJXgNKb6YBPwj12M-Bw",
+    "publicIdentifier": "remi-ounadjela",
+    "connections": 500,
+    "followers": 4231,
+    "email": "remi.ounadjela@tiktok.com",
+    "mobileNumber": "+1 415 555 0100",
+    "addressCountryOnly": "United States",
+    "addressWithCountry": "San Francisco, CA, United States",
+    "addressWithoutCountry": "San Francisco, CA",
+    "jobTitle": "Senior Data Science Manager",
+    "jobStartedOn": "Jan 2023",
+    "jobLocation": "San Francisco Bay Area",
+    "jobStillWorking": true,
+    "companyName": "TikTok",
+    "companyIndustry": "Social Media",
+    "companyWebsite": "https://www.tiktok.com",
+    "companyLinkedin": "https://www.linkedin.com/company/tiktok",
+    "companyFoundedIn": 2016,
+    "companySize": "10,001+ employees",
+    "currentJobDuration": "3 yrs 1 mo",
+    "currentJobDurationInYrs": 3.08,
+    "totalRecommendationsReceived": 12,
+    "totalRecommendationsGiven": 4,
+    "experiencesCount": 2,
+    "experiences": [
+      {
+        "position": "Senior Data Science Manager",
+        "companyName": "TikTok",
+        "companyLinkedinUrl": "https://www.linkedin.com/company/tiktok",
+        "duration": "3 yrs 1 mo",
+        "startDate": {
+          "text": "Jan 2023"
+        },
+        "endDate": null,
+        "location": "San Francisco Bay Area",
+        "description": "Trust & Safety"
+      },
+      {
+        "position": "Data Scientist",
+        "companyName": "Meta",
+        "companyLinkedinUrl": "https://www.linkedin.com/company/meta",
+        "duration": "4 yrs",
+        "startDate": {
+          "text": "Jan 2019"
+        },
+        "endDate": {
+          "text": "Dec 2022"
+        }
+      }
+    ],
+    "education": [
+      {
+        "schoolName": "UCL",
+        "degree": "Bachelor of Science - BS",
+        "fieldOfStudy": "Mathematics and Physics",
+        "startDate": {
+          "text": "2012"
+        },
+        "endDate": {
+          "text": "2015"
+        }
+      }
+    ]
+  }
+]
