@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -48,6 +48,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- provider and its hook are intentionally co-located
 export function useToast() {
   const context = useContext(ToastContext);
   if (context === undefined) {

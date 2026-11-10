@@ -89,16 +89,6 @@ export const scrapeCompanySchema = z.object({
   yearsOfExperienceIds: z.array(z.string()).optional(),
 });
 
-export const setQuotaSchema = z.object({
-  email: z.string().email('Invalid email'),
-  monthly_limit: z.number().int().min(0, 'Monthly limit must be non-negative'),
-});
-
-export const createQuotaSchema = setQuotaSchema.extend({
-  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
-  invite: z.boolean().optional(),
-});
-
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
@@ -109,6 +99,4 @@ export type SignUpInput = z.infer<typeof signUpSchema>;
 export type SaveProfileInput = z.infer<typeof saveProfileSchema>;
 export type ScrapeUrlsInput = z.infer<typeof scrapeUrlsSchema>;
 export type ScrapeCompanyInput = z.infer<typeof scrapeCompanySchema>;
-export type SetQuotaInput = z.infer<typeof setQuotaSchema>;
-export type CreateQuotaInput = z.infer<typeof createQuotaSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;

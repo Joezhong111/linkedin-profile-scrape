@@ -33,7 +33,9 @@ export default function App() {
   const signOut = async () => {
     try {
       await authClient.signOut();
-    } catch { }
+    } catch {
+      // Signing out locally still succeeds if the server call fails.
+    }
     window.location.hash = '#/login';
   };
 
@@ -46,7 +48,7 @@ export default function App() {
           const data = await res.json();
           if (typeof data?.apify === 'boolean') setApifyReady(data.apify);
         }
-      } catch (_) {
+      } catch {
         // ignore: fall back to VITE_ value
       }
     };

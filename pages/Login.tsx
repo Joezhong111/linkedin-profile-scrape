@@ -25,7 +25,9 @@ export default function Login() {
         const t = await getToggles();
         setToggles(t);
         if (!t.registration_open) setMode('signin');
-      } catch {}
+      } catch {
+        // Defaults stay in place when toggles are unavailable.
+      }
     })();
 
     const unsubscribe = authClient.onAuthStateChange((_user) => {

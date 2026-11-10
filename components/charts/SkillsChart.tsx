@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   BarChart,
   Bar,
@@ -61,7 +60,7 @@ export default function SkillsChart({ data }: Props) {
               allowEscapeViewBox={{ x: true, y: true }}
             />
             <Bar dataKey="value" name="Endorsements" radius={[0, 4, 4, 0]} barSize={16}>
-              {data.map((entry, index) => (
+              {data.map((_entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Bar>

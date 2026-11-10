@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Radar,
   RadarChart,
@@ -58,7 +57,7 @@ export default function LanguageRadar({ data }: Props) {
               itemStyle={{ color: 'inherit' }}
               wrapperStyle={{ zIndex: 10000 }}
               allowEscapeViewBox={{ x: true, y: true }}
-              formatter={(value, name, props) => [props.payload.proficiency, 'Level']}
+              formatter={(_value, _name, props) => [props.payload.proficiency, 'Level']}
             />
           </RadarChart>
         </ResponsiveContainer>

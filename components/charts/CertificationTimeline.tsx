@@ -1,4 +1,3 @@
-import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 interface Props {
@@ -43,7 +42,7 @@ export default function CertificationTimeline({ data, byIssuer }: Props) {
                 paddingAngle={2}
                 dataKey="value"
               >
-                {byIssuer.map((entry, index) => (
+                {byIssuer.map((_entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

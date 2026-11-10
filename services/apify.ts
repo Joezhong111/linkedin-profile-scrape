@@ -17,7 +17,9 @@ export const scrapeLinkedInProfiles = async (urls: string[]): Promise<any[]> => 
     try {
       const data = await res.json();
       msg = (data && (data.error || data.message)) || msg;
-    } catch (_) { }
+    } catch {
+      // Error bodies are not always JSON; keep the default message.
+    }
     throw new Error(msg);
   }
 
@@ -74,7 +76,9 @@ export const checkCompanyHistory = async (companyUrl: string): Promise<CompanyHi
     try {
       const data = await res.json();
       msg = (data && (data.error || data.message)) || msg;
-    } catch (_) { }
+    } catch {
+      // Error bodies are not always JSON; keep the default message.
+    }
     throw new Error(msg);
   }
 
@@ -95,7 +99,9 @@ export const scrapeCompany = async (options: ScrapeCompanyOptions): Promise<Scra
     try {
       const data = await res.json();
       msg = (data && (data.error || data.message)) || msg;
-    } catch (_) { }
+    } catch {
+      // Error bodies are not always JSON; keep the default message.
+    }
     throw new Error(msg);
   }
 
@@ -129,7 +135,9 @@ export const checkScrapeStatus = async (
     try {
       const data = await res.json();
       msg = (data && (data.error || data.message)) || msg;
-    } catch (_) { }
+    } catch {
+      // Error bodies are not always JSON; keep the default message.
+    }
     throw new Error(msg);
   }
 

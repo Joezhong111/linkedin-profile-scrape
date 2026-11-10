@@ -1,12 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  getMe,
-  getQuota,
-  getToggles,
-  setQuota,
-  setToggles,
-  adminCreateUser,
-} from '../services/admin';
+import { useEffect, useState } from 'react';
+import { getMe, getToggles, setToggles, adminCreateUser } from '../services/admin';
 import UserManager from '../components/UserManager';
 
 export default function Admin() {

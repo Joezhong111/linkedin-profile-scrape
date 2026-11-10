@@ -1,5 +1,4 @@
 // Authentication utilities for JWT-based auth
-import { User, Session } from '../db/schema';
 
 export interface AuthUser {
   id: string;
@@ -50,7 +49,9 @@ class AuthClient {
     // Notify listeners in this tab
     try {
       window.dispatchEvent(new Event(AuthClient.EVENT));
-    } catch {}
+    } catch {
+      // Listener errors must not break session storage.
+    }
   }
 
   // Clear session
@@ -60,7 +61,9 @@ class AuthClient {
     // Notify listeners in this tab
     try {
       window.dispatchEvent(new Event(AuthClient.EVENT));
-    } catch {}
+    } catch {
+      // Listener errors must not break session clearing.
+    }
   }
 
   // Sign in with email/password

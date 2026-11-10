@@ -106,7 +106,9 @@ export default function Home() {
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-    } catch { }
+    } catch {
+      // Clipboard access can be denied; copying is best-effort.
+    }
   };
 
   const loadCount = useCallback(async () => {
@@ -115,7 +117,7 @@ export default function Home() {
       const [profiles, leadsResponse] = await Promise.all([fetchAllProfiles(), fetchAllLeads()]);
       setSavedCount(profiles.length);
       setSavedLeadsCount(leadsResponse.total);
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, []);

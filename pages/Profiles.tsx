@@ -230,7 +230,9 @@ export default function Profiles() {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-    } catch { }
+    } catch {
+      // Clipboard access can be denied; copying is best-effort.
+    }
   };
 
   // Animation
