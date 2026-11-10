@@ -1,6 +1,7 @@
 import {
   ProviderError,
   type CompanyJobStart,
+  type CompanyJobState,
   type CompanyScrapeInput,
   type ProfileScrapeInput,
   type ProviderRunState,
@@ -250,11 +251,11 @@ async function createCompanyJob(
  * caller can persist the items; every other state is reported without I/O.
  */
 async function pollCompanyJob(
-  job: unknown,
+  job: CompanyJobState,
   _input: CompanyScrapeInput,
   token: string
 ): Promise<ProviderRunState> {
-  const ref = typeof job === 'string' ? job : '';
+  const ref = typeof job.providerJobRef === 'string' ? job.providerJobRef : '';
   if (!ref) {
     throw new ProviderError('provider', 'The Scrape Job has no Apify run reference.');
   }

@@ -13,6 +13,14 @@ import type { LinkedInProfile } from '../types';
 
 type UnknownRecord = Record<string, unknown>;
 
+/**
+ * Lower-cased, query-free, slash-free URL used only as a dedupe key. It is not
+ * a display value; callers keep the original URL for the wire shape.
+ */
+export function normalizeProfileUrl(url: string): string {
+  return url.trim().toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
+}
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

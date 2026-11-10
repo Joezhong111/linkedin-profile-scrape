@@ -33,7 +33,8 @@ import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
 const MAX_PROFILE_URLS = 10;
 const DEFAULT_MAX_ITEMS = 25;
 const MAX_ITEMS = 100;
-const MAX_FILTER_VALUES = 50;
+/** treg accepts 70 filter values per list; Apify accepts 50. */
+const FILTER_LIMITS = { apify: 50, treg: 70 } as const;
 const COMPANY_URL_PATTERN = /^https?:\/\/(?:[a-z0-9-]+\.)*linkedin\.com\/company\/[^\s]+$/i;
 const COMPANY_POLL_INTERVAL_MS = 3000;
 const COMPANY_POLL_MAX_ATTEMPTS = 200;
@@ -101,6 +102,8 @@ export default function Home() {
   const [scrapeMode, setScrapeMode] = useState<'profiles' | 'company'>('profiles');
   const [credential, setCredential] = useState<CredentialStatus | null>(null);
   const credentialReady = Boolean(credential?.configured);
+  const filterLimit =
+    credential?.provider === 'treg' ? FILTER_LIMITS.treg : FILTER_LIMITS.apify;
 
 
   // Profile Scrape State
@@ -122,10 +125,10 @@ export default function Home() {
   // Input helpers
   const addJobTitle = () => {
     if (!jobTitleInput.trim()) return;
-    if (jobTitles.length >= MAX_FILTER_VALUES) {
+    if (jobTitles.length >= filterLimit) {
       setState((prev: ScraperState) => ({
         ...prev,
-        error: `At most ${MAX_FILTER_VALUES} job titles can be used per company scrape.`,
+        error: `At most ${filterLimit} job titles can be used per company scrape.`,
       }));
       return;
     }
@@ -135,10 +138,10 @@ export default function Home() {
   const removeJobTitle = (i: number) => setJobTitles(jobTitles.filter((_, idx) => idx !== i));
   const addLocation = () => {
     if (!locationInput.trim()) return;
-    if (locations.length >= MAX_FILTER_VALUES) {
+    if (locations.length >= filterLimit) {
       setState((prev: ScraperState) => ({
         ...prev,
-        error: `At most ${MAX_FILTER_VALUES} locations can be used per company scrape.`,
+        error: `At most ${filterLimit} locations can be used per company scrape.`,
       }));
       return;
     }
@@ -224,7 +227,7 @@ export default function Home() {
    */
   const pollCompanyJob = useCallback(async (jobId: string) => {
     setState((prev: ScraperState) => ({ ...prev, isLoading: true, error: null }));
-    setScrapingStatus('Company scrape started — waiting for Apify...');
+    setScrapingStatus('Company scrape started — waiting for the provider...');
 
     for (let attempt = 0; attempt < COMPANY_POLL_MAX_ATTEMPTS; attempt += 1) {
       // The app tsconfig targets ES2023, so Promise.withResolvers is unavailable.

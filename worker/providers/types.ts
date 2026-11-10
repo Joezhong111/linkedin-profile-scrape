@@ -28,6 +28,8 @@ export interface ProviderRunState {
   progress: number;
   resultCount: number;
   items?: unknown[];
+  /** Next candidate position for providers that advance in chunks. */
+  cursor?: number;
   error?: string;
 }
 
@@ -64,6 +66,12 @@ export interface CompanyJobStart {
   candidates?: unknown[];
 }
 
+/** The persisted job fields a provider needs to continue a company scrape. */
+export interface CompanyJobState {
+  providerJobRef: string | null;
+  inputSnapshot: unknown;
+}
+
 export interface ScrapeProvider {
   scrapeProfiles(
     input: ProfileScrapeInput,
@@ -72,7 +80,7 @@ export interface ScrapeProvider {
   ): Promise<unknown[]>;
   createCompanyJob(input: CompanyScrapeInput, token: string): Promise<CompanyJobStart>;
   pollCompanyJob(
-    job: unknown,
+    job: CompanyJobState,
     input: CompanyScrapeInput,
     token: string
   ): Promise<ProviderRunState>;

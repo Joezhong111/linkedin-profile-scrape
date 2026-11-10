@@ -24,7 +24,8 @@ const PROFILE_URL_PATTERN = /^https?:\/\/(?:[a-z0-9-]+\.)*linkedin\.com\/in\//i;
 const COMPANY_URL_PATTERN = /^https?:\/\/(?:[a-z0-9-]+\.)*linkedin\.com\/company\/[^\s]+$/i;
 const DEFAULT_MAX_ITEMS = 25;
 const MAX_ITEMS = 100;
-const MAX_FILTER_VALUES = 50;
+/** treg accepts 70 filter values per list; Apify accepts 50. */
+const MAX_FILTER_VALUES = { apify: 50, treg: 70 } as const;
 
 function isTier(value: unknown): value is ScrapeTier {
   return value === 'full' || value === 'full_email';
@@ -49,12 +50,16 @@ function providerFailure(err: unknown, fallback: string): Response {
 
 type FilterListResult = { ok: true; values: string[] } | { ok: false; error: string };
 
-/** Company filters are optional string lists capped at Apify's 50 values. */
-function parseFilterList(value: unknown, label: string): FilterListResult {
+/** Company filters are optional string lists capped per provider. */
+function parseFilterList(
+  value: unknown,
+  label: string,
+  maxValues: number
+): FilterListResult {
   if (value === undefined || value === null) return { ok: true, values: [] };
   if (!Array.isArray(value)) return { ok: false, error: `${label} must be an array.` };
-  if (value.length > MAX_FILTER_VALUES) {
-    return { ok: false, error: `At most ${MAX_FILTER_VALUES} ${label} are allowed.` };
+  if (value.length > maxValues) {
+    return { ok: false, error: `At most ${maxValues} ${label} are allowed.` };
   }
 
   const values: string[] = [];
@@ -65,8 +70,8 @@ function parseFilterList(value: unknown, label: string): FilterListResult {
     const trimmed = entry.trim();
     if (trimmed) values.push(trimmed);
   }
-  if (values.length > MAX_FILTER_VALUES) {
-    return { ok: false, error: `At most ${MAX_FILTER_VALUES} ${label} are allowed.` };
+  if (values.length > maxValues) {
+    return { ok: false, error: `At most ${maxValues} ${label} are allowed.` };
   }
   return { ok: true, values };
 }
@@ -142,19 +147,23 @@ export const scrapeRoutes: Route[] = [
         return error(400, 'tier must be "full" or "full_email".');
       }
       const tier: ScrapeTier = isTier(body.tier) ? body.tier : 'full';
+      const maxFilterValues =
+        credential.provider === 'treg' ? MAX_FILTER_VALUES.treg : MAX_FILTER_VALUES.apify;
 
-      const jobTitles = parseFilterList(body.jobTitles, 'Job titles');
+      const jobTitles = parseFilterList(body.jobTitles, 'Job titles', maxFilterValues);
       if (!jobTitles.ok) return error(400, jobTitles.error);
-      const locations = parseFilterList(body.locations, 'Locations');
+      const locations = parseFilterList(body.locations, 'Locations', maxFilterValues);
       if (!locations.ok) return error(400, locations.error);
       const yearsAtCurrentCompany = parseFilterList(
         body.yearsAtCurrentCompanyIds,
-        'Years-at-current-company filters'
+        'Years-at-current-company filters',
+        maxFilterValues
       );
       if (!yearsAtCurrentCompany.ok) return error(400, yearsAtCurrentCompany.error);
       const yearsOfExperience = parseFilterList(
         body.yearsOfExperienceIds,
-        'Years-of-experience filters'
+        'Years-of-experience filters',
+        maxFilterValues
       );
       if (!yearsOfExperience.ok) return error(400, yearsOfExperience.error);
 
@@ -171,14 +180,15 @@ export const scrapeRoutes: Route[] = [
       try {
         const provider = providerFor(user);
         const started = await provider.createCompanyJob(input, credential.token);
-        if (!started.providerJobRef) {
+        if (credential.provider === 'apify' && !started.providerJobRef) {
           return error(502, 'The provider did not return a run reference. Try again later.');
         }
         const job = await createCompanyJobRow(db, {
           ownerId: user.id,
           provider: credential.provider,
           input,
-          providerJobRef: started.providerJobRef,
+          providerJobRef: started.providerJobRef ?? null,
+          candidates: started.candidates,
         });
         return json(
           { jobId: job.id, status: 'running', progress: 0, resultCount: 0 },
