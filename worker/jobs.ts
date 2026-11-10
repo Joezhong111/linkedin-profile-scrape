@@ -8,19 +8,22 @@ import {
 } from '../db/schema';
 import { normalizeProfileUrl, normalizeScrapeItem } from '../lib/normalize';
 import { chunk, type AppDb } from './db';
+import { redactSecrets } from './http';
 import {
   ProviderError,
   type CompanyScrapeInput,
   type ProviderRunState,
   type ScrapeProvider,
+  type TregCompanySnapshot,
 } from './providers/types';
 
 /**
  * Owner-scoped Scrape Job lifecycle: create, advance one provider poll, read
  * the client status payload, and delete jobs past the retention window.
  *
- * Provider raw items are persisted verbatim (the SPA normalizes them) while
- * dedupe and statistics use the normalized Scrape Result shape.
+ * Provider payloads are normalized by `lib/normalize.ts` before Saved Profile
+ * and Saved Lead persistence. Scrape Job items keep the provider shape;
+ * statistics and dedupe normalize transiently.
  */
 
 /** Scrape Jobs and their items are deleted after seven days. */
@@ -53,18 +56,6 @@ export interface CreateCompanyJobParams {
   providerJobRef?: string | null;
   /** treg search results; the provider has no external run reference. */
   candidates?: unknown[];
-}
-
-interface TregCompanySnapshot extends CompanyScrapeInput {
-  candidates?: unknown;
-  cursor?: unknown;
-}
-
-/** Provider messages are stored for the client, so secrets must not survive. */
-function redactSecrets(message: string): string {
-  return message
-    .replace(/([?&]token=)[^&\s]+/gi, '$1[redacted]')
-    .replace(/(Bearer\s+)[^\s]+/gi, '$1[redacted]');
 }
 
 export async function createCompanyJobRow(
@@ -219,6 +210,84 @@ async function insertCompanyHistory(
   });
 }
 
+/** Applies the shared running transition; `inputSnapshot` is treg-specific. */
+async function markJobRunning(
+  db: AppDb,
+  job: ScrapeJob,
+  progress: number,
+  resultCount: number,
+  inputSnapshot?: unknown
+): Promise<ScrapeJob> {
+  const snapshotUpdate = inputSnapshot === undefined ? {} : { inputSnapshot };
+  await db
+    .update(scrapeJobs)
+    .set({ status: 'running', progress, resultCount, ...snapshotUpdate })
+    .where(eq(scrapeJobs.id, job.id));
+  return { ...job, status: 'running', progress, resultCount, ...snapshotUpdate };
+}
+
+/** Applies the shared failed transition, redacting the stored message. */
+async function markJobFailed(
+  db: AppDb,
+  job: ScrapeJob,
+  progress: number,
+  resultCount: number,
+  error: string,
+  now: string
+): Promise<ScrapeJob> {
+  const errorMessage = redactSecrets(error);
+  await db
+    .update(scrapeJobs)
+    .set({
+      status: 'failed',
+      progress,
+      resultCount,
+      errorMessage,
+      completedAt: now,
+    })
+    .where(eq(scrapeJobs.id, job.id));
+  return {
+    ...job,
+    status: 'failed',
+    progress,
+    resultCount,
+    errorMessage,
+    completedAt: now,
+  };
+}
+
+/** Applies the shared succeeded transition; `inputSnapshot` is treg-specific. */
+async function finishJob(
+  db: AppDb,
+  job: ScrapeJob,
+  progress: number,
+  resultCount: number,
+  now: string,
+  inputSnapshot?: unknown
+): Promise<ScrapeJob> {
+  const snapshotUpdate = inputSnapshot === undefined ? {} : { inputSnapshot };
+  await db
+    .update(scrapeJobs)
+    .set({
+      status: 'succeeded',
+      progress,
+      resultCount,
+      errorMessage: null,
+      completedAt: now,
+      ...snapshotUpdate,
+    })
+    .where(eq(scrapeJobs.id, job.id));
+  return {
+    ...job,
+    status: 'succeeded',
+    progress,
+    resultCount,
+    errorMessage: null,
+    completedAt: now,
+    ...snapshotUpdate,
+  };
+}
+
 /**
  * treg advances a stored candidate list in chunks: items are appended and the
  * cursor is written back to the job snapshot before the next poll.
@@ -239,27 +308,14 @@ async function advanceTregCompanyJob(
       : 0;
 
   if (state.status === 'failed') {
-    const errorMessage = redactSecrets(
-      state.error ?? 'The provider reported a failed scrape. Try again.'
+    return markJobFailed(
+      db,
+      job,
+      state.progress,
+      state.resultCount,
+      state.error ?? 'The provider reported a failed scrape. Try again.',
+      now
     );
-    await db
-      .update(scrapeJobs)
-      .set({
-        status: 'failed',
-        progress: state.progress,
-        resultCount: state.resultCount,
-        errorMessage,
-        completedAt: now,
-      })
-      .where(eq(scrapeJobs.id, job.id));
-    return {
-      ...job,
-      status: 'failed',
-      progress: state.progress,
-      resultCount: state.resultCount,
-      errorMessage,
-      completedAt: now,
-    };
   }
 
   await appendItems(db, job.id, cursor, state.items ?? []);
@@ -277,43 +333,13 @@ async function advanceTregCompanyJob(
   if (state.status === 'running' || state.status === 'pending') {
     const progress = Math.max(job.progress, state.progress);
     const resultCount = Math.max(job.resultCount, state.resultCount);
-    await db
-      .update(scrapeJobs)
-      .set({ status: 'running', progress, resultCount, inputSnapshot: nextSnapshot })
-      .where(eq(scrapeJobs.id, job.id));
-    return {
-      ...job,
-      status: 'running',
-      progress,
-      resultCount,
-      inputSnapshot: nextSnapshot,
-    };
+    return markJobRunning(db, job, progress, resultCount, nextSnapshot);
   }
 
   const items = await readJobItems(db, job.id);
   const stats = await computeStats(db, job.ownerId, items);
   await insertCompanyHistory(db, job, input, items.length, stats, now);
-  await db
-    .update(scrapeJobs)
-    .set({
-      status: 'succeeded',
-      progress: items.length,
-      resultCount: items.length,
-      errorMessage: null,
-      completedAt: now,
-      inputSnapshot: nextSnapshot,
-    })
-    .where(eq(scrapeJobs.id, job.id));
-
-  return {
-    ...job,
-    status: 'succeeded',
-    progress: items.length,
-    resultCount: items.length,
-    errorMessage: null,
-    completedAt: now,
-    inputSnapshot: nextSnapshot,
-  };
+  return finishJob(db, job, items.length, items.length, now, nextSnapshot);
 }
 
 /**
@@ -340,12 +366,7 @@ export async function advanceCompanyJob(
   } catch (err) {
     if (job.provider === 'treg' && err instanceof ProviderError && err.kind === 'provider') {
       const now = new Date().toISOString();
-      const errorMessage = redactSecrets(err.message);
-      await db
-        .update(scrapeJobs)
-        .set({ status: 'failed', errorMessage, completedAt: now })
-        .where(eq(scrapeJobs.id, job.id));
-      return { ...job, status: 'failed', errorMessage, completedAt: now };
+      return markJobFailed(db, job, job.progress, job.resultCount, err.message, now);
     }
     throw err;
   }
@@ -358,33 +379,18 @@ export async function advanceCompanyJob(
   if (state.status === 'running' || state.status === 'pending') {
     const progress = Math.max(job.progress, state.progress);
     const resultCount = Math.max(job.resultCount, state.resultCount);
-    await db
-      .update(scrapeJobs)
-      .set({ status: 'running', progress, resultCount })
-      .where(eq(scrapeJobs.id, job.id));
-    return { ...job, status: 'running', progress, resultCount };
+    return markJobRunning(db, job, progress, resultCount);
   }
 
   if (state.status === 'failed') {
-    const errorMessage = state.error ?? 'The provider reported a failed scrape. Try again.';
-    await db
-      .update(scrapeJobs)
-      .set({
-        status: 'failed',
-        progress: state.progress,
-        resultCount: state.resultCount,
-        errorMessage,
-        completedAt: now,
-      })
-      .where(eq(scrapeJobs.id, job.id));
-    return {
-      ...job,
-      status: 'failed',
-      progress: state.progress,
-      resultCount: state.resultCount,
-      errorMessage,
-      completedAt: now,
-    };
+    return markJobFailed(
+      db,
+      job,
+      state.progress,
+      state.resultCount,
+      state.error ?? 'The provider reported a failed scrape. Try again.',
+      now
+    );
   }
 
   const items = dedupeAndTruncate(state.items ?? [], input.maxItems);
@@ -392,25 +398,7 @@ export async function advanceCompanyJob(
 
   await persistItems(db, job.id, items);
   await insertCompanyHistory(db, job, input, items.length, stats, now);
-  await db
-    .update(scrapeJobs)
-    .set({
-      status: 'succeeded',
-      progress: items.length,
-      resultCount: items.length,
-      errorMessage: null,
-      completedAt: now,
-    })
-    .where(eq(scrapeJobs.id, job.id));
-
-  return {
-    ...job,
-    status: 'succeeded',
-    progress: items.length,
-    resultCount: items.length,
-    errorMessage: null,
-    completedAt: now,
-  };
+  return finishJob(db, job, items.length, items.length, now);
 }
 
 /** Builds the client payload for a job in any state. Succeeded jobs read items. */

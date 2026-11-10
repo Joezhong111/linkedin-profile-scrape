@@ -21,6 +21,12 @@ export interface CompanyScrapeInput {
   yearsOfExperienceIds: string[];
 }
 
+/** The job snapshot fields treg adds to the CompanyScrapeInput. */
+export interface TregCompanySnapshot extends CompanyScrapeInput {
+  candidates?: unknown;
+  cursor?: unknown;
+}
+
 export type ProviderRunStatus = 'pending' | 'running' | 'succeeded' | 'failed';
 
 export interface ProviderRunState {

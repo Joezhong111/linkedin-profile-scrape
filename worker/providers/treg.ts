@@ -8,7 +8,9 @@ import {
   type ProviderRunState,
   type ScrapeProvider,
   type ScrapeProviderOptions,
+  type TregCompanySnapshot,
 } from './types';
+import { sleep } from './util';
 
 /**
  * treg provider adapter.
@@ -40,22 +42,9 @@ interface TregEnvelope {
   pagination?: unknown;
 }
 
-/** The job snapshot fields this adapter adds to the CompanyScrapeInput. */
-interface TregCompanySnapshot extends CompanyScrapeInput {
-  candidates?: unknown;
-  cursor?: unknown;
-}
-
 function isTimeoutError(err: unknown): boolean {
   const name = (err as { name?: unknown } | null)?.name;
   return name === 'TimeoutError' || name === 'AbortError';
-}
-
-function sleep(ms: number): Promise<void> {
-  if (ms <= 0) return Promise.resolve();
-  const { promise, resolve } = Promise.withResolvers<void>();
-  setTimeout(resolve, ms);
-  return promise;
 }
 
 function providerDetail(text: string): string {

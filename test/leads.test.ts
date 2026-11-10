@@ -14,6 +14,8 @@ interface SavedLead {
   source_company_url: string | null;
   current_job_duration: string | null;
   job_period: string | null;
+  is_premium: boolean | null;
+  is_verified: boolean | null;
   raw_data: { id?: string } | null;
 }
 
@@ -202,6 +204,8 @@ describe('POST /api/leads/save', () => {
       source_company_url: 'https://www.linkedin.com/company/acme/',
       current_job_duration: '3 yrs',
       job_period: '2022 - Present',
+      is_premium: true,
+      is_verified: false,
       raw_data: rawData,
     });
     expect(created.id).toEqual(expect.any(String));
@@ -209,6 +213,8 @@ describe('POST /api/leads/save', () => {
     expect(created.source_company_url).toBe('https://www.linkedin.com/company/acme/');
     expect(created.current_job_duration).toBe('3 yrs');
     expect(created.job_period).toBe('2022 - Present');
+    expect(created.is_premium).toBe(true);
+    expect(created.is_verified).toBe(false);
     expect(created.raw_data?.id).toBe(rawData.id);
 
     const updated = await saveLead(session.token, {
@@ -216,12 +222,15 @@ describe('POST /api/leads/save', () => {
       headline: 'Second Headline',
       full_name: '',
       email: null,
+      is_verified: true,
     });
     expect(updated.id).toBe(created.id);
     expect(updated.headline).toBe('Second Headline');
     expect(updated.full_name).toBe('Original Name');
     expect(updated.email).toBe('keep@example.com');
     expect(updated.company_name).toBe('Acme Inc');
+    expect(updated.is_premium).toBe(true);
+    expect(updated.is_verified).toBe(true);
 
     const afterEmptyRaw = await saveLead(session.token, {
       profile_url: url,
@@ -229,6 +238,8 @@ describe('POST /api/leads/save', () => {
     });
     expect(afterEmptyRaw.id).toBe(created.id);
     expect(afterEmptyRaw.raw_data?.id).toBe(rawData.id);
+    expect(afterEmptyRaw.is_premium).toBe(true);
+    expect(afterEmptyRaw.is_verified).toBe(true);
 
     const listed = await listLeads(session.token);
     expect(listed.total).toBe(1);

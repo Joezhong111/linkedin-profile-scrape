@@ -10,6 +10,8 @@ import {
   type ScrapeTier,
 } from './types';
 
+import { sleep } from './util';
+
 /**
  * Apify provider adapter.
  *
@@ -21,8 +23,12 @@ import {
 const APIFY_BASE = 'https://api.apify.com/v2';
 const PROFILE_ACTOR_ID = '2SyF0bVxmgGr8IVCZ';
 const COMPANY_ACTOR_ID = 'Vb6LZkh4EqRlR0Ka9';
-const DEFAULT_POLL_DELAY_MS = 2000;
-const DEFAULT_MAX_WAIT_MS = 120_000;
+/**
+ * A 5 s profile poll keeps the worst case inside Workers Free's 50
+ * subrequests: start + ceil(120 s / 5 s) polls + dataset = 26.
+ */
+export const APIFY_PROFILE_POLL_INTERVAL_MS = 5_000;
+export const APIFY_PROFILE_MAX_WAIT_MS = 120_000;
 
 /** The Apify company actor prices its tiers by name, not by an enum. */
 const COMPANY_TIER_MODE: Record<ScrapeTier, string> = {
@@ -145,20 +151,13 @@ async function startProfileRun(
   };
 }
 
-function sleep(ms: number): Promise<void> {
-  if (ms <= 0) return Promise.resolve();
-  const { promise, resolve } = Promise.withResolvers<void>();
-  setTimeout(resolve, ms);
-  return promise;
-}
-
 async function scrapeProfiles(
   input: ProfileScrapeInput,
   token: string,
   options: ScrapeProviderOptions = {}
 ): Promise<unknown[]> {
-  const pollDelayMs = options.pollDelayMs ?? DEFAULT_POLL_DELAY_MS;
-  const maxWaitMs = options.maxWaitMs ?? DEFAULT_MAX_WAIT_MS;
+  const pollDelayMs = options.pollDelayMs ?? APIFY_PROFILE_POLL_INTERVAL_MS;
+  const maxWaitMs = options.maxWaitMs ?? APIFY_PROFILE_MAX_WAIT_MS;
 
   const started = await startProfileRun(input, token);
   let status = started.status ?? 'READY';

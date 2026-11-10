@@ -223,7 +223,7 @@ try {
 ```
 
 - Provider failures map to a 502 with a user-safe message.
-- Use the existing `providerFailure` helper in `worker/routes/scrape.ts` rather
+- Use the existing `providerFailure` helper in `worker/http.ts` rather
   than inventing a second error shape.
 - Frontend API errors are read with `readApiError()` from `services/http.ts`.
 - `ErrorBoundary` catches render errors only, not event handlers or async work.
@@ -292,6 +292,9 @@ pnpm test --run test/leads.test.ts
 - **Workers Free limits**: 10 ms CPU, 50 subrequests, 50 D1 queries per
   invocation. Company scrapes are chunked for this reason; do not add long
   loops or per-item requests.
+- **Scrape Result shapes**: provider payloads are normalized by
+  `lib/normalize.ts` before Saved Profile and Saved Lead persistence. Scrape Job
+  items keep the provider shape; stats and dedupe normalize transiently.
 - **TypeScript `any`**: minimize it; external provider JSON is the main
   exception, and it should be normalized at the provider boundary.
 - **React lazy imports**: must be wrapped in `<Suspense>`.

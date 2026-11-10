@@ -638,12 +638,13 @@ describe('treg company results to Saved Leads', () => {
       job_period: 'Jan 2023 - Present',
       email: 'remi.ounadjela@tiktok.com',
       mobile_number: null,
+      is_premium: false,
+      is_verified: true,
       followers: 16183,
       connections: 11027,
       source_company_url: COMPANY_URL,
     });
-    // The leads table has no verified/premium columns; the enriched raw data
-    // keeps them so the SPA can still normalize the flags.
+    // The enriched raw payload keeps the flags as well.
     expect(list.data[0]?.raw_data).toMatchObject({ verified: true, premium: false });
   });
 });

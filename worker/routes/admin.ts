@@ -187,37 +187,30 @@ export const adminRoutes: Route[] = [
         .limit(1);
       if (!target) return error(404, 'User not found');
 
-      if (password !== undefined && role !== undefined) {
-        await db.batch([
-          db
-            .update(users)
-            .set({
-              passwordHash: await hashPassword(password),
-              updatedAt: new Date().toISOString(),
-            })
-            .where(eq(users.id, userId)),
-          db
-            .insert(userRoles)
-            .values({ userId, role })
-            .onConflictDoUpdate({ target: userRoles.userId, set: { role } }),
-        ]);
-      } else if (password !== undefined) {
-        await db.batch([
-          db
-            .update(users)
-            .set({
-              passwordHash: await hashPassword(password),
-              updatedAt: new Date().toISOString(),
-            })
-            .where(eq(users.id, userId)),
-        ]);
-      } else if (role !== undefined) {
-        await db.batch([
-          db
-            .insert(userRoles)
-            .values({ userId, role })
-            .onConflictDoUpdate({ target: userRoles.userId, set: { role } }),
-        ]);
+      const passwordStatement =
+        password !== undefined
+          ? db
+              .update(users)
+              .set({
+                passwordHash: await hashPassword(password),
+                updatedAt: new Date().toISOString(),
+              })
+              .where(eq(users.id, userId))
+          : null;
+      const roleStatement =
+        role !== undefined
+          ? db
+              .insert(userRoles)
+              .values({ userId, role })
+              .onConflictDoUpdate({ target: userRoles.userId, set: { role } })
+          : null;
+
+      if (passwordStatement && roleStatement) {
+        await db.batch([passwordStatement, roleStatement]);
+      } else if (passwordStatement) {
+        await passwordStatement;
+      } else if (roleStatement) {
+        await roleStatement;
       }
 
       return json({ message: 'User updated' });

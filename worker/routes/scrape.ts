@@ -1,13 +1,24 @@
 import { createDb } from '../db';
 import { getProviderToken } from '../credentials';
-import { error, json, parseJsonBody, requireUser, type Route } from '../http';
+import {
+  error,
+  json,
+  parseJsonBody,
+  providerFailure,
+  requireUser,
+  type Route,
+} from '../http';
 import { createCompanyJobRow } from '../jobs';
 import { providerFor } from '../providers';
 import {
-  ProviderError,
-  type CompanyScrapeInput,
-  type ScrapeTier,
-} from '../providers/types';
+  COMPANY_URL_PATTERN,
+  DEFAULT_MAX_ITEMS,
+  FILTER_LIMITS,
+  MAX_ITEMS,
+  MAX_PROFILE_URLS,
+  isProfileUrl,
+} from '../../lib/scrape-config';
+import { type CompanyScrapeInput, type ScrapeTier } from '../providers/types';
 
 /**
  * `POST /api/scrape` is the synchronous Profile scrape path.
@@ -19,33 +30,8 @@ import {
  * identifier immediately; progress arrives through `/api/check_scrape_status`.
  */
 
-const MAX_PROFILE_URLS = 10;
-const PROFILE_URL_PATTERN = /^https?:\/\/(?:[a-z0-9-]+\.)*linkedin\.com\/in\//i;
-const COMPANY_URL_PATTERN = /^https?:\/\/(?:[a-z0-9-]+\.)*linkedin\.com\/company\/[^\s]+$/i;
-const DEFAULT_MAX_ITEMS = 25;
-const MAX_ITEMS = 100;
-/** treg accepts 70 filter values per list; Apify accepts 50. */
-const MAX_FILTER_VALUES = { apify: 50, treg: 70 } as const;
-
 function isTier(value: unknown): value is ScrapeTier {
   return value === 'full' || value === 'full_email';
-}
-
-/** Provider messages must never leak a token in a query string or header. */
-function redactSecrets(message: string): string {
-  return message
-    .replace(/([?&]token=)[^&\s]+/gi, '$1[redacted]')
-    .replace(/(Bearer\s+)[^\s]+/gi, '$1[redacted]');
-}
-
-function providerFailure(err: unknown, fallback: string): Response {
-  if (err instanceof ProviderError) {
-    const message = redactSecrets(err.message);
-    if (err.kind === 'credential') return error(400, message, 'credential_invalid');
-    if (err.kind === 'input') return error(400, message);
-    return error(502, message);
-  }
-  return error(502, fallback);
 }
 
 type FilterListResult = { ok: true; values: string[] } | { ok: false; error: string };
@@ -84,7 +70,7 @@ export const scrapeRoutes: Route[] = [
       const user = await requireUser(ctx);
       if (user instanceof Response) return user;
 
-      const credential = await getProviderToken(ctx.env, createDb(ctx.env.DB), user);
+      const credential = await getProviderToken(ctx.env, user);
       if (credential instanceof Response) return credential;
 
       const body = await parseJsonBody(ctx.request);
@@ -99,7 +85,7 @@ export const scrapeRoutes: Route[] = [
       if (urls.length > MAX_PROFILE_URLS) {
         return error(400, `At most ${MAX_PROFILE_URLS} Profile URLs can be scraped at once.`);
       }
-      if (!urls.every((url) => PROFILE_URL_PATTERN.test(url))) {
+      if (!urls.every(isProfileUrl)) {
         return error(400, 'Every URL must be a LinkedIn profile URL (linkedin.com/in/...).');
       }
       if (body.tier !== undefined && !isTier(body.tier)) {
@@ -126,7 +112,7 @@ export const scrapeRoutes: Route[] = [
       if (user instanceof Response) return user;
 
       const db = createDb(ctx.env.DB);
-      const credential = await getProviderToken(ctx.env, db, user);
+      const credential = await getProviderToken(ctx.env, user);
       if (credential instanceof Response) return credential;
 
       const body = await parseJsonBody(ctx.request);
@@ -148,7 +134,7 @@ export const scrapeRoutes: Route[] = [
       }
       const tier: ScrapeTier = isTier(body.tier) ? body.tier : 'full';
       const maxFilterValues =
-        credential.provider === 'treg' ? MAX_FILTER_VALUES.treg : MAX_FILTER_VALUES.apify;
+        credential.provider === 'treg' ? FILTER_LIMITS.treg : FILTER_LIMITS.apify;
 
       const jobTitles = parseFilterList(body.jobTitles, 'Job titles', maxFilterValues);
       if (!jobTitles.ok) return error(400, jobTitles.error);

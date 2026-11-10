@@ -1,6 +1,7 @@
-import { LinkedInProfile } from '../types';
-import { authClient } from '../lib/auth';
-import { normalizeScrapeItem } from '../lib/normalize';
+import { LinkedInProfile } from '@/types';
+import { authClient } from '@/lib/auth';
+import { normalizeScrapeItem } from '@/lib/normalize';
+import { readApiError } from '@/services/http';
 
 /** Scrape tiers accepted by `/api/scrape` and `/api/scrape_company`. */
 export type ScrapeTier = 'full' | 'full_email';
@@ -20,14 +21,7 @@ export const scrapeLinkedInProfiles = async (
   });
 
   if (!res.ok) {
-    let msg = 'Scraping failed';
-    try {
-      const data = await res.json();
-      msg = (data && (data.error || data.message)) || msg;
-    } catch {
-      // Error bodies are not always JSON; keep the default message.
-    }
-    throw new Error(msg);
+    throw new Error(await readApiError(res, 'Scraping failed'));
   }
 
   const data = await res.json();
@@ -82,14 +76,7 @@ export const checkCompanyHistory = async (companyUrl: string): Promise<CompanyHi
   });
 
   if (!res.ok) {
-    let msg = 'Failed to check company history';
-    try {
-      const data = await res.json();
-      msg = (data && (data.error || data.message)) || msg;
-    } catch {
-      // Error bodies are not always JSON; keep the default message.
-    }
-    throw new Error(msg);
+    throw new Error(await readApiError(res, 'Failed to check company history'));
   }
 
   return await res.json();
@@ -105,14 +92,7 @@ export const scrapeCompany = async (options: ScrapeCompanyOptions): Promise<Scra
   });
 
   if (!res.ok) {
-    let msg = 'Company scraping failed';
-    try {
-      const data = await res.json();
-      msg = (data && (data.error || data.message)) || msg;
-    } catch {
-      // Error bodies are not always JSON; keep the default message.
-    }
-    throw new Error(msg);
+    throw new Error(await readApiError(res, 'Company scraping failed'));
   }
 
   const data = await res.json();
@@ -128,14 +108,7 @@ export const checkScrapeStatus = async (jobId: string): Promise<ScrapeCompanyRes
   );
 
   if (!res.ok) {
-    let msg = 'Failed to check scrape status';
-    try {
-      const data = await res.json();
-      msg = (data && (data.error || data.message)) || msg;
-    } catch {
-      // Error bodies are not always JSON; keep the default message.
-    }
-    throw new Error(msg);
+    throw new Error(await readApiError(res, 'Failed to check scrape status'));
   }
 
   return await res.json();

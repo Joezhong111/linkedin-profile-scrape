@@ -128,10 +128,7 @@ export async function decryptCredential(
 }
 
 /** The only credential shape that leaves the Worker. */
-export async function getCredentialStatus(
-  _db: AppDb,
-  user: User
-): Promise<CredentialStatus> {
+export async function getCredentialStatus(user: User): Promise<CredentialStatus> {
   return {
     provider: user.activeProvider ?? null,
     configured: Boolean(user.scrapeCredentialCiphertext && user.scrapeCredentialIv),
@@ -263,7 +260,6 @@ export async function clearCredential(db: AppDb, userId: string): Promise<void> 
 /** Resolves the plaintext credential for a provider call, or a 400 response. */
 export async function getProviderToken(
   env: Env,
-  _db: AppDb,
   user: User
 ): Promise<ResolvedCredential | Response> {
   const provider = user.activeProvider;

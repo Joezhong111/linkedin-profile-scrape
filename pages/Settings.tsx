@@ -11,7 +11,7 @@ import {
   saveCredential,
   type CredentialStatus,
   type ProviderId,
-} from '../services/account';
+} from '@/services/account';
 
 const PROVIDER_LABELS: Record<ProviderId, string> = {
   apify: 'Apify',

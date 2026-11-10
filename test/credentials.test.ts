@@ -281,7 +281,7 @@ describe('credential lifecycle', () => {
 describe('getProviderToken', () => {
   it('returns a missing-credential 400 when nothing is stored', async () => {
     const session = await signUp();
-    const result = await getProviderToken(env, createDb(env.DB), await readUser(session.id));
+    const result = await getProviderToken(env, await readUser(session.id));
 
     expect(result).toBeInstanceOf(Response);
     const response = result as Response;
@@ -299,7 +299,7 @@ describe('getProviderToken', () => {
     await putCredential(session, 'treg', TREG_TOKEN);
     expect(requestLog).not.toHaveBeenCalled();
 
-    const result = await getProviderToken(env, createDb(env.DB), await readUser(session.id));
+    const result = await getProviderToken(env, await readUser(session.id));
     expect(result).not.toBeInstanceOf(Response);
     expect(result).toEqual({ provider: 'treg', token: TREG_TOKEN });
   });
@@ -315,11 +315,7 @@ describe('getProviderToken', () => {
     const wrongKeyEnv = {
       CREDENTIAL_ENCRYPTION_KEY: btoa('abcdefghijklmnopqrstuvwxyz123456'),
     } as unknown as Env;
-    const result = await getProviderToken(
-      wrongKeyEnv,
-      createDb(env.DB),
-      await readUser(session.id)
-    );
+    const result = await getProviderToken(wrongKeyEnv, await readUser(session.id));
 
     expect(result).toBeInstanceOf(Response);
     const response = result as Response;
@@ -341,7 +337,7 @@ describe('getProviderToken', () => {
       .bind(btoa('corrupt-iv!!'), session.id)
       .run();
 
-    const result = await getProviderToken(env, createDb(env.DB), await readUser(session.id));
+    const result = await getProviderToken(env, await readUser(session.id));
     expect(result).toBeInstanceOf(Response);
     const response = result as Response;
     expect(response.status).toBe(400);
