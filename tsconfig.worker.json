@@ -16,6 +16,7 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
+    "resolveJsonModule": true,
     "noEmit": true,
     "paths": {
       "@/*": ["./*"]

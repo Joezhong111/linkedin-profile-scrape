@@ -101,9 +101,9 @@ export const saveLead = async (lead: LinkedInProfile, sourceCompanyUrl?: string)
   });
 
   if (!res.ok) {
-    const errorBody = await res.text();
-    console.error('Save lead failed:', res.status, errorBody);
-    throw new Error(`Failed to save lead (${res.status}): ${errorBody}`);
+    const message = await readApiError(res);
+    console.error('Save lead failed:', res.status, message);
+    throw new Error(message);
   }
 
   return await res.json();
@@ -157,9 +157,9 @@ export const fetchAllLeads = async (
   });
 
   if (!res.ok) {
-    const errorBody = await res.text();
-    console.error('Fetch leads failed:', res.status, errorBody);
-    throw new Error(`Failed to fetch leads (${res.status}): ${errorBody}`);
+    const message = await readApiError(res);
+    console.error('Fetch leads failed:', res.status, message);
+    throw new Error(message);
   }
 
   return (await res.json()) as LeadsPaginatedResponse;
@@ -173,8 +173,7 @@ export const deleteLead = async (id: string) => {
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || 'Failed to delete lead');
+    throw new Error(await readApiError(res));
   }
 };
 
@@ -198,8 +197,7 @@ export const batchDeleteLeads = async (ids: string[]): Promise<{ deleted: number
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || 'Failed to batch delete leads');
+    throw new Error(await readApiError(res));
   }
 
   return await res.json();
