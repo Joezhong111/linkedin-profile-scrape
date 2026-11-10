@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "worker/**/*.ts",
+    "test/**/*.ts",
+    "db/schema.ts",
+    "lib/**/*.ts",
+    "worker-configuration.d.ts"
+  ],
+  // Frontend-only (DOM) and Netlify-only (Node crypto, node-postgres) libs.
+  "exclude": ["lib/auth.ts", "lib/auth-server.ts"]
+}
