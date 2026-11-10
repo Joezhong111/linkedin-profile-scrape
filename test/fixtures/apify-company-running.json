@@ -1,0 +1,11 @@
+{
+  "data": {
+    "id": "run_company1",
+    "status": "RUNNING",
+    "defaultDatasetId": "dataset_company1",
+    "stats": {
+      "itemsScraped": 1,
+      "requestsFinished": 1
+    }
+  }
+}

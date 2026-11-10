@@ -37,8 +37,7 @@ export const scrapeLinkedInProfiles = async (
 export interface ScrapeCompanyOptions {
   companyUrl: string;
   maxItems: number;
-  profileScraperMode: string;
-  tier?: ScrapeTier;
+  tier: ScrapeTier;
   jobTitles?: string[];
   locations?: string[];
   yearsAtCurrentCompanyIds?: string[];
@@ -52,22 +51,23 @@ export interface CompanyHistoryResponse {
     maxItemsRequested: number;
     itemsReturned: number;
     itemsSaved: number;
-    filtersUsed: any;
+    filtersUsed: unknown;
   } | null;
   totalScrapes: number;
 }
 
 export interface ScrapeCompanyResult {
-  items: any[];
+  items?: unknown[];
   stats?: {
     totalReturned: number;
     alreadyExists: number;
     newProfiles: number;
     duplicateRate: number;
   };
-  runId?: string;
   jobId?: string;
   status?: string;
+  progress?: number;
+  resultCount?: number;
   tier?: ScrapeTier;
   message?: string;
   error?: string;
@@ -119,26 +119,13 @@ export const scrapeCompany = async (options: ScrapeCompanyOptions): Promise<Scra
   return data;
 };
 
-export const checkScrapeStatus = async (
-  runId: string,
-  options: ScrapeCompanyOptions
-): Promise<ScrapeCompanyResult> => {
+export const checkScrapeStatus = async (jobId: string): Promise<ScrapeCompanyResult> => {
   const headers = authClient.getAuthHeaders();
 
-  const params = new URLSearchParams({
-    runId,
-    companyUrl: options.companyUrl,
-    maxItems: options.maxItems.toString(),
-    jobTitles: JSON.stringify(options.jobTitles || []),
-    locations: JSON.stringify(options.locations || []),
-    yearsAtCurrentCompanyIds: JSON.stringify(options.yearsAtCurrentCompanyIds || []),
-    yearsOfExperienceIds: JSON.stringify(options.yearsOfExperienceIds || []),
-  });
-
-  const res = await fetch(`/api/check_scrape_status?${params}`, {
-    method: 'GET',
-    headers,
-  });
+  const res = await fetch(
+    `/api/check_scrape_status?jobId=${encodeURIComponent(jobId)}`,
+    { method: 'GET', headers }
+  );
 
   if (!res.ok) {
     let msg = 'Failed to check scrape status';

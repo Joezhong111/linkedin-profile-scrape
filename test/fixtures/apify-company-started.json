@@ -1,0 +1,10 @@
+{
+  "data": {
+    "id": "run_company1",
+    "actId": "Vb6LZkh4EqRlR0Ka9",
+    "status": "READY",
+    "defaultDatasetId": "dataset_company1",
+    "startedAt": "2026-11-11T00:00:00.000Z",
+    "finishedAt": null
+  }
+}
