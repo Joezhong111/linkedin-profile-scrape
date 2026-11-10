@@ -7,6 +7,7 @@ import {
   checkCompanyHistory,
   checkScrapeStatus,
   CompanyHistoryResponse,
+  ScrapeCompanyOptions,
   ScrapeCompanyResult,
   ScrapeTier,
 } from '../services/apify';
@@ -16,6 +17,7 @@ import {
   fetchAllProfiles,
   fetchAllLeads,
 } from '../services/api';
+import { authClient } from '../lib/auth';
 import { getCredentialStatus, type CredentialStatus } from '../services/account';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
@@ -29,6 +31,63 @@ import ProfileCard from '../components/ProfileCard';
 import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
 
 const MAX_PROFILE_URLS = 10;
+const DEFAULT_MAX_ITEMS = 25;
+const MAX_ITEMS = 100;
+const MAX_FILTER_VALUES = 50;
+const COMPANY_URL_PATTERN = /^https?:\/\/(?:[a-z0-9-]+\.)*linkedin\.com\/company\/[^\s]+$/i;
+const COMPANY_POLL_INTERVAL_MS = 3000;
+const COMPANY_POLL_MAX_ATTEMPTS = 200;
+
+interface StoredCompanyJob {
+  jobId: string;
+  companyUrl: string;
+}
+
+/** Active job ids are stored per User so a reload resumes the same poll. */
+function companyJobStorageKey(): string | null {
+  const userId = authClient.getUser()?.id;
+  return userId ? `lps.active-company-job.${userId}` : null;
+}
+
+function readStoredCompanyJob(): StoredCompanyJob | null {
+  const key = companyJobStorageKey();
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    if ('jobId' in parsed && 'companyUrl' in parsed) {
+      const { jobId, companyUrl } = parsed;
+      if (typeof jobId === 'string' && typeof companyUrl === 'string') {
+        return { jobId, companyUrl };
+      }
+    }
+  } catch {
+    // A corrupt entry must not block a new scrape.
+  }
+  return null;
+}
+
+function storeCompanyJob(value: StoredCompanyJob): void {
+  const key = companyJobStorageKey();
+  if (!key) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Storage can be full or denied; polling still works until reload.
+  }
+}
+
+function clearStoredCompanyJob(): void {
+  const key = companyJobStorageKey();
+  if (!key) return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore storage failures; the in-memory poll state is authoritative.
+  }
+}
 
 /** Splits the textarea into scrapeable URLs, mirroring the server-side filter. */
 function parseProfileUrls(value: string): string[] {
@@ -51,8 +110,8 @@ export default function Home() {
 
   // Company Scrape State
   const [companyUrl, setCompanyUrl] = useState<string>('');
-  const [maxItems, setMaxItems] = useState<number>(10);
-  const [profileScraperMode, setProfileScraperMode] = useState<string>('Full ($8 per 1k)');
+  const [maxItems, setMaxItems] = useState<number>(DEFAULT_MAX_ITEMS);
+  const [tier, setTier] = useState<ScrapeTier>('full');
   const [jobTitles, setJobTitles] = useState<string[]>([]);
   const [jobTitleInput, setJobTitleInput] = useState('');
   const [locations, setLocations] = useState<string[]>([]);
@@ -62,17 +121,29 @@ export default function Home() {
 
   // Input helpers
   const addJobTitle = () => {
-    if (jobTitleInput.trim()) {
-      setJobTitles([...jobTitles, jobTitleInput.trim()]);
-      setJobTitleInput('');
+    if (!jobTitleInput.trim()) return;
+    if (jobTitles.length >= MAX_FILTER_VALUES) {
+      setState((prev: ScraperState) => ({
+        ...prev,
+        error: `At most ${MAX_FILTER_VALUES} job titles can be used per company scrape.`,
+      }));
+      return;
     }
+    setJobTitles([...jobTitles, jobTitleInput.trim()]);
+    setJobTitleInput('');
   };
   const removeJobTitle = (i: number) => setJobTitles(jobTitles.filter((_, idx) => idx !== i));
   const addLocation = () => {
-    if (locationInput.trim()) {
-      setLocations([...locations, locationInput.trim()]);
-      setLocationInput('');
+    if (!locationInput.trim()) return;
+    if (locations.length >= MAX_FILTER_VALUES) {
+      setState((prev: ScraperState) => ({
+        ...prev,
+        error: `At most ${MAX_FILTER_VALUES} locations can be used per company scrape.`,
+      }));
+      return;
     }
+    setLocations([...locations, locationInput.trim()]);
+    setLocationInput('');
   };
   const removeLocation = (i: number) => setLocations(locations.filter((_, idx) => idx !== i));
   const toggleSet = (set: Set<string>, val: string) => {
@@ -137,6 +208,79 @@ export default function Home() {
     }
   }, []);
 
+  const buildCompanyOptions = (): ScrapeCompanyOptions => ({
+    companyUrl: companyUrl.trim(),
+    maxItems,
+    tier,
+    jobTitles,
+    locations,
+    yearsAtCurrentCompanyIds: Array.from(yearsAtCurrentCompany),
+    yearsOfExperienceIds: Array.from(yearsOfExperience),
+  });
+
+  /**
+   * Polls one job until it succeeds or fails, updating progress on the way.
+   * Every successful or failed terminal state clears the persisted job id.
+   */
+  const pollCompanyJob = useCallback(async (jobId: string) => {
+    setState((prev: ScraperState) => ({ ...prev, isLoading: true, error: null }));
+    setScrapingStatus('Company scrape started — waiting for Apify...');
+
+    for (let attempt = 0; attempt < COMPANY_POLL_MAX_ATTEMPTS; attempt += 1) {
+      // The app tsconfig targets ES2023, so Promise.withResolvers is unavailable.
+      await new Promise<void>((resolve) => setTimeout(resolve, COMPANY_POLL_INTERVAL_MS));
+
+      let statusResult: ScrapeCompanyResult;
+      try {
+        statusResult = await checkScrapeStatus(jobId);
+      } catch (err: any) {
+        clearStoredCompanyJob();
+        setScrapingStatus('');
+        setState((prev: ScraperState) => ({
+          ...prev,
+          isLoading: false,
+          error: err?.message || 'Could not check the company scrape status.',
+        }));
+        return;
+      }
+
+      if (statusResult.status === 'succeeded') {
+        const items = statusResult.items || [];
+        setPreviewItems(items);
+        setSelectedIndexes(new Set(items.map((_: unknown, i: number) => i)));
+        setScrapeStats(statusResult.stats || null);
+        clearStoredCompanyJob();
+        setScrapingStatus('');
+        setState((prev: ScraperState) => ({ ...prev, isLoading: false, error: null }));
+        return;
+      }
+
+      if (statusResult.status === 'failed') {
+        clearStoredCompanyJob();
+        setScrapingStatus('');
+        setState((prev: ScraperState) => ({
+          ...prev,
+          isLoading: false,
+          error: statusResult.error || 'The company scrape failed. Try again.',
+        }));
+        return;
+      }
+
+      const found = statusResult.progress ?? statusResult.resultCount ?? 0;
+      setScrapingStatus(
+        `Scraping company... ${found} profile${found === 1 ? '' : 's'} found so far`
+      );
+    }
+
+    clearStoredCompanyJob();
+    setScrapingStatus('');
+    setState((prev: ScraperState) => ({
+      ...prev,
+      isLoading: false,
+      error: 'Company scraping timed out. Please try again.',
+    }));
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     getCredentialStatus()
@@ -155,6 +299,18 @@ export default function Home() {
     loadCount();
   }, [loadCount]);
 
+  // Resume an in-flight company job after a reload; only once per mount.
+  const resumedCompanyJob = React.useRef(false);
+  useEffect(() => {
+    if (!credentialReady || resumedCompanyJob.current) return;
+    resumedCompanyJob.current = true;
+    const stored = readStoredCompanyJob();
+    if (!stored) return;
+    setScrapeMode('company');
+    setCompanyUrl(stored.companyUrl);
+    void pollCompanyJob(stored.jobId);
+  }, [credentialReady, pollCompanyJob]);
+
   const handleScrape = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -169,12 +325,19 @@ export default function Home() {
       return;
     }
 
-    // Company mode: check history first
+    // Company mode: validate locally, then check history
     if (scrapeMode === 'company') {
-      if (!companyUrl.trim().startsWith('http')) {
+      if (!COMPANY_URL_PATTERN.test(companyUrl.trim())) {
         setState((prev: ScraperState) => ({
           ...prev,
-          error: 'Please enter a valid Company LinkedIn URL',
+          error: 'Please enter a valid Company LinkedIn URL (linkedin.com/company/...)',
+        }));
+        return;
+      }
+      if (!Number.isInteger(maxItems) || maxItems < 1 || maxItems > MAX_ITEMS) {
+        setState((prev: ScraperState) => ({
+          ...prev,
+          error: `Max items must be an integer from 1 to ${MAX_ITEMS}.`,
         }));
         return;
       }
@@ -184,15 +347,7 @@ export default function Home() {
         if (history.hasHistory) {
           // Show warning modal
           setHistoryData(history);
-          setPendingScrapeOptions({
-            companyUrl: companyUrl.trim(),
-            maxItems,
-            profileScraperMode,
-            jobTitles,
-            locations,
-            yearsAtCurrentCompanyIds: Array.from(yearsAtCurrentCompany),
-            yearsOfExperienceIds: Array.from(yearsOfExperience),
-          });
+          setPendingScrapeOptions(buildCompanyOptions());
           setShowWarningModal(true);
           return;
         }
@@ -245,86 +400,20 @@ export default function Home() {
         setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
         setUrls('');
       } else {
-        // Company mode
-        const options = pendingScrapeOptions || {
-          companyUrl: companyUrl.trim(),
-          maxItems,
-          profileScraperMode,
-          jobTitles,
-          locations,
-          yearsAtCurrentCompanyIds: Array.from(yearsAtCurrentCompany),
-          yearsOfExperienceIds: Array.from(yearsOfExperience),
-        };
+        // Company mode: start a job, persist its id, then poll by job id.
+        const options: ScrapeCompanyOptions = pendingScrapeOptions || buildCompanyOptions();
 
-        // Start the scrape (returns immediately with runId)
-        result = await scrapeCompany(options);
-
-        if (result.runId) {
-          // Poll for status
-          setScrapingStatus('抓取任务已启动，正在等待 Apify 处理...');
-
-          const pollInterval = 3000; // 3 seconds
-          const maxAttempts = 200; // 10 minutes max
-          let attempts = 0;
-
-          while (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, pollInterval));
-
-            const statusResult = await checkScrapeStatus(result.runId, options);
-
-            // Update status message with progress
-            // Use maxItems as the target and show how many have been scraped so far
-            if (statusResult.stats) {
-              const stats = statusResult.stats as any;
-              // Try to get the number of items scraped so far from Apify stats
-              const itemsScraped = stats.itemsScraped || stats.requestsFinished || 0;
-              if (itemsScraped > 0) {
-                setScrapingStatus(
-                  `正在抓取中... (已抓取 ${itemsScraped}/${maxItems} 条，已等待 ${Math.floor((attempts + 1) * 3)} 秒)`
-                );
-              } else {
-                setScrapingStatus(`正在抓取中... (已等待 ${Math.floor((attempts + 1) * 3)} 秒)`);
-              }
-            } else {
-              setScrapingStatus(`正在抓取中... (已等待 ${Math.floor((attempts + 1) * 3)} 秒)`);
-            }
-
-            if (statusResult.status === 'SUCCEEDED') {
-              setScrapingStatus('抓取完成！正在处理数据...');
-
-              const items = statusResult.items || [];
-              setPreviewItems(items);
-              setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
-
-              // Save stats if available
-              if (statusResult.stats) {
-                setScrapeStats(statusResult.stats);
-              }
-
-              setScrapingStatus('');
-              break;
-            } else if (statusResult.status === 'FAILED' || statusResult.status === 'ABORTED' || statusResult.status === 'TIMED-OUT') {
-              setScrapingStatus('');
-              throw new Error(statusResult.error || 'Scraping failed');
-            }
-
-            attempts++;
-          }
-
-          if (attempts >= maxAttempts) {
-            setScrapingStatus('');
-            throw new Error('Scraping timed out. Please try again.');
-          }
-        } else {
-          // Old synchronous response (shouldn't happen with new code)
-          const items = result.items || [];
-          setPreviewItems(items);
-          setSelectedIndexes(new Set(items.map((_: any, i: number) => i)));
-
-          if (result.stats) {
-            setScrapeStats(result.stats);
-          }
+        if (!Number.isInteger(options.maxItems) || options.maxItems < 1 || options.maxItems > MAX_ITEMS) {
+          throw new Error(`Max items must be an integer from 1 to ${MAX_ITEMS}.`);
         }
+
+        const started = await scrapeCompany(options);
+        if (!started.jobId) {
+          throw new Error('The server did not return a Scrape Job id.');
+        }
+
+        storeCompanyJob({ jobId: started.jobId, companyUrl: options.companyUrl });
+        await pollCompanyJob(started.jobId);
       }
 
       setState((prev: ScraperState) => ({ ...prev, isLoading: false }));
@@ -597,7 +686,7 @@ export default function Home() {
                       <input
                         type="number"
                         min={1}
-                        max={100}
+                        max={MAX_ITEMS}
                         disabled={state.isLoading}
                         className="w-full p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         value={maxItems}
@@ -606,21 +695,23 @@ export default function Home() {
                         }
                       />
                     </div>
-                    {/* Scraper Mode */}
+                    {/* Scrape Tier */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                        Scraper Mode <span className="text-red-500">*</span>
+                        Scrape Tier <span className="text-red-500">*</span>
                       </label>
                       <select
-                        value={profileScraperMode}
-                        onChange={(e) => setProfileScraperMode(e.target.value)}
+                        value={tier}
+                        onChange={(e) => {
+                          if (e.target.value === 'full' || e.target.value === 'full_email') {
+                            setTier(e.target.value);
+                          }
+                        }}
                         className="w-full p-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         disabled={state.isLoading}
                       >
-                        <option value="Full + email search ($12 per 1k)">
-                          Full + email search ($12 per 1k)
-                        </option>
-                        <option value="Full ($8 per 1k)">Full ($8 per 1k)</option>
+                        <option value="full">Full ($8 per 1k)</option>
+                        <option value="full_email">Full + email search ($12 per 1k)</option>
                       </select>
                     </div>
                   </div>
@@ -783,7 +874,12 @@ export default function Home() {
                   state.isLoading ||
                   !credentialReady ||
                   (scrapeMode === 'profiles' &&
-                    (profileUrlCount === 0 || profileUrlCount > MAX_PROFILE_URLS))
+                    (profileUrlCount === 0 || profileUrlCount > MAX_PROFILE_URLS)) ||
+                  (scrapeMode === 'company' &&
+                    (!COMPANY_URL_PATTERN.test(companyUrl.trim()) ||
+                      !Number.isInteger(maxItems) ||
+                      maxItems < 1 ||
+                      maxItems > MAX_ITEMS))
                 }
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
               >

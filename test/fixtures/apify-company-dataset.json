@@ -1,0 +1,45 @@
+[
+  {
+    "profileUrl": "https://www.linkedin.com/in/alice",
+    "fullName": "Alice Anderson",
+    "firstName": "Alice",
+    "lastName": "Anderson",
+    "headline": "Engineer at Acme",
+    "location": "Guangzhou",
+    "email": "alice@acme.example",
+    "jobTitle": "Engineer",
+    "companyName": "Acme",
+    "companyLinkedin": "https://www.linkedin.com/company/acme"
+  },
+  {
+    "profileUrl": "https://www.linkedin.com/in/ALICE/",
+    "fullName": "Alice Duplicate",
+    "firstName": "Alice",
+    "lastName": "Duplicate",
+    "headline": "Engineer at Acme",
+    "location": "Guangzhou",
+    "jobTitle": "Engineer",
+    "companyName": "Acme"
+  },
+  {
+    "profileUrl": "https://www.linkedin.com/in/bob",
+    "fullName": "Bob Brown",
+    "firstName": "Bob",
+    "lastName": "Brown",
+    "headline": "Designer at Acme",
+    "location": "Shenzhen",
+    "email": "bob@acme.example",
+    "jobTitle": "Designer",
+    "companyName": "Acme"
+  },
+  {
+    "profileUrl": "https://www.linkedin.com/in/carol",
+    "fullName": "Carol Clark",
+    "firstName": "Carol",
+    "lastName": "Clark",
+    "headline": "Manager at Acme",
+    "location": "Beijing",
+    "jobTitle": "Manager",
+    "companyName": "Acme"
+  }
+]

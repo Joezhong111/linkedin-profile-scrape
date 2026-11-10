@@ -20,6 +20,9 @@
       "migrations_dir": "drizzle-d1"
     }
   ],
+  "triggers": {
+    "crons": ["0 3 * * *"]
+  },
   "observability": {
     "enabled": true
   }

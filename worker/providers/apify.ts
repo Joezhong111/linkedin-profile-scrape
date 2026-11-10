@@ -6,6 +6,7 @@ import {
   type ProviderRunState,
   type ScrapeProvider,
   type ScrapeProviderOptions,
+  type ScrapeTier,
 } from './types';
 
 /**
@@ -18,8 +19,15 @@ import {
 
 const APIFY_BASE = 'https://api.apify.com/v2';
 const PROFILE_ACTOR_ID = '2SyF0bVxmgGr8IVCZ';
+const COMPANY_ACTOR_ID = 'Vb6LZkh4EqRlR0Ka9';
 const DEFAULT_POLL_DELAY_MS = 2000;
 const DEFAULT_MAX_WAIT_MS = 120_000;
+
+/** The Apify company actor prices its tiers by name, not by an enum. */
+const COMPANY_TIER_MODE: Record<ScrapeTier, string> = {
+  full: 'Full ($8 per 1k)',
+  full_email: 'Full + email search ($12 per 1k)',
+};
 
 const POLLABLE_STATUS: Record<string, true> = {
   READY: true,
@@ -46,6 +54,7 @@ interface ApifyRunEnvelope {
 interface ApifyRunData {
   status?: string;
   defaultDatasetId?: string;
+  itemsScraped?: number;
 }
 
 function readRunData(payload: unknown): ApifyRunData {
@@ -53,10 +62,19 @@ function readRunData(payload: unknown): ApifyRunData {
   if (typeof data !== 'object' || data === null) {
     throw new ProviderError('provider', 'Apify returned an unexpected run response.');
   }
+  let itemsScraped: number | undefined;
+  if ('stats' in data && typeof data.stats === 'object' && data.stats !== null) {
+    const stats = data.stats;
+    if ('itemsScraped' in stats) {
+      const raw = stats.itemsScraped;
+      if (typeof raw === 'number' && Number.isFinite(raw)) itemsScraped = raw;
+    }
+  }
   return {
     status: typeof data.status === 'string' ? data.status : undefined,
     defaultDatasetId:
       typeof data.defaultDatasetId === 'string' ? data.defaultDatasetId : undefined,
+    itemsScraped,
   };
 }
 
@@ -191,25 +209,112 @@ async function scrapeProfiles(
   );
 }
 
-function notImplementedCompany(): never {
+async function createCompanyJob(
+  input: CompanyScrapeInput,
+  token: string
+): Promise<CompanyJobStart> {
+  const actorInput: Record<string, unknown> = {
+    profileScraperMode: COMPANY_TIER_MODE[input.tier],
+    maxItems: input.maxItems,
+    companies: [input.companyUrl],
+    companyBatchMode: 'all_at_once',
+  };
+  if (input.jobTitles.length > 0) actorInput.jobTitles = input.jobTitles;
+  if (input.locations.length > 0) actorInput.locations = input.locations;
+  if (input.yearsAtCurrentCompanyIds.length > 0) {
+    actorInput.yearsAtCurrentCompanyIds = input.yearsAtCurrentCompanyIds;
+  }
+  if (input.yearsOfExperienceIds.length > 0) {
+    actorInput.yearsOfExperienceIds = input.yearsOfExperienceIds;
+  }
+
+  const payload = await requestJson(`${APIFY_BASE}/acts/${COMPANY_ACTOR_ID}/runs`, token, {
+    method: 'POST',
+    body: JSON.stringify(actorInput),
+  });
+
+  const data = (payload as ApifyRunEnvelope | null | undefined)?.data;
+  if (typeof data !== 'object' || data === null) {
+    throw new ProviderError('provider', 'Apify returned an unexpected run response.');
+  }
+  const id = typeof data.id === 'string' ? data.id : '';
+  if (!id) {
+    throw new ProviderError('provider', 'Apify did not return a run id.');
+  }
+
+  return { providerJobRef: id };
+}
+
+/**
+ * Reads the run once. A SUCCEEDED run additionally reads its dataset so the
+ * caller can persist the items; every other state is reported without I/O.
+ */
+async function pollCompanyJob(
+  job: unknown,
+  _input: CompanyScrapeInput,
+  token: string
+): Promise<ProviderRunState> {
+  const ref = typeof job === 'string' ? job : '';
+  if (!ref) {
+    throw new ProviderError('provider', 'The Scrape Job has no Apify run reference.');
+  }
+
+  const payload = await requestJson(
+    `${APIFY_BASE}/actor-runs/${encodeURIComponent(ref)}`,
+    token
+  );
+  const run = readRunData(payload);
+  const status = run.status ?? '';
+  const progress = run.itemsScraped ?? 0;
+
+  if (POLLABLE_STATUS[status] === true) {
+    return { status: 'running', progress, resultCount: progress };
+  }
+
+  if (status === 'SUCCEEDED') {
+    if (!run.defaultDatasetId) {
+      throw new ProviderError('provider', 'Apify finished without a dataset.');
+    }
+    const items = await requestJson(
+      `${APIFY_BASE}/datasets/${encodeURIComponent(run.defaultDatasetId)}/items?format=json&clean=true`,
+      token
+    );
+    if (!Array.isArray(items)) {
+      throw new ProviderError('provider', 'Apify returned an unexpected dataset payload.');
+    }
+    return {
+      status: 'succeeded',
+      progress: items.length,
+      resultCount: items.length,
+      items,
+    };
+  }
+
+  if (FAILED_STATUS[status] === true) {
+    const reason =
+      status === 'TIMED-OUT'
+        ? 'timed out'
+        : status === 'ABORTED'
+          ? 'was aborted'
+          : 'failed';
+    return {
+      status: 'failed',
+      progress,
+      resultCount: progress,
+      error: `Apify run ${reason} (status ${status}). Try again later.`,
+    };
+  }
+
   throw new ProviderError(
-    'input',
-    'Company scraping is not implemented for the Apify provider yet.'
+    'provider',
+    `Apify run entered an unexpected state${status ? ` "${status}"` : ''}. Try again later.`
   );
 }
 
 export const apifyProvider: ScrapeProvider = {
   scrapeProfiles,
-  createCompanyJob(_input: CompanyScrapeInput, _token: string): Promise<CompanyJobStart> {
-    return notImplementedCompany();
-  },
-  pollCompanyJob(
-    _job: unknown,
-    _input: CompanyScrapeInput,
-    _token: string
-  ): Promise<ProviderRunState> {
-    return notImplementedCompany();
-  },
+  createCompanyJob,
+  pollCompanyJob,
 };
 
 export default apifyProvider;

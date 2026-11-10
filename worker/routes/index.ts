@@ -2,6 +2,7 @@ import { json, type Route } from '../http';
 import { adminRoutes } from './admin';
 import { authRoutes } from './auth';
 import { credentialsRoutes } from './credentials';
+import { jobsRoutes } from './jobs';
 import { leadsRoutes } from './leads';
 import { profilesRoutes } from './profiles';
 import { scrapeRoutes } from './scrape';
@@ -21,5 +22,6 @@ export const ROUTES: Route[] = [
   ...leadsRoutes,
   ...profilesRoutes,
   ...scrapeRoutes,
+  ...jobsRoutes,
   ...adminRoutes,
 ];

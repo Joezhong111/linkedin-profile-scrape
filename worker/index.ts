@@ -1,3 +1,5 @@
+import { createDb } from './db';
+import { cleanupOldJobs } from './jobs';
 import { handleApiRequest } from './router';
 
 const worker = {
@@ -9,8 +11,10 @@ const worker = {
     return env.ASSETS.fetch(request);
   },
 
-  // No-op until the Scrape Job cleanup ticket wires the daily Cron Trigger.
-  async scheduled() {},
+  // Daily Cron Trigger: drop Scrape Jobs (and their items) after seven days.
+  async scheduled(_controller, env, _ctx) {
+    await cleanupOldJobs(createDb(env.DB));
+  },
 } satisfies ExportedHandler<Env>;
 
 export default worker;
