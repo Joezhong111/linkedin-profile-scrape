@@ -3,6 +3,7 @@ import { env } from 'cloudflare:test';
 import { eq, inArray } from 'drizzle-orm';
 import { createDb, chunk } from '../worker/db';
 import {
+  appSettings,
   linkedinLeads,
   linkedinProfiles,
   scrapeJobItems,
@@ -142,6 +143,22 @@ describe('D1 schema', () => {
 
     expect(await db.select().from(scrapeJobItems).where(eq(scrapeJobItems.jobId, job!.id))).toEqual([]);
     expect(await db.select().from(users).where(eq(users.id, user.id))).toHaveLength(1);
+  });
+  it('keeps app settings to the global singleton identity', async () => {
+    const updatedAt = new Date().toISOString();
+    await db.insert(appSettings).values({ id: 'global', updatedAt });
+
+    await expect(
+      db
+        .insert(appSettings)
+        .values({ id: 'second', updatedAt })
+        .run()
+    ).rejects.toThrow();
+
+    // The only rejection reason is the singleton CHECK, and no second row landed.
+    expect(await db.select().from(appSettings)).toEqual([
+      expect.objectContaining({ id: 'global', registrationOpen: true, googleOauthOpen: true }),
+    ]);
   });
 });
 
