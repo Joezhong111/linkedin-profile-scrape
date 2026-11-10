@@ -1,16 +1,11 @@
-import { error, json, type Route, type RouteContext } from './http';
+import { error, type Route, type RouteContext } from './http';
+import { ROUTES } from './routes/index';
 
 /**
  * Every `/api/*` request enters here. Route modules export `Route[]` and are
- * composed in `worker/routes/index.ts` once business handlers land.
+ * composed in `worker/routes/index.ts`.
  */
-export const ROUTES: Route[] = [
-  {
-    method: 'GET',
-    path: '/api/health',
-    handler: () => json({ status: 'ok', providers: ['apify', 'treg'] }),
-  },
-];
+export { ROUTES };
 
 interface Match {
   route: Route;

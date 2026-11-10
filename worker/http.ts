@@ -1,3 +1,7 @@
+import type { User } from '../db/schema';
+import { getUserRole, verifyToken } from './auth';
+import { createDb } from './db';
+
 /**
  * Minimal HTTP helpers shared by every Worker route.
  *
@@ -43,4 +47,43 @@ export function text(body: string, status = 200, headers?: HeadersInit): Respons
 
 export function error(status: number, message: string, code?: string): Response {
   return json(code ? { error: message, code } : { error: message }, status);
+}
+
+/** Parses a JSON object body; empty or invalid bodies become `{}` instead of throwing. */
+export async function parseJsonBody(request: Request): Promise<Record<string, unknown>> {
+  try {
+    const body = await request.json();
+    if (body && typeof body === 'object' && !Array.isArray(body)) {
+      return body as Record<string, unknown>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+/** Reads a Bearer token from the Authorization header, or `null`. */
+export function extractToken(request: Request): string | null {
+  const header = request.headers.get('Authorization');
+  if (!header || !header.startsWith('Bearer ')) return null;
+  const token = header.slice('Bearer '.length).trim();
+  return token || null;
+}
+
+/** Resolves the current User, or returns a ready-made 401 response. */
+export async function requireUser(ctx: RouteContext): Promise<User | Response> {
+  const token = extractToken(ctx.request);
+  if (!token) return error(401, 'Missing Authorization');
+  const user = await verifyToken(createDb(ctx.env.DB), token);
+  if (!user) return error(401, 'Invalid or expired token');
+  return user;
+}
+
+/** Requires an Admin User; otherwise returns 401 (no User) or 403 (not Admin). */
+export async function requireAdmin(ctx: RouteContext): Promise<User | Response> {
+  const user = await requireUser(ctx);
+  if (user instanceof Response) return user;
+  const role = await getUserRole(createDb(ctx.env.DB), user.id);
+  if (role !== 'admin') return error(403, 'Admin access required');
+  return user;
 }
