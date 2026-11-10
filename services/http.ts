@@ -1,27 +1,33 @@
 /**
- * Reads an API error message, preferring the JSON `{ error }` body the Worker
- * returns and falling back to plain text for non-JSON failures.
+ * Reads an API error body for the SPA.
+ *
+ * Prefers a JSON `{ error }` payload and falls back to the raw response text.
  */
-export async function readApiError(
-  response: Response,
-  fallback = 'Request failed'
-): Promise<string> {
-  const contentType = response.headers.get('Content-Type') ?? '';
-  if (contentType.includes('application/json')) {
-    try {
-      const body = (await response.json()) as { error?: unknown };
-      if (typeof body?.error === 'string' && body.error.trim()) return body.error;
-    } catch {
-      // Fall through to the text body.
-    }
-  }
-
+export async function readApiError(res: Response, fallback?: string): Promise<string> {
+  const defaultMessage = fallback ?? `Request failed (${res.status})`;
+  let body = '';
   try {
-    const text = await response.text();
-    if (text.trim()) return text;
+    body = await res.text();
   } catch {
-    // Ignore unreadable bodies and use the fallback.
+    return defaultMessage;
   }
 
-  return fallback;
+  if (body) {
+    try {
+      const parsed: unknown = JSON.parse(body);
+      if (parsed !== null && typeof parsed === 'object' && 'error' in parsed) {
+        const value = parsed.error;
+        if (typeof value === 'string') {
+          const message = value.trim();
+          if (message) return message;
+        }
+      }
+    } catch {
+      // Not JSON; use the text body below.
+    }
+    const trimmed = body.trim();
+    if (trimmed) return trimmed;
+  }
+
+  return defaultMessage;
 }

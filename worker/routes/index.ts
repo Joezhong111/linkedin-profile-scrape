@@ -1,6 +1,9 @@
 import { json, type Route } from '../http';
+import { adminRoutes } from './admin';
 import { authRoutes } from './auth';
 import { credentialsRoutes } from './credentials';
+import { leadsRoutes } from './leads';
+import { profilesRoutes } from './profiles';
 
 /**
  * Every route module contributes its `Route[]` here. Later tickets add one
@@ -14,4 +17,7 @@ export const ROUTES: Route[] = [
   },
   ...authRoutes,
   ...credentialsRoutes,
+  ...leadsRoutes,
+  ...profilesRoutes,
+  ...adminRoutes,
 ];

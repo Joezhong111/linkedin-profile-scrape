@@ -1,0 +1,294 @@
+{
+  "status": "success",
+  "error": null,
+  "element": {
+    "id": "ACoAAA-kh3MBoBXafap6sJXgNKb6YBPwj12M-Bw",
+    "about": "Data science leader building trust & safety systems.",
+    "photo": "https://media.licdn.com/dms/image/v2/D4E03AQH7uBSQOzgHRw/profile-displayphoto-crop_800_800/B4EZsthQMoJQAM-/0/1765995255887?e=1769040000&v=beta&t=gDjTQuo81dgtHckpwyP6qJTvMqSfIy7cs5ZLmOEanPY",
+    "emails": [
+      {
+        "free": false,
+        "email": "remi.ounadjela@tiktok.com",
+        "status": "valid",
+        "deliverable": true,
+        "qualityScore": 90,
+        "catchAllDomain": false,
+        "validEmailServer": true
+      }
+    ],
+    "premium": false,
+    "headline": "Data Science Manager @ TikTok | ex Google/Amazon",
+    "lastName": "Ounadjela",
+    "location": {
+      "parsed": {
+        "city": "San Francisco",
+        "text": "San Francisco, CA, United States",
+        "state": "California",
+        "country": "United States",
+        "regionCode": null,
+        "countryCode": "US",
+        "countryFull": "United States of America"
+      },
+      "countryCode": "US",
+      "linkedinText": "San Francisco Bay Area"
+    },
+    "verified": true,
+    "education": [
+      {
+        "degree": "Bachelor of Science - BS",
+        "period": "2012 - 2015",
+        "skills": [],
+        "endDate": {
+          "text": "2015",
+          "year": 2015
+        },
+        "schoolId": "4171",
+        "startDate": {
+          "text": "2012",
+          "year": 2012
+        },
+        "schoolLogo": {
+          "url": "https://media.licdn.com/dms/image/v2/C4E0BAQEkPpD2CJSBpQ/company-logo_400_400/company-logo_400_400/0/1663656692926/university_college_london_logo?e=1769040000&v=beta&t=Sph43bRpcu5MzN-yFrFzNWIAQ2nNCOWU3hRNnVONE9M",
+          "sizes": [
+            {
+              "url": "https://media.licdn.com/dms/image/v2/C4E0BAQEkPpD2CJSBpQ/company-logo_400_400/company-logo_400_400/0/1663656692926/university_college_london_logo?e=1769040000&v=beta&t=Sph43bRpcu5MzN-yFrFzNWIAQ2nNCOWU3hRNnVONE9M",
+              "width": 400,
+              "height": 400,
+              "expiresAt": 1769040000000
+            },
+            {
+              "url": "https://media.licdn.com/dms/image/v2/C4E0BAQEkPpD2CJSBpQ/company-logo_200_200/company-logo_200_200/0/1663656692926/university_college_london_logo?e=1769040000&v=beta&t=aM8zJFj3Sa5Xf4PzJDrkrJMEU19YmTnKg15NGVhFfgE",
+              "width": 200,
+              "height": 200,
+              "expiresAt": 1769040000000
+            },
+            {
+              "url": "https://media.licdn.com/dms/image/v2/C4E0BAQEkPpD2CJSBpQ/company-logo_100_100/company-logo_100_100/0/1663656692926/university_college_london_logo?e=1769040000&v=beta&t=10CPkhdHB_jayZQFLfMfsXClXzEVru7ASMSVaLrYZw8",
+              "width": 100,
+              "height": 100,
+              "expiresAt": 1769040000000
+            }
+          ]
+        },
+        "schoolName": "UCL",
+        "fieldOfStudy": "Mathematics and Physics",
+        "schoolLinkedinUrl": "https://www.linkedin.com/company/4171/"
+      },
+      {
+        "degree": "Master’s Degree",
+        "period": "2016 - 2017",
+        "skills": [],
+        "endDate": {
+          "text": "2017",
+          "year": 2017
+        },
+        "schoolId": "163090",
+        "startDate": {
+          "text": "2016",
+          "year": 2016
+        },
+        "schoolLogo": {
+          "url": "https://media.licdn.com/dms/image/v2/D4E0BAQFo5ybHIog7yg/company-logo_400_400/B4EZUn_qj6GYAY-/0/1740132756782/city_university_london_logo?e=1769040000&v=beta&t=ZF4SKpcADZr_GYODWjn4KaU8Zn9sQI1S06w3j4yaAlU",
+          "sizes": [
+            {
+              "url": "https://media.licdn.com/dms/image/v2/D4E0BAQFo5ybHIog7yg/company-logo_400_400/B4EZUn_qj6GYAY-/0/1740132756782/city_university_london_logo?e=1769040000&v=beta&t=ZF4SKpcADZr_GYODWjn4KaU8Zn9sQI1S06w3j4yaAlU",
+              "width": 400,
+              "height": 400,
+              "expiresAt": 1769040000000
+            },
+            {
+              "url": "https://media.licdn.com/dms/image/v2/D4E0BAQFo5ybHIog7yg/company-logo_200_200/B4EZUn_qj6GYAI-/0/1740132756782/city_university_london_logo?e=1769040000&v=beta&t=sDiJ6OBc3TY9eNKywgmOGBSKSLdskfXnDpjiHfBPC9o",
+              "width": 200,
+              "height": 200,
+              "expiresAt": 1769040000000
+            },
+            {
+              "url": "https://media.licdn.com/dms/image/v2/D4E0BAQFo5ybHIog7yg/company-logo_100_100/B4EZUn_qj6GYAQ-/0/1740132756782/city_university_london_logo?e=1769040000&v=beta&t=JfPOM3KDI_QavWsPVqxh6yxBAoHcKvk6rYIRK2Ls1c8",
+              "width": 100,
+              "height": 100,
+              "expiresAt": 1769040000000
+            }
+          ]
+        },
+        "schoolName": "City St George’s, University of London",
+        "fieldOfStudy": "Data Science",
+        "schoolLinkedinUrl": "https://www.linkedin.com/company/163090/"
+      }
+    ],
+    "firstName": "Rémi",
+    "objectUrn": "262440819",
+    "experience": [
+      {
+        "skills": null,
+        "endDate": {
+          "text": "Present"
+        },
+        "duration": "3 yrs 1 mo",
+        "location": "San Francisco Bay Area",
+        "position": "Senior Data Science Manager",
+        "companyId": "33246798",
+        "startDate": {
+          "text": "Jan 2023",
+          "year": 2023,
+          "month": "Jan"
+        },
+        "companyLogo": {
+          "url": "https://media.licdn.com/dms/image/v2/D560BAQHYzDOZhwEZ7Q/company-logo_400_400/B56Zl_CaXSIAAc-/0/1758772964879/tiktok_logo?e=1769040000&v=beta&t=BfE2QbHcrByXOmIsuANZfqUVLSF1-oPfO_8c9JXlU_U",
+          "sizes": [
+            {
+              "url": "https://media.licdn.com/dms/image/v2/D560BAQHYzDOZhwEZ7Q/company-logo_400_400/B56Zl_CaXSIAAc-/0/1758772964879/tiktok_logo?e=1769040000&v=beta&t=BfE2QbHcrByXOmIsuANZfqUVLSF1-oPfO_8c9JXlU_U",
+              "width": 400,
+              "height": 400,
+              "expiresAt": 1769040000000
+            },
+            {
+              "url": "https://media.licdn.com/dms/image/v2/D560BAQHYzDOZhwEZ7Q/company-logo_200_200/B56Zl_CaXSIAAM-/0/1758772964879/tiktok_logo?e=1769040000&v=beta&t=mVoAb0_1talmSUYRHZd3rhkyjbbi0Qnrb6NFRdQTWxw",
+              "width": 200,
+              "height": 200,
+              "expiresAt": 1769040000000
+            },
+            {
+              "url": "https://media.licdn.com/dms/image/v2/D560BAQHYzDOZhwEZ7Q/company-logo_100_100/B56Zl_CaXSIAAU-/0/1758772964879/tiktok_logo?e=1769040000&v=beta&t=Qsc2qSfTBchJM2p1pto3sjr-GqhbecJgpn0CCTREvBQ",
+              "width": 100,
+              "height": 100,
+              "expiresAt": 1769040000000
+            }
+          ]
+        },
+        "companyName": "TikTok",
+        "description": "Trust & Safety",
+        "workplaceType": null,
+        "employmentType": null,
+        "experienceGroupId": "e55dc44d60e66478a4dee28bd2bdb01c4edceb7f",
+        "companyLinkedinUrl": "https://www.linkedin.com/company/tiktok/",
+        "companyUniversalName": "tiktok"
+      },
+      {
+        "skills": null,
+        "endDate": {
+          "text": "Jan 2023",
+          "year": 2023,
+          "month": "Jan"
+        },
+        "duration": "2 yrs 3 mos",
+        "location": "Dublin, County Dublin, Ireland",
+        "position": "Data Science Manager",
+        "companyId": "33246798",
+        "startDate": {
+          "text": "Nov 2020",
+          "year": 2020,
+          "month": "Nov"
+        },
+        "companyLogo": {
+          "url": "https://media.licdn.com/dms/image/v2/D560BAQHYzDOZhwEZ7Q/company-logo_400_400/B56Zl_CaXSIAAc-/0/1758772964879/tiktok_logo?e=1769040000&v=beta&t=BfE2QbHcrByXOmIsuANZfqUVLSF1-oPfO_8c9JXlU_U",
+          "sizes": [
+            {
+              "url": "https://media.licdn.com/dms/image/v2/D560BAQHYzDOZhwEZ7Q/company-logo_400_400/B56Zl_CaXSIAAc-/0/1758772964879/tiktok_logo?e=1769040000&v=beta&t=BfE2QbHcrByXOmIsuANZfqUVLSF1-oPfO_8c9JXlU_U",
+              "width": 400,
+              "height": 400,
+              "expiresAt": 1769040000000
+            },
+            {
+              "url": "https://media.licdn.com/dms/image/v2/D560BAQHYzDOZhwEZ7Q/company-logo_200_200/B56Zl_CaXSIAAM-/0/1758772964879/tiktok_logo?e=1769040000&v=beta&t=mVoAb0_1talmSUYRHZd3rhkyjbbi0Qnrb6NFRdQTWxw",
+              "width": 200,
+              "height": 200,
+              "expiresAt": 1769040000000
+            },
+            {
+              "url": "https://media.licdn.com/dms/image/v2/D560BAQHYzDOZhwEZ7Q/company-logo_100_100/B56Zl_CaXSIAAU-/0/1758772964879/tiktok_logo?e=1769040000&v=beta&t=Qsc2qSfTBchJM2p1pto3sjr-GqhbecJgpn0CCTREvBQ",
+              "width": 100,
+              "height": 100,
+              "expiresAt": 1769040000000
+            }
+          ]
+        },
+        "companyName": "TikTok",
+        "description": "Trust & Safety",
+        "workplaceType": null,
+        "employmentType": null,
+        "experienceGroupId": "e55dc44d60e66478a4dee28bd2bdb01c4edceb7f",
+        "companyLinkedinUrl": "https://www.linkedin.com/company/tiktok/",
+        "companyUniversalName": "tiktok"
+      }
+    ],
+    "influencer": false,
+    "linkedinUrl": "https://www.linkedin.com/in/remiounadjela",
+    "coverPicture": {
+      "url": "https://media.licdn.com/dms/image/v2/D4D16AQGRVRbbX_0rIA/profile-displaybackgroundimage-shrink_350_1400/B4DZXb50v3HsAc-/0/1743151124282?e=1769040000&v=beta&t=E260ur36YO35MZdYah9HFFHpdNGN87FQXi_Ey1skNIA",
+      "sizes": [
+        {
+          "url": "https://media.licdn.com/dms/image/v2/D4D16AQGRVRbbX_0rIA/profile-displaybackgroundimage-shrink_350_1400/B4DZXb50v3HsAc-/0/1743151124282?e=1769040000&v=beta&t=E260ur36YO35MZdYah9HFFHpdNGN87FQXi_Ey1skNIA",
+          "width": 1400,
+          "height": 350,
+          "expiresAt": 1769040000000
+        },
+        {
+          "url": "https://media.licdn.com/dms/image/v2/D4D16AQGRVRbbX_0rIA/profile-displaybackgroundimage-shrink_200_800/B4DZXb50v3HsAY-/0/1743151124282?e=1769040000&v=beta&t=bL4D76_-l1YicFstl1wQhshIDFjmECDCh_Thul6SnMQ",
+          "width": 800,
+          "height": 200,
+          "expiresAt": 1769040000000
+        }
+      ]
+    },
+    "publicIdentifier": "remiounadjela",
+    "followerCount": 16183,
+    "connectionsCount": 11027,
+    "currentPosition": [
+      {
+        "companyId": "33246798",
+        "dateRange": {
+          "end": null,
+          "start": {
+            "day": null,
+            "year": 2023,
+            "month": 1
+          }
+        },
+        "companyName": "TikTok",
+        "companyLinkedinUrl": "https://www.linkedin.com/company/33246798/"
+      }
+    ],
+    "profilePicture": {
+      "url": "https://media.licdn.com/dms/image/v2/D4E03AQH7uBSQOzgHRw/profile-displayphoto-crop_800_800/B4EZsthQMoJQAM-/0/1765995255887?e=1769040000&v=beta&t=gDjTQuo81dgtHckpwyP6qJTvMqSfIy7cs5ZLmOEanPY",
+      "sizes": [
+        {
+          "url": "https://media.licdn.com/dms/image/v2/D4E03AQH7uBSQOzgHRw/profile-displayphoto-crop_800_800/B4EZsthQMoJQAM-/0/1765995255887?e=1769040000&v=beta&t=gDjTQuo81dgtHckpwyP6qJTvMqSfIy7cs5ZLmOEanPY",
+          "width": 800,
+          "height": 800,
+          "expiresAt": 1769040000000
+        },
+        {
+          "url": "https://media.licdn.com/dms/image/v2/D4E03AQH7uBSQOzgHRw/profile-displayphoto-scale_400_400/B4EZsthQMoJQAk-/0/1765995256027?e=1769040000&v=beta&t=pwbCrGbGlhQC6tU1eUfr690rAX6fpOouZwsXZd9VrUM",
+          "width": 400,
+          "height": 400,
+          "expiresAt": 1769040000000
+        },
+        {
+          "url": "https://media.licdn.com/dms/image/v2/D4E03AQH7uBSQOzgHRw/profile-displayphoto-scale_200_200/B4EZsthQMoJQAc-/0/1765995256027?e=1769040000&v=beta&t=8J9daIqLJYthuXga6qwis1HK14f9GJtUOvu6t9wauq0",
+          "width": 200,
+          "height": 200,
+          "expiresAt": 1769040000000
+        },
+        {
+          "url": "https://media.licdn.com/dms/image/v2/D4E03AQH7uBSQOzgHRw/profile-displayphoto-scale_100_100/B4EZsthQMoJQAg-/0/1765995256027?e=1769040000&v=beta&t=1NCuwRPx06l3GcniBAOS7priqjQFrz3AUQw3ITqw5RU",
+          "width": 100,
+          "height": 100,
+          "expiresAt": 1769040000000
+        }
+      ]
+    },
+    "openToWork": false,
+    "languages": [
+      {
+        "name": "English",
+        "proficiency": "Native or bilingual proficiency"
+      }
+    ],
+    "skills": [
+      {
+        "name": "Python",
+        "endorsements": "29 endorsements"
+      }
+    ]
+  }
+}

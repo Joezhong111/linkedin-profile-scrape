@@ -1,7 +1,27 @@
 import { authClient } from '../lib/auth';
+import { readApiError } from './http';
 
 async function authHeaders() {
   return authClient.getAuthHeaders();
+}
+
+async function request(path: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(path, init);
+  if (!res.ok) throw new Error(await readApiError(res));
+  return res;
+}
+
+export type AdminRole = 'admin' | 'user';
+
+export interface AdminUser {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  role: AdminRole;
+  created_at: string;
+  last_login_at: string | null;
+  has_credential: boolean;
+  active_provider: 'apify' | 'treg' | null;
 }
 
 export async function getMe(): Promise<{
@@ -18,6 +38,7 @@ export type Toggles = {
   registration_open: boolean;
   google_oauth_open: boolean;
 };
+
 export async function getToggles(): Promise<Toggles> {
   const res = await fetch('/api/admin/toggles');
   if (!res.ok) return { registration_open: true, google_oauth_open: true };
@@ -25,63 +46,51 @@ export async function getToggles(): Promise<Toggles> {
 }
 
 export async function setToggles(p: Partial<Toggles>): Promise<void> {
-  const res = await fetch('/api/admin/toggles', {
+  await request('/api/admin/toggles', {
     method: 'POST',
     headers: await authHeaders(),
     body: JSON.stringify(p),
   });
-  if (!res.ok) throw new Error(await res.text());
 }
 
-export async function getQuota(email?: string, user_id?: string): Promise<any> {
-  let url = '/api/admin/quotas';
-  if (email) {
-    url += `?email=${encodeURIComponent(email)}`;
-  } else if (user_id) {
-    url += `?user_id=${encodeURIComponent(user_id)}`;
-  }
-  const res = await fetch(url, { headers: await authHeaders() });
-  if (!res.ok) throw new Error(await res.text());
+export async function listUsers(): Promise<AdminUser[]> {
+  const res = await request('/api/admin/users', { headers: await authHeaders() });
   return res.json();
-}
-
-export async function setQuota(email: string, monthly_limit: number): Promise<void> {
-  const res = await fetch('/api/admin/quotas', {
-    method: 'POST',
-    headers: await authHeaders(),
-    body: JSON.stringify({ email, monthly_limit }),
-  });
-  if (!res.ok) throw new Error(await res.text());
 }
 
 export async function adminCreateUser(params: {
   email: string;
-  password?: string;
-  invite?: boolean;
-  monthly_limit?: number;
-}): Promise<any> {
-  const res = await fetch('/api/admin/create-user', {
+  password: string;
+  fullName?: string;
+  role?: AdminRole;
+}): Promise<{ user_id: string; email: string; role: AdminRole }> {
+  const res = await request('/api/admin/create-user', {
     method: 'POST',
     headers: await authHeaders(),
     body: JSON.stringify(params),
   });
-  if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 export async function updatePassword(user_id: string, password: string): Promise<void> {
-  const res = await fetch('/api/admin/users', {
+  await request('/api/admin/users', {
     method: 'PATCH',
     headers: await authHeaders(),
     body: JSON.stringify({ user_id, password }),
   });
-  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function updateRole(user_id: string, role: AdminRole): Promise<void> {
+  await request('/api/admin/users', {
+    method: 'PATCH',
+    headers: await authHeaders(),
+    body: JSON.stringify({ user_id, role }),
+  });
 }
 
 export async function deleteUser(user_id: string): Promise<void> {
-  const res = await fetch(`/api/admin/users?user_id=${user_id}`, {
+  await request(`/api/admin/users?user_id=${encodeURIComponent(user_id)}`, {
     method: 'DELETE',
     headers: await authHeaders(),
   });
-  if (!res.ok) throw new Error(await res.text());
 }
