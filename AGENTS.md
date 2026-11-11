@@ -291,7 +291,10 @@ pnpm test --run test/leads.test.ts
   `chunk(items, 90)` for `inArray` and multi-row inserts.
 - **Workers Free limits**: 10 ms CPU, 50 subrequests, 50 D1 queries per
   invocation. Company scrapes are chunked for this reason; do not add long
-  loops or per-item requests.
+  loops or per-item requests. The sanctioned exception is treg phone
+  enrichment: a company chunk makes one profile call plus one best-effort phone
+  call per candidate (6 subrequests for 3 candidates, 10 for 5), and a 10-URL
+  treg profile scrape makes 20.
 - **Scrape Result shapes**: provider payloads are normalized by
   `lib/normalize.ts` before Saved Profile and Saved Lead persistence. Scrape Job
   items keep the provider shape; stats and dedupe normalize transiently.

@@ -63,3 +63,7 @@ _Avoid_: default provider
 **Scrape Credential**:
 A user-supplied API key for the active scrape provider, stored encrypted and used only for that user's scrapes.
 _Avoid_: provider token, API key
+
+**Phone Enrichment**:
+The best-effort second provider call that adds a phone number to a Scrape Result. BlitzAPI is the cheapest US-focused provider; a miss leaves the record unchanged.
+_Avoid_: phone lookup, phone waterfall

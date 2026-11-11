@@ -31,3 +31,12 @@ numeric statuses in envelopes, and send `findEmail=true` on the email variant.
   mobile numbers, so non-US profiles often miss.
 - Phone lookups are found-only, not live-verified; the UI says the number is
   best-effort.
+
+## Considered Options
+
+- Routed phone tool or waterfall: rejected because it can fall through to
+  providers costing up to $0.90 per lookup.
+- HarvestAPI as the phone source: rejected because it exposes no phone
+  endpoint.
+- Direct BlitzAPI catalog call: chosen because it costs $0.000495 per hit and
+  $0 on a miss, with US-biased coverage.

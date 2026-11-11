@@ -15,10 +15,10 @@ import { sleep } from './util';
 /**
  * treg provider adapter.
  *
- * Uses the direct call endpoint with the User's own treg token. Requests are GET
- * with query parameters only: no JSON body, one idempotency key per logical
- * call, and the response envelope is inspected because an HTTP 200 can still
- * carry a provider error.
+ * Uses the direct call endpoint with the User's own treg token. Profile and
+ * search calls are GET with query parameters; the phone call is POST with a
+ * JSON body. Every logical call uses one idempotency key, and the response
+ * envelope is inspected because an HTTP 200 can still carry a provider error.
  */
 
 const TREG_BASE = 'https://treg.to/call';
@@ -39,7 +39,6 @@ const PROVIDER_DETAIL_LIMIT = 300;
 interface TregCallOptions {
   method?: 'GET' | 'POST';
   body?: unknown;
-  headers?: Record<string, string>;
 }
 
 interface TregEnvelope {
@@ -143,7 +142,6 @@ async function callEndpoint(
     Accept: 'application/json',
     'X-Treg-Token': token,
     'Idempotency-Key': idempotencyKey,
-    ...options.headers,
   };
   let body: string | undefined;
   if (options.body !== undefined) {

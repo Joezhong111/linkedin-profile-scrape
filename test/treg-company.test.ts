@@ -5,6 +5,7 @@ import searchPage1 from './fixtures/treg-lead-search-page1.json';
 import searchPage2 from './fixtures/treg-lead-search-page2.json';
 import tregProfile from './fixtures/treg-profile.json';
 import tregProfileEmail from './fixtures/treg-profile-email.json';
+import blitzapiPhone from './fixtures/blitzapi-phone.json';
 import { normalizeScrapeItem } from '../lib/normalize';
 import { createDb } from '../worker/db';
 import { cleanupOldJobs } from '../worker/jobs';
@@ -18,12 +19,8 @@ const FULL_PATH = '/call/harvestapi.linkedin.user.profile';
 const EMAIL_PATH = '/call/harvestapi.linkedin.user.profile.email';
 const PHONE_PATH = '/call/blitzapi.people.phone.find';
 
-const PHONE_MISS = { found: false, phone: null, fair_usage: { records_used: 0 } };
-const PHONE_HIT = {
-  found: true,
-  phone: '+1 415 555 0100',
-  fair_usage: { records_used: 1 },
-};
+const PHONE_MISS = blitzapiPhone.miss;
+const PHONE_HIT = blitzapiPhone.hit;
 
 type ScrapeTier = 'full' | 'full_email';
 
