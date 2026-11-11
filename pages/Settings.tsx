@@ -246,8 +246,9 @@ export default function Settings() {
             treg
           </h3>
           <p className="text-sm text-gray-600 dark:text-slate-300">
-            treg Profile scrapes never return phone numbers. Email is optional and often missing
-            from results. The token is validated by the first scrape.
+            treg Profile scrapes attempt a best-effort phone lookup, strongest for US direct and
+            mobile numbers. The number may be missing when no provider has it. Email is optional
+            and often missing from results. The token is validated by the first scrape.
           </p>
         </div>
       </section>

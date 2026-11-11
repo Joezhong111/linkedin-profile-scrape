@@ -656,7 +656,7 @@ export default function Home() {
                           {profileTier === 'full_email' && (
                             <li>Full+email may take around two minutes per batch.</li>
                           )}
-                          <li>treg never returns a phone number.</li>
+                          <li>treg phone lookup is best-effort; US direct/mobile coverage is strongest.</li>
                           <li>treg email is optional and often missing.</li>
                         </ul>
                       </div>

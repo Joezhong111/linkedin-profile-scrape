@@ -213,10 +213,10 @@ Workers Free per-invocation limits: **10 ms CPU**, **50 subrequests**,
 | `GET /api/check_scrape_status` (Apify running poll) | 3 | 1 | — |
 | `GET /api/check_scrape_status` (Apify success poll, 100 items) | 15 | 2 | — |
 | Apify profile scrape (worst case: start + polls every 5 s for 120 s + dataset) | 0 | 26 | 120 s wait |
-| `POST /api/scrape` (treg, 10 profiles) | 1 | 10 | provider concurrency 5 |
+| `POST /api/scrape` (treg, 10 profiles) | 1 | 20 | profile + phone per URL; provider concurrency 5 |
 | `POST /api/scrape_company` (treg, 10 search pages) | 2 | 10 | page cap |
 | `POST /api/scrape_company` (treg, 2-page fixture search) | 2 | 2 | — |
-| `GET /api/check_scrape_status` (treg enrichment chunk) | 9 | 3 | 3 candidates; cap is 5 per poll |
+| `GET /api/check_scrape_status` (treg enrichment chunk) | 9 | 6 | 3 candidates; profile + phone each |
 | `JSON.parse` profile item (2,189 chars) | — | — | median 0.0020 ms/parse |
 | `JSON.parse` 100-item company dataset (31,371 chars) | — | — | median 0.0180 ms/parse |
 
@@ -231,8 +231,8 @@ Reasons:
 1. The highest D1 count is the 100-item Apify success poll at 15/50; ordinary
    reads are 2–4. Batching and chunk sizes stay well below D1's limits.
 2. The highest subrequest count is the Apify profile worst case at 26/50
-   (`ceil(120 s / 5 s) + 2`); treg's 10-URL and 10-page caps use 10, and a
-   company poll is at most 2.
+   (`ceil(120 s / 5 s) + 2`); treg's 10-URL cap uses 20 (profile + phone per
+   URL), a company poll at most 10, and a 10-page search uses 10.
 3. PBKDF2-SHA512 sign-in costs about 1.5–2 ms locally. Auth still uses the full
    10,000 iterations and 512-bit output; nothing was weakened to fit Free.
 4. Profile/company JSON parsing is negligible next to the 10 ms CPU budget.

@@ -37,6 +37,8 @@ const TREG_TOKEN = 'treg_user_token_0123456789';
 const PROFILE_URL = 'https://www.linkedin.com/in/remi-ounadjela';
 const COMPANY_URL = 'https://www.linkedin.com/company/acme';
 const APIFY_ME_URL = 'https://api.apify.com/v2/users/me';
+const TREG_PHONE_PATH = '/call/blitzapi.people.phone.find';
+const TREG_PHONE_MISS = { found: false, phone: null, fair_usage: { records_used: 0 } };
 
 const FREE_CPU_MS = 10;
 const FREE_SUBREQUESTS = 50;
@@ -433,9 +435,13 @@ describe('Workers Free limits', () => {
     expectWithinFreeLimits({ label: 'Apify profile scrape', d1Queries: 0, subrequests: outboundCalls.length });
   });
 
-  it('measures treg profile chunk subrequests (10-URL cap)', async () => {
+  it('measures treg profile chunk subrequests (10-URL cap, profile + phone)', async () => {
     const session = await tregSession();
-    stubFetch(() => jsonResponse(tregProfile));
+    stubFetch((url) =>
+      new URL(url).pathname.endsWith(TREG_PHONE_PATH)
+        ? jsonResponse(TREG_PHONE_MISS)
+        : jsonResponse(tregProfile)
+    );
     const urls = Array.from(
       { length: 10 },
       (_, index) => `https://www.linkedin.com/in/limits-treg-${index}`
@@ -452,7 +458,7 @@ describe('Workers Free limits', () => {
     );
     expect(measured.status).toBe(200);
     expect(measured.body).toHaveLength(10);
-    expect(measured.subrequests).toBe(10);
+    expect(measured.subrequests).toBe(20);
     expectWithinFreeLimitsFrom('POST /api/scrape (treg 10 profiles)', measured);
   });
 
@@ -501,6 +507,9 @@ describe('Workers Free limits', () => {
     const jobId = jobIdOf(started.body);
 
     stubFetch((url) => {
+      if (new URL(url).pathname.endsWith(TREG_PHONE_PATH)) {
+        return jsonResponse(TREG_PHONE_MISS);
+      }
       const profileUrl = new URL(url).searchParams.get('url') ?? '';
       return jsonResponse({
         status: 'success',
@@ -518,8 +527,8 @@ describe('Workers Free limits', () => {
     );
     expect(poll.status).toBe(200);
     expect(poll.body).toMatchObject({ status: 'succeeded' });
-    expect(poll.subrequests).toBeLessThanOrEqual(5);
-    expectWithinFreeLimitsFrom('GET /api/check_scrape_status (treg 5-profile chunk)', poll);
+    expect(poll.subrequests).toBe(6);
+    expectWithinFreeLimitsFrom('GET /api/check_scrape_status (treg 3-profile chunk)', poll);
   });
 
   it('measures JSON parse cost for a profile and a 100-item company dataset', () => {

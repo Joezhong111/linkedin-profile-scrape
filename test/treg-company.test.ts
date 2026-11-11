@@ -16,6 +16,14 @@ const COMPANY_URL = 'https://www.linkedin.com/company/acme';
 const SEARCH_PATH = '/call/harvestapi.linkedin.leads.search';
 const FULL_PATH = '/call/harvestapi.linkedin.user.profile';
 const EMAIL_PATH = '/call/harvestapi.linkedin.user.profile.email';
+const PHONE_PATH = '/call/blitzapi.people.phone.find';
+
+const PHONE_MISS = { found: false, phone: null, fair_usage: { records_used: 0 } };
+const PHONE_HIT = {
+  found: true,
+  phone: '+1 415 555 0100',
+  fair_usage: { records_used: 1 },
+};
 
 type ScrapeTier = 'full' | 'full_email';
 
@@ -46,6 +54,7 @@ function jsonResponse(body: unknown, status = 200, headers: Record<string, strin
 interface HarnessOptions {
   search?: (page: number) => Response | Promise<Response>;
   enrich?: (profileUrl: string, tier: ScrapeTier) => Response | Promise<Response>;
+  phone?: (profileUrl: string) => Response | Promise<Response>;
 }
 
 interface Harness {
@@ -65,6 +74,10 @@ function isSearchCall(call: ProviderCall): boolean {
 function isProfileCall(call: ProviderCall): boolean {
   const { path } = endpointOf(call);
   return path.endsWith(FULL_PATH) || path.endsWith(EMAIL_PATH);
+}
+
+function isPhoneCall(call: ProviderCall): boolean {
+  return endpointOf(call).path.endsWith(PHONE_PATH);
 }
 
 function idempotencyKeyOf(call: ProviderCall): string | null {
@@ -109,6 +122,19 @@ function defaultSearch(page: number): Response {
   throw new Error(`Unexpected search page ${page}`);
 }
 
+function linkedinUrlFromBody(body: BodyInit | null | undefined): string {
+  if (typeof body !== 'string') return '';
+  const parsed: unknown = JSON.parse(body);
+  if (typeof parsed !== 'object' || parsed === null) return '';
+  if ('person_linkedin_url' in parsed && typeof parsed.person_linkedin_url === 'string') {
+    return parsed.person_linkedin_url;
+  }
+  if ('linkedin_url' in parsed && typeof parsed.linkedin_url === 'string') {
+    return parsed.linkedin_url;
+  }
+  return '';
+}
+
 /** Signs up and saves a treg credential, then routes every provider call. */
 async function signUpWithTreg(options: HarnessOptions = {}): Promise<Harness> {
   const calls: ProviderCall[] = [];
@@ -130,6 +156,10 @@ async function signUpWithTreg(options: HarnessOptions = {}): Promise<Harness> {
       return options.enrich
         ? options.enrich(profileUrl, 'full')
         : enrichedResponse(profileUrl, 'full');
+    }
+    if (parsed.pathname.endsWith(PHONE_PATH)) {
+      const profileUrl = linkedinUrlFromBody(init?.body);
+      return options.phone ? options.phone(profileUrl) : jsonResponse(PHONE_MISS);
     }
     throw new Error(`Unexpected treg request: ${url}`);
   });
@@ -646,6 +676,53 @@ describe('treg company results to Saved Leads', () => {
     });
     // The enriched raw payload keeps the flags as well.
     expect(list.data[0]?.raw_data).toMatchObject({ verified: true, premium: false });
+  });
+
+  it('saves a found phone in the Saved Lead mobile_number column', async () => {
+    const profileUrl = 'https://www.linkedin.com/in/remi-ounadjela';
+    const harness = await signUpWithTreg({
+      search: () => searchResponse([leadElement(profileUrl)], 1, 1),
+      phone: () => jsonResponse(PHONE_HIT),
+    });
+    const created = await createJob(harness, { maxItems: 1, tier: 'full' });
+
+    const status = await readJson<StatusResponse>(
+      await pollStatus(harness.session.token, created.jobId)
+    );
+    expect(status.status).toBe('succeeded');
+    const [item] = status.items ?? [];
+    const profile = normalizeScrapeItem(item);
+    expect(profile.mobile_number).toBe('+1 415 555 0100');
+
+    const phoneCalls = harness.calls.filter(isPhoneCall);
+    expect(phoneCalls).toHaveLength(1);
+    expect(phoneCalls[0]!.init?.method).toBe('POST');
+    expect(JSON.parse(String(phoneCalls[0]!.init?.body))).toEqual({
+      person_linkedin_url: profileUrl,
+    });
+    expect(new Headers(phoneCalls[0]!.init?.headers).get('X-Treg-Route-Max-Cost')).toBeNull();
+
+    const saveResponse = await workerFetch(
+      '/api/leads/save',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...profile,
+          raw_data: item,
+          source_company_url: COMPANY_URL,
+        }),
+      },
+      harness.session.token
+    );
+    expect(saveResponse.status).toBe(200);
+
+    const listResponse = await workerFetch('/api/leads/list', undefined, harness.session.token);
+    const list = await readJson<{ data: Array<Record<string, unknown>> }>(listResponse);
+    expect(list.data[0]).toMatchObject({
+      profile_url: profileUrl,
+      mobile_number: '+1 415 555 0100',
+    });
   });
 });
 

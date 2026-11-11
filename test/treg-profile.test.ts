@@ -10,6 +10,17 @@ const TOKEN = 'treg_user_token_0123456789';
 const PROFILE_URL = 'https://www.linkedin.com/in/remiounadjela';
 const FULL_ENDPOINT = 'https://treg.to/call/harvestapi.linkedin.user.profile';
 const EMAIL_ENDPOINT = 'https://treg.to/call/harvestapi.linkedin.user.profile.email';
+const PHONE_ENDPOINT = 'https://treg.to/call/blitzapi.people.phone.find';
+const PHONE_HIT = {
+  found: true,
+  phone: '+1 415 555 0100',
+  fair_usage: { records_used: 1 },
+};
+const PHONE_MISS = {
+  found: false,
+  phone: null,
+  fair_usage: { records_used: 0 },
+};
 
 interface ProviderCall {
   url: string;
@@ -26,6 +37,16 @@ function stubFetch(handler: FetchHandler) {
   });
   vi.stubGlobal('fetch', mock);
   return mock;
+}
+
+/** Phone is a second call; tests that do not inspect it get a clean miss. */
+function stubTregFetch(
+  handler: FetchHandler,
+  phone: FetchHandler = () => jsonResponse(PHONE_MISS)
+) {
+  return stubFetch((url, init) =>
+    url.startsWith(PHONE_ENDPOINT) ? phone(url, init) : handler(url, init)
+  );
 }
 
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}) {
@@ -74,7 +95,7 @@ afterEach(() => {
 describe('treg profile adapter', () => {
   it('maps Full to the full-profile endpoint with GET query params and treg headers', async () => {
     const calls: ProviderCall[] = [];
-    stubFetch((url, init) => {
+    stubTregFetch((url, init) => {
       calls.push({ url, init });
       return jsonResponse(tregProfile);
     });
@@ -98,9 +119,81 @@ describe('treg profile adapter', () => {
     expect(idempotencyKeyOf(call)).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   });
 
+  it('accepts the provider native numeric status envelope', async () => {
+    stubTregFetch(() =>
+      jsonResponse({ status: 200, error: null, element: tregProfile.element, cost: 3200 })
+    );
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(200);
+    expect(await readJson<unknown[]>(response)).toEqual([tregProfile.element]);
+  });
+
+  it('rejects a native envelope with a non-2xx numeric status', async () => {
+    stubTregFetch(() => jsonResponse({ status: 422, error: null, element: null }));
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(502);
+  });
+
+  it('enriches the profile with the cheapest phone lookup and maps mobile_number', async () => {
+    const profileCalls: ProviderCall[] = [];
+    const phoneCalls: ProviderCall[] = [];
+    stubTregFetch(
+      (url, init) => {
+        profileCalls.push({ url, init });
+        return jsonResponse(tregProfile);
+      },
+      (url, init) => {
+        phoneCalls.push({ url, init });
+        return jsonResponse(PHONE_HIT);
+      }
+    );
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(200);
+    const [element] = await readJson<Record<string, unknown>[]>(response);
+    expect(element).toMatchObject({ ...tregProfile.element, mobileNumber: '+1 415 555 0100' });
+    expect(normalizeScrapeItem(element).mobile_number).toBe('+1 415 555 0100');
+
+    expect(profileCalls).toHaveLength(1);
+    expect(endpointOf(profileCalls[0]!).path).toBe(FULL_ENDPOINT);
+
+    expect(phoneCalls).toHaveLength(1);
+    const phone = phoneCalls[0]!;
+    const endpoint = endpointOf(phone);
+    expect(endpoint.path).toBe(PHONE_ENDPOINT);
+    expect(endpoint.params.toString()).toBe('');
+    expect(phone.init?.method).toBe('POST');
+    expect(JSON.parse(String(phone.init?.body))).toEqual({ person_linkedin_url: PROFILE_URL });
+    const headers = new Headers(phone.init?.headers);
+    expect(headers.get('X-Treg-Token')).toBe(TOKEN);
+    expect(headers.get('X-Treg-Route-Max-Cost')).toBeNull();
+    expect(headers.get('Content-Type')).toBe('application/json');
+  });
+
+  it('keeps the profile when the phone lookup fails', async () => {
+    stubTregFetch(
+      () => jsonResponse(tregProfile),
+      () => new Response('phone provider down', { status: 500 })
+    );
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(200);
+    expect(await readJson<unknown[]>(response)).toEqual([tregProfile.element]);
+  });
+
   it('maps Full+email to the email endpoint and never calls both for one URL', async () => {
     const calls: ProviderCall[] = [];
-    stubFetch((url, init) => {
+    stubTregFetch((url, init) => {
       calls.push({ url, init });
       return jsonResponse(tregProfileEmail);
     });
@@ -111,12 +204,15 @@ describe('treg profile adapter', () => {
     expect(response.status).toBe(200);
     expect(await readJson<unknown[]>(response)).toEqual([tregProfileEmail.element]);
     expect(calls).toHaveLength(1);
-    expect(endpointOf(calls[0]!).path).toBe(EMAIL_ENDPOINT);
+    const endpoint = endpointOf(calls[0]!);
+    expect(endpoint.path).toBe(EMAIL_ENDPOINT);
+    expect(endpoint.params.get('url')).toBe(PROFILE_URL);
+    expect(endpoint.params.get('findEmail')).toBe('true');
   });
 
   it('rejects an unknown tier before reaching the provider', async () => {
     const calls: ProviderCall[] = [];
-    stubFetch((url, init) => {
+    stubTregFetch((url, init) => {
       calls.push({ url, init });
       return jsonResponse(tregProfile);
     });
@@ -132,7 +228,7 @@ describe('treg profile adapter', () => {
   });
 
   it('treats an HTTP 200 envelope error as a provider error (502)', async () => {
-    stubFetch(() => jsonResponse({ status: 'error', error: 'Profile could not be read' }));
+    stubTregFetch(() => jsonResponse({ status: 'error', error: 'Profile could not be read' }));
     const session = await signUpWithTreg();
 
     const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
@@ -144,7 +240,7 @@ describe('treg profile adapter', () => {
   });
 
   it('treats a success envelope without an element as a provider error', async () => {
-    stubFetch(() => jsonResponse({ status: 'success', error: null }));
+    stubTregFetch(() => jsonResponse({ status: 'success', error: null }));
     const session = await signUpWithTreg();
 
     const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
@@ -154,7 +250,7 @@ describe('treg profile adapter', () => {
   });
 
   it('returns the profile with an empty email when the provider has no email', async () => {
-    stubFetch(() => jsonResponse(tregProfileNoEmail));
+    stubTregFetch(() => jsonResponse(tregProfileNoEmail));
     const session = await signUpWithTreg();
 
     const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full_email' });
@@ -169,7 +265,7 @@ describe('treg profile adapter', () => {
   });
 
   it('maps a provider 401 to 400 credential_invalid', async () => {
-    stubFetch(() => jsonResponse({ status: 'error', error: 'Invalid token' }, 401));
+    stubTregFetch(() => jsonResponse({ status: 'error', error: 'Invalid token' }, 401));
     const session = await signUpWithTreg();
 
     const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
@@ -181,7 +277,7 @@ describe('treg profile adapter', () => {
   });
 
   it('maps a request timeout to a 502 timeout error', async () => {
-    stubFetch(() => {
+    stubTregFetch(() => {
       const err = new Error('timed out');
       err.name = 'TimeoutError';
       throw err;
@@ -197,7 +293,7 @@ describe('treg profile adapter', () => {
   it('honors Retry-After and retries a 429 once with the same idempotency key', async () => {
     const calls: ProviderCall[] = [];
     let attempt = 0;
-    stubFetch((url, init) => {
+    stubTregFetch((url, init) => {
       calls.push({ url, init });
       attempt += 1;
       if (attempt === 1) {
@@ -221,7 +317,7 @@ describe('treg profile adapter', () => {
 
   it('maps a persistent 429 to a 502 after one retry', async () => {
     const keys: Array<string | null> = [];
-    stubFetch((_url, init) => {
+    stubTregFetch((_url, init) => {
       keys.push(new Headers(init?.headers).get('Idempotency-Key'));
       return jsonResponse({ status: 'error', error: 'Rate limit exceeded' }, 429, {
         'Retry-After': '0',
@@ -238,7 +334,7 @@ describe('treg profile adapter', () => {
 
   it.each([409, 410, 422])('maps an explicit HTTP %i failure to 502 with the provider body', async (status) => {
     const calls: ProviderCall[] = [];
-    stubFetch((url, init) => {
+    stubTregFetch((url, init) => {
       calls.push({ url, init });
       return new Response('provider body says no', { status });
     });
@@ -262,7 +358,7 @@ describe('treg profile adapter', () => {
     const waiters: Array<() => void> = [];
     let inFlight = 0;
     let maxInFlight = 0;
-    stubFetch(() => {
+    stubTregFetch(() => {
       const gate = Promise.withResolvers<Response>();
       gates.push(gate);
       inFlight += 1;
@@ -324,7 +420,7 @@ interface SavedProfile {
 
 describe('treg profile to Saved Profile', () => {
   it('normalizes the HarvestAPI profile shape into populated columns with no phone', async () => {
-    stubFetch(() => jsonResponse(tregProfileEmail));
+    stubTregFetch(() => jsonResponse(tregProfileEmail));
     const session = await signUpWithTreg();
 
     const scrapeResponse = await scrape(session.token, {
@@ -377,5 +473,38 @@ describe('treg profile to Saved Profile', () => {
       is_premium: false,
     });
     expect(saved?.raw_data).toEqual(tregProfileEmail.element);
+  });
+
+  it('persists a found phone in the Saved Profile mobile_number column', async () => {
+    stubTregFetch(
+      () => jsonResponse(tregProfile),
+      () => jsonResponse(PHONE_HIT)
+    );
+    const session = await signUpWithTreg();
+
+    const scrapeResponse = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+    expect(scrapeResponse.status).toBe(200);
+    const [item] = await readJson<unknown[]>(scrapeResponse);
+
+    const profile = normalizeScrapeItem(item);
+    expect(profile.mobile_number).toBe('+1 415 555 0100');
+
+    const saveResponse = await workerFetch(
+      '/api/profiles/save',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...profile, raw_data: item }),
+      },
+      session.token
+    );
+    expect(saveResponse.status).toBe(200);
+
+    const listResponse = await workerFetch('/api/profiles/list', undefined, session.token);
+    const [saved] = await readJson<SavedProfile[]>(listResponse);
+    expect(saved).toMatchObject({
+      profile_url: PROFILE_URL,
+      mobile_number: '+1 415 555 0100',
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { normalizeProfileUrl, normalizeScrapeItem } from '../../lib/normalize';
+import { isRecord, normalizeProfileUrl, normalizeScrapeItem } from '../../lib/normalize';
 import {
   ProviderError,
   type CompanyJobStart,
@@ -27,12 +27,20 @@ const PROFILE_ENDPOINTS = {
   full_email: 'harvestapi.linkedin.user.profile.email',
 } as const;
 const SEARCH_ENDPOINT = 'harvestapi.linkedin.leads.search';
+/** Cheapest catalog phone provider: $0.000495 per hit, $0 on a miss. */
+const PHONE_ENDPOINT = 'blitzapi.people.phone.find';
 const PROFILE_CONCURRENCY = 5;
 /** The lead search is paged 25 rows at a time; never read more than 10 pages. */
 const SEARCH_PAGE_CAP = 10;
 const DEFAULT_RETRY_AFTER_MS = 1000;
 const REQUEST_TIMEOUT_MS = 180_000;
 const PROVIDER_DETAIL_LIMIT = 300;
+
+interface TregCallOptions {
+  method?: 'GET' | 'POST';
+  body?: unknown;
+  headers?: Record<string, string>;
+}
 
 interface TregEnvelope {
   status?: unknown;
@@ -65,8 +73,15 @@ function retryAfterMs(response: Response): number {
 
 /** A 200 response still fails when the envelope reports an error. */
 function assertEnvelopeSuccess(payload: unknown): TregEnvelope {
-  const envelope = (payload ?? {}) as TregEnvelope;
-  if (envelope.status !== 'success') {
+  const envelope: TregEnvelope = isRecord(payload) ? payload : {};
+  const status = envelope.status;
+  // treg relays the provider's native envelope: HarvestAPI sends HTTP-like
+  // numeric statuses (200), while older payloads and tests use "success".
+  const statusOk =
+    status === 'success' ||
+    (typeof status === 'number' && status >= 200 && status < 300) ||
+    (typeof status === 'string' && /^2\d\d$/.test(status.trim()));
+  if (!statusOk) {
     const detail =
       typeof envelope.error === 'string' && envelope.error.trim()
         ? envelope.error.trim()
@@ -117,23 +132,33 @@ function readEnvelopeElements(payload: unknown): {
 async function callEndpoint(
   endpoint: string,
   params: Record<string, string>,
-  token: string
+  token: string,
+  options: TregCallOptions = {}
 ): Promise<unknown> {
   const idempotencyKey = crypto.randomUUID();
-  const url = `${TREG_BASE}/${endpoint}?${new URLSearchParams(params).toString()}`;
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${TREG_BASE}/${endpoint}?${query}` : `${TREG_BASE}/${endpoint}`;
+  const method = options.method ?? 'GET';
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'X-Treg-Token': token,
     'Idempotency-Key': idempotencyKey,
+    ...options.headers,
   };
+  let body: string | undefined;
+  if (options.body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(options.body);
+  }
 
   const send = async (): Promise<Response> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       return await fetch(url, {
-        method: 'GET',
+        method,
         headers,
+        body,
         signal: controller.signal,
       });
     } catch (err) {
@@ -195,8 +220,58 @@ async function callProfileEndpoint(
   profileUrl: string,
   token: string
 ): Promise<unknown> {
-  const payload = await callEndpoint(endpoint, { url: profileUrl }, token);
+  const params: Record<string, string> = { url: profileUrl };
+  // HarvestAPI marks findEmail as required on the email variant; without it
+  // treg rejects the request before it reaches the provider.
+  if (endpoint === PROFILE_ENDPOINTS.full_email) params.findEmail = 'true';
+  const payload = await callEndpoint(endpoint, params, token);
   return readEnvelopeElement(payload);
+}
+
+/** BlitzAPI answers `{ found, phone, fair_usage }`; a miss has `phone: null`. */
+function readPhone(payload: unknown): string | undefined {
+  if (!isRecord(payload)) return undefined;
+  const phone = payload.phone;
+  if (typeof phone !== 'string') return undefined;
+  const trimmed = phone.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+/**
+ * Phone is a second, best-effort call. BlitzAPI bills only a hit, and a
+ * provider failure must never discard the profile the User already paid for.
+ */
+async function findPhone(profileUrl: string, token: string): Promise<string | undefined> {
+  try {
+    const payload = await callEndpoint(PHONE_ENDPOINT, {}, token, {
+      method: 'POST',
+      body: { person_linkedin_url: profileUrl },
+    });
+    return readPhone(payload);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * HarvestAPI has no phone endpoint; attach the sibling lookup under
+ * `mobileNumber`, which `normalizeScrapeItem` already maps to `mobile_number`.
+ */
+function attachPhone(element: unknown, phone: string | undefined): unknown {
+  if (!phone) return element;
+  if (!isRecord(element)) return element;
+  return { ...element, mobileNumber: phone };
+}
+
+/** One profile call plus its best-effort phone enrichment. */
+async function scrapeProfileWithPhone(
+  endpoint: string,
+  profileUrl: string,
+  token: string
+): Promise<unknown> {
+  const element = await callProfileEndpoint(endpoint, profileUrl, token);
+  const phone = await findPhone(profileUrl, token);
+  return attachPhone(element, phone);
 }
 
 /** Runs at most `limit` mappers at once, preserving input order. */
@@ -247,10 +322,11 @@ async function scrapeProfiles(
     throw new ProviderError('input', 'Profile tier must be "full" or "full_email".');
   }
 
-  // No URL ever hits both endpoints: the email endpoint already returns the
-  // full profile, so the tier decides the single call per URL.
+  // No URL ever hits both profile endpoints: the email endpoint already returns
+  // the full profile, so the tier decides the profile call. Phone is a second,
+  // best-effort call for either tier.
   return mapLimit(input.urls, PROFILE_CONCURRENCY, (url) =>
-    callProfileEndpoint(endpoint, url, token)
+    scrapeProfileWithPhone(endpoint, url, token)
   );
 }
 
@@ -344,7 +420,7 @@ async function pollCompanyJob(
 
   const batch = candidates.slice(cursor, cursor + PROFILE_CONCURRENCY);
   const items = await mapLimit(batch, PROFILE_CONCURRENCY, (url) =>
-    callProfileEndpoint(endpoint, url, token)
+    scrapeProfileWithPhone(endpoint, url, token)
   );
   const nextCursor = cursor + items.length;
 

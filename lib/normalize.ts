@@ -21,7 +21,7 @@ export function normalizeProfileUrl(url: string): string {
   return url.trim().toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
 }
 
-function isRecord(value: unknown): value is UnknownRecord {
+export function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
