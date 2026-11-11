@@ -221,7 +221,98 @@ describe('treg profile adapter', () => {
     const headers = new Headers(phone.init?.headers);
     expect(headers.get('X-Treg-Token')).toBe(TOKEN);
     expect(headers.get('X-Treg-Route-Max-Cost')).toBeNull();
+    expect([...headers.keys()].filter((name) => /cost|verif/i.test(name))).toEqual([]);
     expect(headers.get('Content-Type')).toBe('application/json');
+  });
+
+  it.each(['full', 'full_email'] as const)(
+    'makes one profile call then one phone call per URL on the %s tier',
+    async (tier) => {
+      const calls: ProviderCall[] = [];
+      stubFetch((url, init) => {
+        calls.push({ url, init });
+        if (url.startsWith(PHONE_ENDPOINT)) return jsonResponse(PHONE_HIT);
+        return jsonResponse(
+          url.startsWith(EMAIL_ENDPOINT) ? tregProfileEmail : tregProfile
+        );
+      });
+      const session = await signUpWithTreg();
+      const urls = [PROFILE_URL, 'https://www.linkedin.com/in/second-person'];
+
+      const response = await scrape(session.token, { urls, tier });
+
+      expect(response.status).toBe(200);
+      const items = await readJson<Record<string, unknown>[]>(response);
+      expect(items).toHaveLength(2);
+
+      const profileEndpoint = tier === 'full' ? FULL_ENDPOINT : EMAIL_ENDPOINT;
+      // Two provider calls per URL, with the phone lookup after the profile.
+      expect(calls).toHaveLength(4);
+      for (const profileUrl of urls) {
+        expect(
+          calls
+            .filter((call) => {
+              const endpoint = endpointOf(call);
+              if (endpoint.path === PHONE_ENDPOINT) {
+                const body = JSON.parse(String(call.init?.body)) as Record<string, unknown>;
+                return body.person_linkedin_url === profileUrl;
+              }
+              return endpoint.params.get('url') === profileUrl;
+            })
+            .map((call) => endpointOf(call).path)
+        ).toEqual([profileEndpoint, PHONE_ENDPOINT]);
+      }
+      for (const item of items) {
+        expect(normalizeScrapeItem(item).mobile_number).toBe('+1 415 555 0100');
+      }
+    }
+  );
+
+  it('makes no phone call when the profile call fails', async () => {
+    const phoneCalls: ProviderCall[] = [];
+    stubTregFetch(
+      () => jsonResponse({ status: 200, error: 'Profile could not be read' }),
+      (url, init) => {
+        phoneCalls.push({ url, init });
+        return jsonResponse(PHONE_HIT);
+      }
+    );
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(502);
+    expect(phoneCalls).toHaveLength(0);
+  });
+
+  it('keeps the profile when the phone lookup times out', async () => {
+    stubTregFetch(
+      () => jsonResponse(tregProfile),
+      () => {
+        const err = new Error('timed out');
+        err.name = 'TimeoutError';
+        throw err;
+      }
+    );
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(200);
+    expect(await readJson<unknown[]>(response)).toEqual([tregProfile.element]);
+  });
+
+  it('keeps the profile when the phone lookup returns an unreadable body', async () => {
+    stubTregFetch(
+      () => jsonResponse(tregProfile),
+      () => new Response('not-json{', { status: 200 })
+    );
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(200);
+    expect(await readJson<unknown[]>(response)).toEqual([tregProfile.element]);
   });
 
   it('keeps the profile when the phone lookup fails', async () => {
@@ -436,6 +527,50 @@ describe('treg profile adapter', () => {
 
     const items = await result;
     expect(items).toHaveLength(urls.length);
+    expect(maxInFlight).toBe(5);
+  });
+
+  it('holds five in-flight calls across profile and phone for a 10-URL scrape', async () => {
+    interface Gate {
+      url: string;
+      resolve: (response: Response) => void;
+    }
+    const gates: Gate[] = [];
+    const waiters: Array<() => void> = [];
+    let inFlight = 0;
+    let maxInFlight = 0;
+    stubFetch((url) => {
+      const gate = Promise.withResolvers<Response>();
+      gates.push({ url, resolve: gate.resolve });
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      for (const wake of waiters.splice(0)) wake();
+      return gate.promise.finally(() => {
+        inFlight -= 1;
+      });
+    });
+    const urls = Array.from(
+      { length: 10 },
+      (_, index) => `https://www.linkedin.com/in/two-call-${index}`
+    );
+
+    const result = tregProvider.scrapeProfiles({ urls, tier: 'full' }, TOKEN);
+
+    // Resolve calls in the order they start; a URL's phone call only starts
+    // after its profile call has completed.
+    for (let index = 0; index < 20; index += 1) {
+      if (gates.length <= index) {
+        const { promise, resolve } = Promise.withResolvers<void>();
+        waiters.push(resolve);
+        await promise;
+      }
+      const gate = gates[index]!;
+      gate.resolve(jsonResponse(gate.url.startsWith(PHONE_ENDPOINT) ? PHONE_MISS : tregProfile));
+    }
+
+    const items = await result;
+    expect(items).toHaveLength(urls.length);
+    expect(gates).toHaveLength(20);
     expect(maxInFlight).toBe(5);
   });
 });
