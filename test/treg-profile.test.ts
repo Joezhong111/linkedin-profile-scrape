@@ -131,6 +131,18 @@ describe('treg profile adapter', () => {
     expect(await readJson<unknown[]>(response)).toEqual([tregProfile.element]);
   });
 
+  it('accepts a numeric-string 2xx envelope when error is absent', async () => {
+    stubTregFetch(() =>
+      jsonResponse({ status: '200', element: tregProfile.element, cost: 3200 })
+    );
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(200);
+    expect(await readJson<unknown[]>(response)).toEqual([tregProfile.element]);
+  });
+
   it('rejects a native envelope with a non-2xx numeric status', async () => {
     stubTregFetch(() => jsonResponse({ status: 422, error: null, element: null }));
     const session = await signUpWithTreg();
@@ -138,6 +150,40 @@ describe('treg profile adapter', () => {
     const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
 
     expect(response.status).toBe(502);
+    const body = await readJson<{ error: string }>(response);
+    expect(body.error).toContain('treg returned an error');
+    expect(body.error).not.toContain(TOKEN);
+  });
+
+  it('rejects a numeric 2xx envelope that carries a provider error', async () => {
+    stubTregFetch(() =>
+      jsonResponse({ status: 200, error: 'Insufficient credits', element: tregProfile.element })
+    );
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls: [PROFILE_URL], tier: 'full' });
+
+    expect(response.status).toBe(502);
+    const body = await readJson<{ error: string }>(response);
+    expect(body.error).toContain('Insufficient credits');
+    expect(body.error).not.toContain(TOKEN);
+  });
+
+  it('calls only the full-profile endpoint once per Profile URL', async () => {
+    const urls = [PROFILE_URL, 'https://www.linkedin.com/in/second-person'];
+    const calls: ProviderCall[] = [];
+    stubTregFetch((url, init) => {
+      calls.push({ url, init });
+      return jsonResponse(tregProfile);
+    });
+    const session = await signUpWithTreg();
+
+    const response = await scrape(session.token, { urls, tier: 'full' });
+
+    expect(response.status).toBe(200);
+    expect(calls.map((call) => endpointOf(call).path)).toEqual([FULL_ENDPOINT, FULL_ENDPOINT]);
+    expect(calls.map((call) => endpointOf(call).params.get('url'))).toEqual(urls);
+    expect(calls.some((call) => endpointOf(call).params.has('findEmail'))).toBe(false);
   });
 
   it('enriches the profile with the cheapest phone lookup and maps mobile_number', async () => {
@@ -207,7 +253,7 @@ describe('treg profile adapter', () => {
     const endpoint = endpointOf(calls[0]!);
     expect(endpoint.path).toBe(EMAIL_ENDPOINT);
     expect(endpoint.params.get('url')).toBe(PROFILE_URL);
-    expect(endpoint.params.get('findEmail')).toBe('true');
+    expect(endpoint.params.getAll('findEmail')).toEqual(['true']);
   });
 
   it('rejects an unknown tier before reaching the provider', async () => {

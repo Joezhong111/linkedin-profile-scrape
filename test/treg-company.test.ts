@@ -599,6 +599,19 @@ describe('GET /api/check_scrape_status (treg)', () => {
     }
   );
 
+  it('maps a non-array elements list to a 502 provider error', async () => {
+    const harness = await signUpWithTreg({
+      search: () => jsonResponse({ status: 200, error: null, elements: 'not-a-list' }),
+    });
+
+    const response = await startCompany(harness.session.token);
+
+    expect(response.status).toBe(502);
+    const body = await readJson<{ error: string }>(response);
+    expect(body.error).toContain('lead search results');
+    expect(body.error).not.toContain(TOKEN);
+  });
+
   it('marks a treg job failed when enrichment is definitively rejected', async () => {
     const harness = await signUpWithTreg({
       search: () => searchResponse([leadElement('https://www.linkedin.com/in/one-person')], 1, 1),
