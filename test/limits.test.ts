@@ -531,6 +531,50 @@ describe('Workers Free limits', () => {
     expectWithinFreeLimitsFrom('GET /api/check_scrape_status (treg 3-profile chunk)', poll);
   });
 
+  it('measures a five-candidate treg enrichment chunk (profile + phone each)', async () => {
+    const session = await tregSession();
+    const candidates = Array.from(
+      { length: 5 },
+      (_, index) => `https://www.linkedin.com/in/limits-five-${index}`
+    );
+    stubFetch(() => tregSearchPage(candidates.map(tregLead), 1, 1));
+    const started = await measure(
+      '/api/scrape_company',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(companyBody({ maxItems: 5 })),
+      },
+      session.token
+    );
+    expect(started.status).toBe(202);
+    const jobId = jobIdOf(started.body);
+
+    stubFetch((url) => {
+      if (new URL(url).pathname.endsWith(TREG_PHONE_PATH)) {
+        return jsonResponse(TREG_PHONE_MISS);
+      }
+      const profileUrl = new URL(url).searchParams.get('url') ?? '';
+      return jsonResponse({
+        status: 'success',
+        error: null,
+        element: {
+          ...(tregProfile.element ?? {}),
+          linkedinUrl: profileUrl,
+        },
+      });
+    });
+    const poll = await measure(
+      `/api/check_scrape_status?jobId=${encodeURIComponent(jobId)}`,
+      undefined,
+      session.token
+    );
+    expect(poll.status).toBe(200);
+    expect(poll.body).toMatchObject({ status: 'succeeded' });
+    expect(poll.subrequests).toBe(10);
+    expectWithinFreeLimitsFrom('GET /api/check_scrape_status (treg 5-candidate chunk)', poll);
+  });
+
   it('measures JSON parse cost for a profile and a 100-item company dataset', () => {
     // workerd's performance.now() has 1 ms resolution here, so each sample
     // parses 1,000 times and the median is reported per parse.

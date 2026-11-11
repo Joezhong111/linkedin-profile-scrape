@@ -217,8 +217,18 @@ Workers Free per-invocation limits: **10 ms CPU**, **50 subrequests**,
 | `POST /api/scrape_company` (treg, 10 search pages) | 2 | 10 | page cap |
 | `POST /api/scrape_company` (treg, 2-page fixture search) | 2 | 2 | — |
 | `GET /api/check_scrape_status` (treg enrichment chunk) | 9 | 6 | 3 candidates; profile + phone each |
+| `GET /api/check_scrape_status` (treg 5-candidate chunk) | 9 | 10 | five-candidate cap; profile + phone each |
 | `JSON.parse` profile item (2,189 chars) | — | — | median 0.0020 ms/parse |
 | `JSON.parse` 100-item company dataset (31,371 chars) | — | — | median 0.0180 ms/parse |
+
+A treg Profile or Lead costs two provider calls: HarvestAPI for the profile (or
+profile-with-email) and then BlitzAPI for the phone. The phone call is
+best-effort and made only after the profile call succeeds, so a failed profile
+never spends a phone lookup. BlitzAPI is the cheapest phone catalog entry at
+$0.000495 per hit and $0 on a miss; the routed phone tool can fall through to
+providers priced up to $0.90. The tradeoff is coverage: BlitzAPI targets US
+direct and mobile numbers, so non-US Profiles often miss and keep an empty
+`mobile_number`. See ADR 0007.
 
 Maximum observed: **15 D1 queries** (30% of Free), **26 subrequests** (52% of
 Free, the Apify profile worst case), and **2.00 ms** sign-in wall-clock (20% of

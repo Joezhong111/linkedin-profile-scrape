@@ -421,6 +421,7 @@ describe('GET /api/check_scrape_status (treg)', () => {
     expect(first).toMatchObject({ status: 'running', progress: 5, resultCount: 5 });
     expect(first.items).toBeUndefined();
     expect(harness.calls.filter(isProfileCall)).toHaveLength(5);
+    expect(harness.calls.filter(isPhoneCall)).toHaveLength(5);
     expect(await itemIndexes(created.jobId)).toEqual([0, 1, 2, 3, 4]);
 
     const secondResponse = await pollStatus(harness.session.token, created.jobId);
@@ -436,16 +437,84 @@ describe('GET /api/check_scrape_status (treg)', () => {
       duplicateRate: 0,
     });
     expect(harness.calls.filter(isProfileCall)).toHaveLength(7);
+    expect(harness.calls.filter(isPhoneCall)).toHaveLength(7);
     expect(await itemIndexes(created.jobId)).toEqual([0, 1, 2, 3, 4, 5, 6]);
 
     const callsAfterSuccess = harness.calls.length;
+    const phoneCallsAfterSuccess = harness.calls.filter(isPhoneCall).length;
     const repeat = await readJson<StatusResponse>(
       await pollStatus(harness.session.token, created.jobId)
     );
     expect(repeat.status).toBe('succeeded');
     expect(repeat.items).toEqual(second.items);
     expect(harness.calls.length).toBe(callsAfterSuccess);
+    expect(harness.calls.filter(isPhoneCall)).toHaveLength(phoneCallsAfterSuccess);
+    expect(await itemIndexes(created.jobId)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(await historyCount(harness.session.id)).toBe(1);
+  });
+
+  it.each(['full', 'full_email'] as const)(
+    'makes exactly one phone call per enriched candidate on the %s tier',
+    async (tier) => {
+      const candidates = Array.from(
+        { length: 3 },
+        (_, index) => `https://www.linkedin.com/in/phone-count-${index}`
+      );
+      const harness = await signUpWithTreg({
+        search: () => searchResponse(candidates.map(leadElement), 1, 1),
+        phone: () => jsonResponse(PHONE_HIT),
+      });
+      const created = await createJob(harness, { maxItems: 3, tier });
+
+      const status = await readJson<StatusResponse>(
+        await pollStatus(harness.session.token, created.jobId)
+      );
+
+      expect(status.status).toBe('succeeded');
+      expect(status.items).toHaveLength(3);
+      expect(harness.calls.filter(isProfileCall)).toHaveLength(3);
+      const phoneCalls = harness.calls.filter(isPhoneCall);
+      expect(phoneCalls).toHaveLength(3);
+      expect(
+        phoneCalls.map((call) => linkedinUrlFromBody(call.init?.body)).sort()
+      ).toEqual([...candidates].sort());
+      for (const call of phoneCalls) {
+        expect(call.init?.method).toBe('POST');
+        expect(new Headers(call.init?.headers).get('X-Treg-Token')).toBe(TOKEN);
+      }
+      const phones = (status.items ?? []).map((item) => normalizeScrapeItem(item).mobile_number);
+      expect(phones).toEqual(Array(3).fill('+1 415 555 0100'));
+    }
+  );
+
+  it.each([
+    ['a miss', () => jsonResponse(PHONE_MISS)],
+    ['a provider error', () => new Response('phone provider down', { status: 500 })],
+    [
+      'a timeout',
+      () => {
+        const err = new Error('timed out');
+        err.name = 'TimeoutError';
+        throw err;
+      },
+    ],
+  ])('succeeds and leaves the item unchanged on %s phone lookup', async (_label, phone) => {
+    const profileUrl = 'https://www.linkedin.com/in/phone-failure';
+    const harness = await signUpWithTreg({
+      search: () => searchResponse([leadElement(profileUrl)], 1, 1),
+      phone,
+    });
+    const created = await createJob(harness, { maxItems: 1, tier: 'full' });
+
+    const status = await readJson<StatusResponse>(
+      await pollStatus(harness.session.token, created.jobId)
+    );
+
+    expect(status.status).toBe('succeeded');
+    expect(harness.calls.filter(isPhoneCall)).toHaveLength(1);
+    expect(status.items).toEqual([{ ...tregProfile.element, linkedinUrl: profileUrl }]);
+    expect(normalizeScrapeItem(status.items?.[0]).mobile_number).toBeUndefined();
+    expect((await getJobRow(created.jobId))?.status).toBe('succeeded');
   });
 
   it('maps Full to the profile endpoint and never calls email for the same person', async () => {
@@ -631,6 +700,8 @@ describe('GET /api/check_scrape_status (treg)', () => {
     expect(row?.status).toBe('failed');
     expect(row?.error_message).toContain('HTTP 422');
     expect(await itemIndexes(created.jobId)).toEqual([]);
+    // A failed profile call must not spend a phone lookup.
+    expect(harness.calls.filter(isPhoneCall)).toHaveLength(0);
   });
 });
 
