@@ -1,0 +1,12 @@
+{
+  "hit": {
+    "found": true,
+    "phone": "+1 415 555 0100",
+    "fair_usage": { "records_used": 1 }
+  },
+  "miss": {
+    "found": false,
+    "phone": null,
+    "fair_usage": { "records_used": 0 }
+  }
+}

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import tregProfile from './fixtures/treg-profile.json';
 import tregProfileEmail from './fixtures/treg-profile-email.json';
 import tregProfileNoEmail from './fixtures/treg-profile-no-email.json';
+import blitzapiPhone from './fixtures/blitzapi-phone.json';
 import { normalizeScrapeItem } from '../lib/normalize';
 import { tregProvider } from '../worker/providers/treg';
 import { putCredential, readJson, signUp, workerFetch, type TestSession } from './helpers';
@@ -11,16 +12,8 @@ const PROFILE_URL = 'https://www.linkedin.com/in/remiounadjela';
 const FULL_ENDPOINT = 'https://treg.to/call/harvestapi.linkedin.user.profile';
 const EMAIL_ENDPOINT = 'https://treg.to/call/harvestapi.linkedin.user.profile.email';
 const PHONE_ENDPOINT = 'https://treg.to/call/blitzapi.people.phone.find';
-const PHONE_HIT = {
-  found: true,
-  phone: '+1 415 555 0100',
-  fair_usage: { records_used: 1 },
-};
-const PHONE_MISS = {
-  found: false,
-  phone: null,
-  fair_usage: { records_used: 0 },
-};
+const PHONE_HIT = blitzapiPhone.hit;
+const PHONE_MISS = blitzapiPhone.miss;
 
 interface ProviderCall {
   url: string;
@@ -169,7 +162,7 @@ describe('treg profile adapter', () => {
     expect(body.error).not.toContain(TOKEN);
   });
 
-  it('calls only the full-profile endpoint once per Profile URL', async () => {
+  it('calls the full-profile endpoint once per Profile URL', async () => {
     const urls = [PROFILE_URL, 'https://www.linkedin.com/in/second-person'];
     const calls: ProviderCall[] = [];
     stubTregFetch((url, init) => {

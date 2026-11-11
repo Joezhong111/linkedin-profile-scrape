@@ -16,6 +16,7 @@ import companySucceeded from './fixtures/apify-company-succeeded.json';
 import searchPage1 from './fixtures/treg-lead-search-page1.json';
 import searchPage2 from './fixtures/treg-lead-search-page2.json';
 import tregProfile from './fixtures/treg-profile.json';
+import blitzapiPhone from './fixtures/blitzapi-phone.json';
 import { putCredential, signUp, workerFetch, type TestSession } from './helpers';
 
 /**
@@ -38,7 +39,7 @@ const PROFILE_URL = 'https://www.linkedin.com/in/remi-ounadjela';
 const COMPANY_URL = 'https://www.linkedin.com/company/acme';
 const APIFY_ME_URL = 'https://api.apify.com/v2/users/me';
 const TREG_PHONE_PATH = '/call/blitzapi.people.phone.find';
-const TREG_PHONE_MISS = { found: false, phone: null, fair_usage: { records_used: 0 } };
+const TREG_PHONE_MISS = blitzapiPhone.miss;
 
 const FREE_CPU_MS = 10;
 const FREE_SUBREQUESTS = 50;

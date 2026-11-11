@@ -8,6 +8,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   EnvelopeIcon,
+  PhoneIcon,
   MapPinIcon,
   BriefcaseIcon,
   FunnelIcon,
@@ -198,13 +199,21 @@ function LeadCard({
           </div>
         </div>
 
-        {/* Email badge */}
-        {lead.email && (
-          <div className="mt-2 flex items-center">
-            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
-              <EnvelopeIcon className="h-3 w-3" />
-              {lead.email}
-            </span>
+        {/* Contact badges */}
+        {(lead.email || lead.mobile_number) && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {lead.email && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
+                <EnvelopeIcon className="h-3 w-3" />
+                {lead.email}
+              </span>
+            )}
+            {lead.mobile_number && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">
+                <PhoneIcon className="h-3 w-3" />
+                {lead.mobile_number}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -706,21 +715,39 @@ export default function Leads() {
                       </div>
                     </td>
                     <td className="p-4">
-                      {p.email ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopy(p.email);
-                          }}
-                          className="text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 group"
-                        >
-                          <span className="truncate max-w-[150px]">{p.email}</span>
-                          <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-gray-100 dark:bg-slate-600 px-1 rounded">
-                            Copy
-                          </span>
-                        </button>
+                      {p.email || p.mobile_number ? (
+                        <div className="flex flex-col gap-1">
+                          {p.email && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopy(p.email);
+                              }}
+                              className="text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 group"
+                            >
+                              <span className="truncate max-w-[150px]">{p.email}</span>
+                              <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-gray-100 dark:bg-slate-600 px-1 rounded">
+                                Copy
+                              </span>
+                            </button>
+                          )}
+                          {p.mobile_number && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopy(p.mobile_number);
+                              }}
+                              className="text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 group"
+                            >
+                              <span className="truncate max-w-[150px]">{p.mobile_number}</span>
+                              <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-gray-100 dark:bg-slate-600 px-1 rounded">
+                                Copy
+                              </span>
+                            </button>
+                          )}
+                        </div>
                       ) : (
-                        <span className="text-gray-400 dark:text-slate-500 italic">No email</span>
+                        <span className="text-gray-400 dark:text-slate-500 italic">No contact</span>
                       )}
                     </td>
                     <td className="p-4 hidden 2xl:table-cell">
