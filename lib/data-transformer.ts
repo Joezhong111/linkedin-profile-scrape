@@ -3,16 +3,48 @@
  * Maps messy nested JSON to flat structures for Recharts
  */
 
+/**
+ * Provider payloads disagree on pluralization: Apify returns `experiences`
+ * and `educations`, while HarvestAPI/treg returns `experience` and `education`.
+ * Every visualization reads both so a saved row renders the same either way.
+ */
+export function getProfileExperiences(rawData: any): any[] {
+  if (!rawData) return [];
+  const experiences = rawData.experience ?? rawData.experiences;
+  return Array.isArray(experiences) ? experiences : [];
+}
+
+export function getProfileEducation(rawData: any): any[] {
+  if (!rawData) return [];
+  const education = rawData.education ?? rawData.educations;
+  return Array.isArray(education) ? education : [];
+}
+
+function yearFromDate(date: any): number | null {
+  const value = date?.year ?? date?.text;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const match = value.match(/(?:19|20)\d{2}/);
+    return match ? parseInt(match[0], 10) : null;
+  }
+  return null;
+}
+
+function arrayLength(value: unknown): number {
+  return Array.isArray(value) ? value.length : 0;
+}
+
 // ============================================
 // Skills Transformation
 // ============================================
 
 export const transformSkillsData = (rawData: any) => {
-  if (!rawData || !rawData.skills) return [];
+  const skills = Array.isArray(rawData?.skills) ? rawData.skills : [];
+  if (!skills.length) return [];
 
-  return rawData.skills
+  return skills
     .map((skill: any) => {
-      const name = skill.name || 'Unknown';
+      const name = skill.name || skill.title || 'Unknown';
 
       // Parse endorsements (e.g., "26 endorsements" -> 26)
       let value = 0;
@@ -115,7 +147,7 @@ export const transformSkillsByCategory = (rawData: any) => {
 // ============================================
 
 export const transformExperienceData = (rawData: any) => {
-  const experiences = rawData?.experience || rawData?.experiences || [];
+  const experiences = getProfileExperiences(rawData);
   if (!experiences.length) return [];
 
   return experiences
@@ -166,25 +198,36 @@ export const transformExperienceData = (rawData: any) => {
 
 // For timeline visualization
 export const transformExperienceTimeline = (rawData: any) => {
-  const experiences = rawData?.experience || rawData?.experiences || [];
+  const experiences = getProfileExperiences(rawData);
   if (!experiences.length) return [];
 
   return experiences
-    .filter((exp: any) => exp.startDate?.year)
-    .map((exp: any) => {
-      const startYear = exp.startDate.year;
-      const endYear = exp.endDate?.year || new Date().getFullYear();
+    .flatMap((exp: any) => {
+      // Apify sends only `startDate.text` (e.g. "Jan 2023"); HarvestAPI also
+      // sends `year`. Parse the text so both providers produce a timeline.
+      const startYear = yearFromDate(exp.startDate);
+      if (startYear === null) return [];
 
-      return {
-        company: exp.companyName || 'Unknown',
-        role: exp.position || 'Unknown',
-        start: startYear,
-        end: endYear,
-        duration: `${endYear - startYear} yrs`,
-        isCurrent: !exp.endDate?.year,
-      };
+      const endYear = yearFromDate(exp.endDate);
+      const isCurrent = endYear === null;
+      const effectiveEnd = endYear ?? new Date().getFullYear();
+
+      return [
+        {
+          company: exp.companyName || exp.company || 'Unknown',
+          role: exp.position || exp.title || 'Unknown',
+          start: startYear,
+          end: effectiveEnd,
+          startText: exp.startDate?.text || String(startYear),
+          endText: exp.endDate?.text || (endYear === null ? 'Present' : String(endYear)),
+          duration: exp.duration || `${effectiveEnd - startYear} yrs`,
+          location: exp.location || exp.jobLocation || null,
+          description: exp.description || null,
+          isCurrent,
+        },
+      ];
     })
-    .sort((a: any, b: any) => a.start - b.start);
+    .sort((a, b) => a.start - b.start);
 };
 
 // ============================================
@@ -192,7 +235,8 @@ export const transformExperienceTimeline = (rawData: any) => {
 // ============================================
 
 export const transformLanguagesData = (rawData: any) => {
-  if (!rawData || !rawData.languages) return [];
+  const languages = Array.isArray(rawData?.languages) ? rawData.languages : [];
+  if (!languages.length) return [];
 
   const proficiencyMap: { [key: string]: number } = {
     'native or bilingual proficiency': 5,
@@ -202,7 +246,7 @@ export const transformLanguagesData = (rawData: any) => {
     'elementary proficiency': 1,
   };
 
-  return rawData.languages.map((lang: any) => {
+  return languages.map((lang: any) => {
     const proficiency = lang.proficiency?.toLowerCase() || '';
     let level = 3; // default
 
@@ -359,13 +403,26 @@ export const transformFeaturedData = (rawData: any) => {
 
 export const getProfileStats = (rawData: any) => {
   return {
-    skillsCount: rawData?.skills?.length || 0,
-    experienceCount: rawData?.experience?.length || 0,
-    languagesCount: rawData?.languages?.length || 0,
-    certificationsCount: rawData?.certifications?.length || 0,
-    patentsCount: rawData?.patents?.length || 0,
-    recommendationsCount: rawData?.receivedRecommendations?.length || 0,
-    followers: rawData?.followerCount || 0,
-    connections: rawData?.connectionsCount || 0,
+    skillsCount: arrayLength(rawData?.skills),
+    experienceCount: getProfileExperiences(rawData).length,
+    languagesCount: arrayLength(rawData?.languages),
+    certificationsCount: arrayLength(rawData?.certifications),
+    patentsCount: arrayLength(rawData?.patents),
+    recommendationsCount: arrayLength(rawData?.receivedRecommendations),
+    followers: rawData?.followerCount ?? rawData?.followers ?? 0,
+    connections: rawData?.connectionsCount ?? rawData?.connections ?? 0,
   };
+};
+
+/**
+ * Sums the provider duration strings ("3 yrs 1 mo"). Summing roles is a
+ * deliberate approximation: overlapping roles count twice, but the header
+ * previously showed 0 for every HarvestAPI/treg profile.
+ */
+export const getTotalExperienceYears = (rawData: any): number => {
+  const months = transformExperienceData(rawData).reduce(
+    (total, experience: any) => total + (Number(experience.value) || 0),
+    0
+  );
+  return Math.round((months / 12) * 10) / 10;
 };

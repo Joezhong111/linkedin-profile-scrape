@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { LinkedInProfile } from '../types';
 
 import { fetchAllProfiles } from '../services/api';
+import { getProfileEducation, getProfileExperiences } from '../lib/data-transformer';
 import {
   MagnifyingGlassIcon,
-  SparklesIcon,
   BriefcaseIcon,
   MapPinIcon,
   EnvelopeIcon,
@@ -29,7 +29,6 @@ function toCsv(rows: LinkedInProfile[]) {
     'location',
     'about',
     'photo_url',
-    'ai_summary',
   ];
   const esc = (v: any) => {
     const s = v === undefined || v === null ? '' : String(v);
@@ -47,7 +46,6 @@ function toCsv(rows: LinkedInProfile[]) {
         esc(r.location),
         esc(r.about),
         esc(r.photo_url),
-        esc(r.ai_summary),
       ].join(',')
     );
   }
@@ -62,7 +60,6 @@ export default function Profiles() {
 
   // Filters
   const [q, setQ] = useState('');
-  const [aiOnly, setAiOnly] = useState(false);
   const [hasEmail, setHasEmail] = useState(false);
   const [hasPhone, setHasPhone] = useState(false);
   const [minFollowers, setMinFollowers] = useState<number>(0);
@@ -95,7 +92,6 @@ export default function Profiles() {
 
   const clearFilters = () => {
     setQ('');
-    setAiOnly(false);
     setHasEmail(false);
     setHasPhone(false);
     setMinFollowers(0);
@@ -146,7 +142,6 @@ export default function Profiles() {
       const loc = p.location ?? p.address_with_country ?? rd.addressWithCountry ?? '';
 
       // Boolean checks
-      if (aiOnly && !p.ai_summary) return false;
       if (hasEmail && !emailVal) return false;
       if (hasPhone && !phoneVal) return false;
       if (hasPhoto && !p.photo_url) return false;
@@ -157,10 +152,10 @@ export default function Profiles() {
       if (companyQ && !String(companyVal).toLowerCase().includes(companyQ.toLowerCase())) return false;
       if (locationFilter && loc !== locationFilter) return false;
 
-      // Arrays
-      const expList = p.experiences ?? rd.experiences ?? [];
+      // Arrays (Apify sends plural keys; HarvestAPI/treg sends singular)
+      const expList = p.experiences ?? getProfileExperiences(rd);
       if (hasExp && expList.length === 0) return false;
-      const eduList = p.education ?? rd.educations ?? [];
+      const eduList = p.education ?? getProfileEducation(rd);
       if (hasEdu && eduList.length === 0) return false;
 
       // Date Range
@@ -180,7 +175,6 @@ export default function Profiles() {
         companyVal,
         p.profile_url,
         p.about,
-        p.ai_summary,
         String(industryVal),
       ]
         .map((v) => (v || '').toLowerCase())
@@ -188,7 +182,7 @@ export default function Profiles() {
       return hay.includes(term);
     });
   }, [
-    all, q, aiOnly, hasEmail, hasPhone, minFollowers, industryQ, companyQ,
+    all, q, hasEmail, hasPhone, minFollowers, industryQ, companyQ,
     locationFilter, hasPhoto, hasExp, hasEdu, dateFrom, dateTo
   ]);
 
@@ -352,22 +346,6 @@ export default function Profiles() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <label className="relative inline-flex items-center cursor-pointer select-none group">
-              <input
-                type="checkbox"
-                checked={aiOnly}
-                onChange={(e) => setAiOnly(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-              <span className="ml-2 text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-1">
-                <SparklesIcon className="h-4 w-4 text-amber-500" />
-                AI Only
-              </span>
-            </label>
-
-            <div className="h-6 w-px bg-gray-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}

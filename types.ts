@@ -17,7 +17,6 @@ export interface LinkedInProfile {
 
   // Raw
   raw_data: any;
-  ai_summary?: string;
 
   // Columns from the provided schema
   linkedin_public_url?: string;

@@ -21,7 +21,6 @@ function profileColumns(profile: LinkedInProfile): ProfileColumnValues {
     about: nullable(profile.about),
     photoUrl: nullable(profile.photo_url),
     rawData: profile.raw_data ?? null,
-    aiSummary: nullable(profile.ai_summary),
     linkedinPublicUrl: nullable(profile.linkedin_public_url),
     linkedinId: nullable(profile.linkedin_id),
     publicIdentifier: nullable(profile.public_identifier),
@@ -167,27 +166,6 @@ export const profilesRoutes: Route[] = [
 
       await createDb(ctx.env.DB)
         .delete(linkedinProfiles)
-        .where(and(eq(linkedinProfiles.id, id), eq(linkedinProfiles.ownerId, user.id)));
-
-      return json({ success: true });
-    },
-  },
-  {
-    method: 'POST',
-    path: '/api/profiles/update-ai',
-    handler: async (ctx) => {
-      const user = await requireUser(ctx);
-      if (user instanceof Response) return user;
-
-      const body = await parseJsonBody(ctx.request);
-      const id = typeof body.id === 'string' ? body.id.trim() : '';
-      const summary = body.ai_summary;
-      if (!id) return error(400, 'id is required');
-      if (typeof summary !== 'string') return error(400, 'ai_summary is required');
-
-      await createDb(ctx.env.DB)
-        .update(linkedinProfiles)
-        .set({ aiSummary: summary })
         .where(and(eq(linkedinProfiles.id, id), eq(linkedinProfiles.ownerId, user.id)));
 
       return json({ success: true });

@@ -333,8 +333,6 @@ export function normalizeScrapeItem(raw: unknown): LinkedInProfile {
       item.current_job_duration_years
     ),
 
-    ai_summary: pickString(item.aiSummary, item.ai_summary),
-
     experiences,
     education,
     raw_data: raw,

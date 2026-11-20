@@ -28,8 +28,7 @@ bind D1 in one deployable unit.
 - **Secrets**: `CREDENTIAL_ENCRYPTION_KEY` is a Worker secret set with
   `wrangler secret put`; it is never a `vars` entry. User Scrape Credentials
   are encrypted with AES-GCM and stored in D1, not configured in the
-  environment. The only browser-exposed variable is the optional
-  `VITE_GEMINI_API_KEY`.
+  environment.
 - **One migration ledger**: `db/schema.ts` generates SQL into `drizzle-d1/`,
   and `wrangler.jsonc` sets `migrations_dir` to that directory for every
   environment. Applied migrations are immutable; changes generate a new file.

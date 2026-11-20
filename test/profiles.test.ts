@@ -18,7 +18,6 @@ interface SavedProfile {
   company_linkedin: string | null;
   is_verified: boolean | null;
   is_premium: boolean | null;
-  ai_summary: string | null;
   raw_data: unknown;
 }
 
@@ -59,7 +58,6 @@ describe('Profiles authentication', () => {
       workerFetch('/api/profiles/list'),
       postJson('/api/profiles/save', { profile_url: APIFY_URL }),
       postJson('/api/profiles/delete', { id: 'missing' }),
-      postJson('/api/profiles/update-ai', { id: 'missing', ai_summary: 'x' }),
     ]);
     for (const res of responses) {
       expect(res.status).toBe(401);
@@ -224,37 +222,6 @@ describe('POST /api/profiles/delete', () => {
     const own = await postJson('/api/profiles/delete', { id: saved.id }, owner.token);
     expect(own.status).toBe(200);
     expect(await list(owner.token)).toHaveLength(0);
-  });
-});
-
-describe('POST /api/profiles/update-ai', () => {
-  it('only updates the current User’s AI summary', async () => {
-    const owner = await signUp();
-    const stranger = await signUp();
-    const saved = await save(owner.token, {
-      profile_url: APIFY_URL,
-      ai_summary: 'Original summary',
-    });
-
-    const res = await postJson(
-      '/api/profiles/update-ai',
-      { id: saved.id, ai_summary: 'Hijacked' },
-      stranger.token
-    );
-    expect(res.status).toBe(200);
-
-    let [row] = await list(owner.token);
-    expect(row?.ai_summary).toBe('Original summary');
-
-    const own = await postJson(
-      '/api/profiles/update-ai',
-      { id: saved.id, ai_summary: 'Updated summary' },
-      owner.token
-    );
-    expect(own.status).toBe(200);
-
-    [row] = await list(owner.token);
-    expect(row?.ai_summary).toBe('Updated summary');
   });
 });
 

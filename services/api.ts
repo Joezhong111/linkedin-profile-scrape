@@ -68,7 +68,6 @@ export const saveLead = async (lead: LinkedInProfile, sourceCompanyUrl?: string)
     owner_id: userId,
     profile_url: lead.profile_url,
     raw_data: lead.raw_data,
-    ai_summary: lead.ai_summary,
     full_name: lead.full_name,
     first_name: lead.first_name || rd.firstName,
     last_name: lead.last_name || rd.lastName,
@@ -174,18 +173,6 @@ export const deleteLead = async (id: string) => {
 
   if (!res.ok) {
     throw new Error(await readApiError(res));
-  }
-};
-
-export const updateProfileAI = async (id: string, summary: string) => {
-  const res = await fetch(`/api/profiles/update-ai`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ id, ai_summary: summary }),
-  });
-
-  if (!res.ok) {
-    throw new Error(await readApiError(res, 'Failed to update AI summary'));
   }
 };
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { LinkedInProfile } from '../../types';
+import { getTotalExperienceYears, transformExperienceTimeline } from '../../lib/data-transformer';
 import ProfileHeader from './ProfileHeader';
 import AboutSection from './AboutSection';
 import SkillsSection from './SkillsSection';
@@ -45,14 +46,15 @@ const TalentAnalyticsDashboard: React.FC<TalentAnalyticsDashboardProps> = ({ pro
     companyIndustry: rd0.companyIndustry || (profile as any).company_industry,
 
     // numbers
-    followers: rd0.followers ?? (profile as any).followers ?? 0,
-    connections: rd0.connections ?? (profile as any).connections ?? 0,
-    totalExperienceYears: rd0.totalExperienceYears ?? (profile as any).total_experience_years ?? 0,
+    followers: rd0.followers ?? rd0.followerCount ?? (profile as any).followers ?? 0,
+    connections:
+      rd0.connections ?? rd0.connectionsCount ?? (profile as any).connections ?? 0,
+    totalExperienceYears: getTotalExperienceYears(rd0),
 
-    // collections (prefer raw)
-    skills: rd0.skills || [],
-    experiences: rd0.experiences || [],
-    peopleAlsoViewed: rd0.peopleAlsoViewed || [],
+    // collections (prefer raw, then normalize provider-specific keys)
+    skills: Array.isArray(rd0.skills) ? rd0.skills : [],
+    experiences: transformExperienceTimeline(rd0),
+    peopleAlsoViewed: Array.isArray(rd0.peopleAlsoViewed) ? rd0.peopleAlsoViewed : [],
     about: rd0.about || (profile as any).about || '',
   };
 

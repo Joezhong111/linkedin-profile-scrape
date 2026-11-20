@@ -941,7 +941,9 @@ export default function Home() {
         <div className="lg:col-span-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {previewItems.length > 0 ? 'Preview from Apify' : 'Ready to scrape'}
+              {previewItems.length > 0
+                ? `Preview from ${credential?.provider === 'treg' ? 'treg' : 'Apify'}`
+                : 'Ready to scrape'}
             </h2>
           </div>
 

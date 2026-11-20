@@ -1,0 +1,10 @@
+{
+  "data": {
+    "id": "run_abc123",
+    "actId": "2SyF0bVxmgGr8IVCZ",
+    "status": "READY",
+    "defaultDatasetId": "dataset_abc123",
+    "startedAt": "2026-11-11T00:00:00.000Z",
+    "finishedAt": null
+  }
+}

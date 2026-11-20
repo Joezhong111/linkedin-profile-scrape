@@ -74,7 +74,6 @@ export const linkedinProfiles = sqliteTable(
     photoUrl: text('photo_url'),
 
     rawData: text('raw_data', { mode: 'json' }),
-    aiSummary: text('ai_summary'),
 
     linkedinPublicUrl: text('linkedin_public_url'),
     linkedinId: text('linkedin_id'),
@@ -153,7 +152,6 @@ export const linkedinLeads = sqliteTable(
     photoUrl: text('photo_url'),
 
     rawData: text('raw_data', { mode: 'json' }),
-    aiSummary: text('ai_summary'),
 
     linkedinPublicUrl: text('linkedin_public_url'),
     linkedinId: text('linkedin_id'),

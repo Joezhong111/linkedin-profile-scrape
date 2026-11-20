@@ -16,7 +16,6 @@ stores data in a D1 (SQLite) database. There is no separate application server.
 - **Auth**: opaque session tokens stored in D1; PBKDF2-SHA512 password hashes
 - **Scraping**: Apify and treg, called over HTTPS from the Worker
 - **Credentials**: bring-your-own-key, encrypted at rest with AES-GCM
-- **AI summary**: Google Gemini, optional, called from the browser
 
 ## Requirements
 
@@ -46,15 +45,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 `.dev.vars` is gitignored. Never reuse the local key in preview or production.
 
-The optional browser-side Gemini key goes in `.env.local`:
-
-```bash
-cp .env.example .env.local
-# set VITE_GEMINI_API_KEY
-```
-
-`.env.local` holds only `VITE_GEMINI_API_KEY`. Scrape credentials are not
-environment variables; each user saves their own in Settings.
+Scrape credentials are not environment variables; each user saves their own in
+Settings.
 
 ### 2. Local database
 
@@ -112,15 +104,14 @@ the Worker in workerd, so `/api/*` works with the same code path as production.
 | Name                        | Where                           | Required | Purpose                                                          |
 | --------------------------- | ------------------------------- | -------- | ---------------------------------------------------------------- |
 | `CREDENTIAL_ENCRYPTION_KEY` | `.dev.vars` / `wrangler secret` | Yes      | Base64 32-byte AES-GCM key that encrypts user Scrape Credentials |
-| `VITE_GEMINI_API_KEY`       | `.env.local` (build-time)       | No       | Gemini key for the optional client-side AI summary               |
 
 Provider tokens are **not** Worker secrets. Each user configures an Apify or
 treg credential in Settings; the Worker encrypts it before storing it in D1
 and never returns it to the browser. Production has no shared Apify or treg
 token.
 
-`.env.example` and `.dev.vars.example` are the source of truth for the two
-variables above. Do not add provider tokens to either file.
+`.dev.vars.example` is the source of truth for the Worker secret above. Do not
+add provider tokens to it.
 
 ## Commands
 
@@ -221,7 +212,7 @@ linkedin-profile-scrape/
 ├── drizzle-d1/             # Generated migrations and snapshots
 ├── components/             # React components (dashboard, charts, shared UI)
 ├── pages/                  # Home, Profiles, Leads, Settings, Admin, Login
-├── services/               # Browser API clients and Gemini integration
+├── services/               # Browser API clients
 ├── lib/                    # Auth client, validation, formatting helpers
 ├── scripts/                # create-admin-d1.mjs
 ├── test/                   # Vitest suites running inside workerd
@@ -239,7 +230,7 @@ All routes are served by the Worker; there is no separate API host or proxy.
   `POST /api/auth/signout`, `GET /api/auth/me`
 - **Account**: `GET|PUT|DELETE /api/account/credentials`
 - **Profiles**: `GET /api/profiles/list`, `POST /api/profiles/save`,
-  `POST /api/profiles/delete`, `POST /api/profiles/update-ai`
+  `POST /api/profiles/delete`
 - **Leads**: `GET /api/leads/list`, `POST /api/leads/save`,
   `POST /api/leads/delete`, `POST /api/leads/batch-delete`
 - **Scraping**: `POST /api/scrape` (profiles), `POST /api/scrape_company`
@@ -304,7 +295,7 @@ rejected; there is no cross-account read path.
 
 ## Security
 
-- Never commit `.dev.vars`, `.env.local`, or real credentials.
+- Never commit `.dev.vars` or real credentials.
 - Scrape Credentials are encrypted with AES-GCM and never returned to the
   browser or written to logs.
 - Session tokens are opaque, stored server-side, and expire after 30 days.

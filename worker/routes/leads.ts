@@ -26,7 +26,6 @@ const TEXT_FIELDS: ReadonlyArray<readonly [string, string]> = [
   ['location', 'location'],
   ['about', 'about'],
   ['photo_url', 'photoUrl'],
-  ['ai_summary', 'aiSummary'],
   ['linkedin_public_url', 'linkedinPublicUrl'],
   ['linkedin_id', 'linkedinId'],
   ['public_identifier', 'publicIdentifier'],

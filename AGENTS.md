@@ -186,12 +186,11 @@ function mapRowToClient(r: ProfileRow) {
 | Name                        | Where                            | Notes                                     |
 | --------------------------- | -------------------------------- | ----------------------------------------- |
 | `CREDENTIAL_ENCRYPTION_KEY` | `.dev.vars`, `wrangler secret`   | Base64 32-byte AES-GCM key; required      |
-| `VITE_GEMINI_API_KEY`       | `.env.local` / build environment | Optional, browser-exposed, Gemini only    |
 
 Provider tokens are **not** environment variables. They are saved per User via
 `PUT /api/account/credentials`, encrypted, and read only for that User's
 scrapes. Never add `APIFY_TOKEN`, `TREG_TOKEN`, or a database URL to
-`.env.example`, `.dev.vars.example`, `wrangler.jsonc`, or code.
+`.dev.vars.example`, `wrangler.jsonc`, or code.
 
 ## Input Validation
 
@@ -262,7 +261,7 @@ pnpm test --run test/leads.test.ts
 
 ## Security Guidelines
 
-- Never commit `.dev.vars`, `.env.local`, or real credentials.
+- Never commit `.dev.vars` or real credentials.
 - Encrypt Scrape Credentials with the existing AES-GCM helper; never return
   plaintext tokens to the client, log them, or put them in error messages.
 - Keep session tokens opaque; never build a client-trusted auth claim.

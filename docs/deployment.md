@@ -480,7 +480,9 @@ Bundle inspection after the production build:
   `dist/linkedin_insights_pro/.dev.vars`; it contains only
   `VITE_GEMINI_API_KEY`. The `deploy` scripts delete `dist/*/.dev.vars` before
   Wrangler runs, and `dist/client/.assetsignore` excludes it from the asset
-  upload.
+  upload. _Historical: the Gemini variable and the `.env.local` workflow were
+  removed after this measurement; the cleanup and exclusion behaviour above
+  still applies._
 - Generated config retains `assets`, the D1 binding, `triggers.crons =
   ["0 3 * * *"]`, and `observability.enabled = true` for both targets.
 

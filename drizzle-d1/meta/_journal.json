@@ -15,6 +15,13 @@
       "when": 1794338233593,
       "tag": "0001_clumsy_roxanne_simpson",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794347525096,
+      "tag": "0002_cheerful_pete_wisdom",
+      "breakpoints": true
     }
   ]
 }

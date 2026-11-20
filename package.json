@@ -27,7 +27,6 @@
     "typecheck:app": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@google/genai": "^1.33.0",
     "@gsap/react": "^2.1.2",
     "@heroicons/react": "^2.2.0",
     "@types/recharts": "^2.0.1",
